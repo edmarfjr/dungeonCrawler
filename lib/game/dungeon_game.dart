@@ -1,0 +1,702 @@
+// (Mantenha os seus imports e variáveis iniciais...)
+import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
+import 'package:dungeon_crawler/game/components/core/minimap_renderer.dart';
+import 'package:dungeon_crawler/game/components/core/palette.dart';
+import 'package:dungeon_crawler/game/components/core/player_state.dart';
+import 'package:dungeon_crawler/game/components/core/maze_renderer.dart';
+import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
+import 'package:dungeon_crawler/game/components/entities/item.dart';
+import 'package:dungeon_crawler/game/overlays/combat_overlay.dart';
+import 'package:flame/game.dart';
+import 'package:flame/input.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+enum GameInput { up, down, left, right, buttonA, buttonB, pause }
+enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory }
+
+class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
+  GameState currentState = GameState.exploration;
+  GameState previousState = GameState.exploration;
+
+  late DungeonMap dungeon;
+  late PlayerState player;
+  late MazeRenderer renderer;
+  late MinimapRenderer minimap;
+  late PlayerCombatStats playerCombatStats;
+  late CombatOverlay combatOverlay;
+  late Map<EnemyType, ui.Image> enemySheets;
+  late ui.Image playerSheet; 
+  late ui.Image playerSlashSprite;
+  late Map<EnemyType, ui.Image> enemySlashSprites;
+  late ui.Image weaponSheet;
+  late ui.Image armorSheet;
+
+  late ui.Image keySprite;
+  late ui.Image doorTexture;
+  late ui.Image chestSprite;
+  late ui.Image spikeSprite;
+
+  bool leftPressed = false, rightPressed = false, downPressed = false, showHitboxes = false;
+  bool showVictoryMessage = false;
+  double encounterEssence = 0;
+
+  String? activeMessage; 
+  VoidCallback? onMessageDismissed; 
+
+  // --- VARIÁVEIS DE INVENTÁRIO ---
+  int inventoryCursor = 0;
+  bool isActionMenuOpen = false;
+  int selectedConsumableIndex = 0;
+
+  void showMessage(String text, {VoidCallback? onDismiss}) {
+    activeMessage = text;
+    onMessageDismissed = onDismiss;
+  }
+
+  void dismissMessage() {
+    activeMessage = null;
+    if (onMessageDismissed != null) {
+      onMessageDismissed!(); 
+      onMessageDismissed = null;
+    }
+  }
+
+  void _initializeInventory() {
+    playerCombatStats.inventory = [
+      ItemDatabase.dagger,
+      ItemDatabase.tanga,
+      ItemDatabase.healthPotion,
+      ItemDatabase.alchemistsFire,
+    ];
+    playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
+    playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
+    selectedConsumableIndex = 0;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await images.loadAll([
+      'itens/dagger.png',
+      'itens/armor.png',
+      'itens/potion.png',
+      'itens/tanga.png',
+      'itens/sword.png',
+    ]);
+    final ui.Image wallImg = await images.load('tilesets/wall.png');
+    final ui.Image floorImg = await images.load('tilesets/floor.png');
+
+    keySprite = await images.load('itens/key.png');     
+    doorTexture = await images.load('tilesets/trapdoor.png');
+    chestSprite = await images.load('tilesets/bau.png');
+    spikeSprite = await images.load('tilesets/trap.png');
+    enemySheets = {
+      EnemyType.slime: await images.load('actors/slime.png'),
+      EnemyType.goblin: await images.load('actors/goblin.png'),
+      EnemyType.spider: await images.load('actors/spider.png'),
+      EnemyType.mimic: await images.load('actors/mimic.png'),
+    };
+    playerSheet = await images.load('actors/player.png');
+
+    weaponSheet = await images.load('actors/dagger.png');
+    armorSheet = await images.load('actors/tanga.png');
+    playerSlashSprite = await images.load('effects/slashV.png'); // O corte da espada do herói
+    
+    enemySlashSprites = {
+      EnemyType.slime: await images.load('effects/golpe.png'), 
+      EnemyType.goblin: await images.load('effects/golpe.png'),
+      EnemyType.spider: await images.load('effects/bite.png'), 
+      EnemyType.mimic: await images.load('effects/coin.png'),
+    };
+
+    dungeon = DungeonMap(width: 20, height: 20);
+    player = PlayerState(x: dungeon.playerSpawn.x, y: dungeon.playerSpawn.y, facing: Direction.north);
+
+    renderer = MazeRenderer(
+      map: dungeon, 
+      player: player, 
+      wallImage: wallImg, 
+      floorImage: floorImg,
+      doorImage: doorTexture, 
+      keyImage: keySprite, 
+      chestImage: chestSprite,
+      spikeImage: spikeSprite,
+    );
+    renderer.size = size; 
+    add(renderer);
+
+    playerCombatStats = PlayerCombatStats();
+    _initializeInventory();
+    combatOverlay = CombatOverlay(
+      playerStats: playerCombatStats, 
+      playerSheetImage: playerSheet, 
+      weaponSheetImage: weaponSheet,
+      armorSheetImage: armorSheet,
+      enemySheets: enemySheets,
+      playerSlashImage: playerSlashSprite,    // <--- Passa o do player
+      enemySlashImages: enemySlashSprites,    // <--- Passa a lista dos inimigos
+    );
+    combatOverlay.size = size; add(combatOverlay);
+
+    minimap = MinimapRenderer();
+    add(minimap);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas); 
+
+    if (activeMessage != null && currentState == GameState.exploration) {
+      // (Código existente da caixa de diálogo da exploração...)
+      double boxWidth = 340; double boxHeight = 100;
+      double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
+      final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
+      canvas.drawRect(rect, Paint()..color = Colors.black.withOpacity(0.95));
+      canvas.drawRect(rect, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2);
+      final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Courier', fontWeight: FontWeight.bold));
+      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
+      textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
+      textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
+    }
+
+    if (currentState == GameState.inventory) {
+      _drawInventoryScreen(canvas);
+    }
+  }
+
+  void _drawInventoryScreen(Canvas canvas) {
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black87);
+    final titlePainter = TextPainter(text: const TextSpan(text: "INVENTÁRIO", style: TextStyle(color: Colors.amber, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+    titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
+
+    double startY = 80;
+    for (int i = 0; i < playerCombatStats.inventory.length; i++) {
+      Item item = playerCombatStats.inventory[i];
+      Color textColor = i == inventoryCursor ? Colors.white : Colors.grey;
+      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item) ? " [Equipado]" : "";
+      String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+      
+      // Fundo de seleção
+      canvas.drawRect(Rect.fromLTWH(20, startY + (i * 40), size.x - 40, 35), Paint()..color = i == inventoryCursor ? Colors.blue.withOpacity(0.3) : Colors.transparent);
+      
+      // --- NOVO: DESENHA O ÍCONE DO ITEM NA LISTA ---
+      try {
+        // Tenta pegar do cache
+        ui.Image itemImg = images.fromCache(item.imagePath);
+        
+        // Garante que a cor não seja nula (fallback para branco se não tiver cor)
+        Color tint = item.cor; 
+        final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+        
+        canvas.drawImageRect(
+          itemImg,
+          Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
+          Rect.fromLTWH(25, startY + (i * 40) + 2, 30, 30), 
+          tintPaint 
+        );
+      } catch (e) {
+        // SE A IMAGEM NÃO APARECER, OLHE O CONSOLE (TERMINAL) DO VS CODE!
+        debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
+        
+        // Desenha um quadrado rosa choque no lugar para você saber que a imagem falhou
+        canvas.drawRect(
+          Rect.fromLTWH(25, startY + (i * 40) + 2, 30, 30), 
+          Paint()..color = Colors.pinkAccent
+        );
+      }
+
+      // Texto do Item (Agora com Offset 60 para não ficar em cima da imagem)
+      TextPainter(text: TextSpan(text: "${item.name}$equipTag$qtyTag", style: TextStyle(color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(60, startY + (i * 40) + 8));
+    }
+
+    if (isActionMenuOpen) {
+      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Colors.black);
+      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Colors.white..style = PaintingStyle.stroke);
+      TextPainter(text: const TextSpan(text: "A - Confirmar\nB - Cancelar", style: TextStyle(color: Colors.white, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
+    }
+  }
+
+  Future<void> changeWeaponSprite(String imagePath) async {
+    ui.Image newWeapon = await images.load(imagePath);
+    
+    weaponSheet = newWeapon;
+    
+    combatOverlay.equipNewWeapon(weaponSheet);
+  }
+
+  Future<void> changeArmorSprite(String imagePath) async {
+    ui.Image newArmor = await images.load(imagePath);
+    
+    armorSheet = newArmor;
+    
+    combatOverlay.equipNewArmor(armorSheet);
+  }
+
+  @override
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+    if (isLoaded) { renderer.size = gameSize; combatOverlay.size = gameSize; }
+  }
+
+  void resetGame() {
+    playerCombatStats.hp = playerCombatStats.maxHp;
+    playerCombatStats.stamina = playerCombatStats.maxStamina;
+    playerCombatStats.mana = playerCombatStats.maxMana;
+    playerCombatStats.currentPhase = CombatPhase.idle;
+
+    _initializeInventory();
+    
+    player.floorLevel = 1;
+    player.hasKey = false;
+    player.noiseLevel = 0;
+    
+    dungeon.generateProceduralMap();
+    player.x = dungeon.playerSpawn.x;
+    player.y = dungeon.playerSpawn.y;
+    player.facing = Direction.north;
+    
+    combatOverlay.enemies.clear();
+  }
+
+  void startGame() {
+    resetGame();
+    currentState = GameState.exploration;
+    overlays.remove('GameOver');
+    overlays.remove('MainMenu');
+  }
+
+  void togglePause() {
+    if (currentState == GameState.exploration || currentState == GameState.combat) {
+      previousState = currentState;
+      currentState = GameState.paused;
+      overlays.add('PauseMenu');
+    } else if (currentState == GameState.paused) {
+      currentState = previousState;
+      overlays.remove('PauseMenu');
+    }
+  }
+
+  void quitToMainMenu() {
+    overlays.remove('PauseMenu');
+    overlays.remove('GameOver');
+    currentState = GameState.mainMenu;
+    overlays.add('MainMenu');
+  }
+
+  void _handlePlayerDeath() {
+    currentState = GameState.gameOver;
+    overlays.add('GameOver');
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    
+    if (currentState == GameState.mainMenu || currentState == GameState.paused || currentState == GameState.gameOver) return;
+
+    if (currentState == GameState.exploration) {
+      if (activeMessage != null) return;
+      // --- SISTEMA DE FOG OF WAR ---
+      // Revela uma área 3x3 ao redor do jogador para que ele veja as paredes coladas a ele
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          dungeon.markExplored(player.x + dx, player.y + dy);
+        }
+      }
+      
+      // Checa se o jogador pisou no mesmo bloco onde está a chave
+      if (dungeon.keyPosition != null && player.x == dungeon.keyPosition!.x && player.y == dungeon.keyPosition!.y) {
+        player.hasKey = true;
+        dungeon.keyPosition = null;
+        showMessage("Você encontrou a Chave da Masmorra!");
+      }
+      return;
+    }
+
+    if (playerCombatStats.currentPhase == CombatPhase.exiting && playerCombatStats.animTimer <= 0) {
+      currentState = GameState.exploration;
+      combatOverlay.enemies.clear();
+      playerCombatStats.currentPhase = CombatPhase.idle;
+      leftPressed = false; rightPressed = false; downPressed = false;
+      return; 
+    }
+    
+    if (playerCombatStats.currentPhase == CombatPhase.entering || playerCombatStats.currentPhase == CombatPhase.exiting) return;
+
+    // --- 1. ATUALIZA A IA E COLISÃO ---
+    if (combatOverlay.enemies.isNotEmpty) {
+      Rect pHurtbox = playerCombatStats.getHurtbox(size);
+      Rect pHitbox = playerCombatStats.getHitbox(size);
+
+      // A. Ataque do Jogador
+      if (playerCombatStats.currentPhase == CombatPhase.active && !playerCombatStats.attackHit) {
+        playerCombatStats.attackHit = true;
+        for (var enemy in combatOverlay.enemies) {
+          if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(size))){
+            double damage = (playerCombatStats.comboCount >= 3) ? playerCombatStats.damage * 1.5 : playerCombatStats.damage;
+            if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
+            if(enemy.isVulnerable){
+              enemy.hp -= damage;
+              enemy.applyHitStun(0.3);
+            }else{
+              enemy.applyHitGuard(0.1);
+            }
+            
+            if (enemy.hp <= 0) {
+              enemy.hp = 0;
+              enemy.isDying = true; // Inicia animação de morte (piscar)
+              encounterEssence += enemy.dropEssence; // Guarda a essência provisoriamente
+            }
+          }
+        }
+        //combatOverlay.enemies.removeWhere((e) => e.hp <= 0);
+        if (combatOverlay.enemies.isEmpty) { _endEncounter(); return; }
+      }
+
+      // B. Processamento e Ataque dos Inimigos
+      for (var enemy in combatOverlay.enemies) {
+        enemy.update(dt, playerCombatStats, size); // IA é acionada aqui
+        if (enemy.isDying) continue;
+        if (enemy.currentPhase == CombatPhase.active && !enemy.attackHit) {
+          if (enemy.getHitbox(size).overlaps(pHurtbox)) {
+            enemy.attackHit = true;
+            combatOverlay.applyEnemyDamage(enemy);
+            playerCombatStats.hitFlashTimer = 0.20;
+            if (playerCombatStats.hp <= 0) _handlePlayerDeath();
+          }
+        }
+        for (var proj in enemy.projectiles) {
+          // O projétil só machuca se estiver "isFalling" (caindo)
+          if (proj.isActive && proj.isFalling && proj.getHitbox(size).overlaps(pHurtbox)) {
+            proj.isActive = false; // Destrói o projétil que acertou
+            combatOverlay.applyEnemyDamage(enemy); // Causa o dano
+            if (playerCombatStats.hp <= 0) _handlePlayerDeath();
+          }
+        }
+      }
+    }
+
+    combatOverlay.enemies.removeWhere((e) => !e.isAlive);
+
+    if (combatOverlay.enemies.isEmpty && !showVictoryMessage && playerCombatStats.currentPhase != CombatPhase.exiting) {
+      // ...Aguarda o jogador terminar qualquer animação de golpe e voltar pro Idle
+      if (playerCombatStats.currentPhase == CombatPhase.idle) {
+        showVictoryMessage = true; // Mostra a caixa na tela
+        playerCombatStats.essence += encounterEssence; // Transfere pra carteira do player
+        
+        playerCombatStats.isGuarding = false; // Solta o escudo se tiver segurando
+      }
+    }
+
+    // --- 2. MOVIMENTAÇÃO DO JOGADOR ---
+    bool isFreeToMove = !showVictoryMessage && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk || playerCombatStats.currentPhase == CombatPhase.guard);
+
+    if (isFreeToMove) {
+      if (downPressed) { playerCombatStats.isGuarding = true; playerCombatStats.currentPhase = CombatPhase.guard; } 
+      else {
+        playerCombatStats.isGuarding = false;
+        if (leftPressed) { playerCombatStats.strafePosition -= 1.5 * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+        else if (rightPressed) { playerCombatStats.strafePosition += 1.5 * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+        else { playerCombatStats.currentPhase = CombatPhase.idle; }
+        playerCombatStats.strafePosition = playerCombatStats.strafePosition.clamp(-1.0, 1.0);
+      }
+    } else if (showVictoryMessage) {
+      playerCombatStats.currentPhase = CombatPhase.idle; // Fica parado lendo
+    }
+  }
+
+  void _endEncounter() { playerCombatStats.currentPhase = CombatPhase.exiting; playerCombatStats.animTimer = 1; }
+  //void _handlePlayerDeath() { playerCombatStats.hp = playerCombatStats.maxHp; currentState = GameState.exploration; playerCombatStats.currentPhase = CombatPhase.idle; }
+
+  @override
+  KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    leftPressed = keysPressed.contains(LogicalKeyboardKey.arrowLeft); rightPressed = keysPressed.contains(LogicalKeyboardKey.arrowRight); downPressed = keysPressed.contains(LogicalKeyboardKey.arrowDown);
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape) togglePause();
+      
+      if (event.logicalKey == LogicalKeyboardKey.keyZ) startInput(GameInput.buttonA);
+      if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
+      
+      if (currentState == GameState.exploration && activeMessage == null) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) startInput(GameInput.left);
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) startInput(GameInput.right);
+      } else if (currentState == GameState.inventory || currentState == GameState.combat) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
+      }
+    }
+    return KeyEventResult.handled;
+  }
+
+  void _performAttack() {
+    if (playerCombatStats.stamina >= 0 && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk)) {
+      playerCombatStats.stamina -= playerCombatStats.staminaCost;
+      playerCombatStats.staminaTmr = playerCombatStats.staminaRegenDelay; 
+      playerCombatStats.currentPhase = CombatPhase.windup;
+      playerCombatStats.animTimer = playerCombatStats.windupTime;
+      combatOverlay.playerAttackWindupTicker.reset();
+      combatOverlay.weaponAttackWindupTicker.reset();
+      playerCombatStats.comboCount++;
+      if (playerCombatStats.comboCount > 3) playerCombatStats.comboCount = 1;
+      playerCombatStats.comboTimer = 1.0;
+    }
+  }
+
+  void triggerEncounter() {
+    encounterEssence = 0;         
+    showVictoryMessage = false;
+    currentState = GameState.combat;
+    int numEnemies = Random().nextInt(3) + 1; 
+    List<Enemy> spawnedEnemies = [];
+    for (int i = 0; i < numEnemies; i++) {
+      int enemyType = Random().nextInt(3); 
+      Enemy newEnemy;
+      switch (enemyType) {
+        case 0: newEnemy = SlimeEnemy(); break;
+        case 1: newEnemy = GoblinEnemy(); break;
+        case 2: newEnemy = SpiderEnemy(); break;
+        default: newEnemy = SlimeEnemy(); break;
+      }
+      
+      newEnemy.strafePosition = -0.6 + (i * 0.6); 
+      spawnedEnemies.add(newEnemy);
+    }
+    combatOverlay.startEncounter(spawnedEnemies);
+    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 0.5;
+  }
+
+  void _triggerSpecificEncounter(EnemyType type) {
+    encounterEssence = 0; showVictoryMessage = false; currentState = GameState.combat;
+    Enemy newEnemy = MimicEnemy(); // Se quiser adicionar outros específicos depois, basta checar o tipo!
+    newEnemy.strafePosition = 0.0; // Centralizado no jogador
+    combatOverlay.startEncounter([newEnemy]);
+    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 0.5;
+  }
+
+  void _checkRandomEncounter() {
+    // Sorteia um número de 0 a 99
+    int chance = Random().nextInt(100);
+
+    // Se a chance sorteada for menor que o ruído atual, o combate começa!
+    if (chance < player.noiseLevel) {
+      debugPrint("⚠️ Uma emboscada! Ruído estava em ${player.noiseLevel}%");
+      player.noiseLevel = 0; // Zera o ruído para a próxima exploração
+      triggerEncounter();
+    }
+  }
+
+  // (Mantenha seus métodos startInput e stopInput que já estavam prontos para a interface touch)
+  void startInput(GameInput input) {
+    if (input == GameInput.pause) { togglePause(); return; }
+
+    // --- MODO INVENTÁRIO ---
+    if (currentState == GameState.inventory) {
+      if (isActionMenuOpen) {
+        if (input == GameInput.buttonB) { isActionMenuOpen = false; }
+        if (input == GameInput.buttonA) { 
+          Item item = playerCombatStats.inventory[inventoryCursor];
+          _useOrEquipItem(item); 
+          isActionMenuOpen = false; 
+        }
+        return;
+      }
+      
+      if (input == GameInput.up) { inventoryCursor--; if (inventoryCursor < 0) inventoryCursor = playerCombatStats.inventory.length - 1; }
+      if (input == GameInput.down) { inventoryCursor++; if (inventoryCursor >= playerCombatStats.inventory.length) inventoryCursor = 0; }
+      if (input == GameInput.buttonB) { currentState = GameState.exploration; }
+      if (input == GameInput.buttonA && playerCombatStats.inventory.isNotEmpty) { isActionMenuOpen = true; }
+      return;
+    }
+    
+    // --- MODO EXPLORAÇÃO ---
+    if (currentState == GameState.exploration) {
+      if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
+      if (input == GameInput.up) { if (player.move(true, dungeon)) _onPlayerStepped(); }
+      if (input == GameInput.down) { if (player.move(false, dungeon)) _onPlayerStepped(); }
+      if (input == GameInput.left) player.turn(false);
+      if (input == GameInput.right) player.turn(true);
+      if (input == GameInput.buttonA) _interact();
+      if (input == GameInput.buttonB) { currentState = GameState.inventory; inventoryCursor = 0; isActionMenuOpen = false; }
+    } 
+    // --- MODO COMBATE ---
+    else if (currentState == GameState.combat) {
+      if (showVictoryMessage) { if (input == GameInput.buttonA) { showVictoryMessage = false; _endEncounter(); } return; }
+      
+      if (input == GameInput.left) leftPressed = true;
+      if (input == GameInput.right) rightPressed = true;
+      if (input == GameInput.down) downPressed = true;
+      if (input == GameInput.buttonA) _performAttack();
+      
+      // Muda Consumível Selecionado
+      if (input == GameInput.up && playerCombatStats.consumables.isNotEmpty) {
+        selectedConsumableIndex++;
+        if (selectedConsumableIndex >= playerCombatStats.consumables.length) selectedConsumableIndex = 0;
+      }
+      // Usa Consumível Selecionado
+      if (input == GameInput.buttonB && playerCombatStats.consumables.isNotEmpty) {
+        Item sel = playerCombatStats.consumables[selectedConsumableIndex];
+        _useCombatConsumable(sel);
+      }
+    }
+  }
+  
+  void stopInput(GameInput input) {
+    if (input == GameInput.left) leftPressed = false;
+    if (input == GameInput.right) rightPressed = false;
+    if (input == GameInput.down) downPressed = false;
+  }
+  
+  void _useOrEquipItem(Item item) async {
+    // Pega apenas o final do caminho. Ex: "items/espada.png" vira "espada.png"
+    String fileName = item.imagePath.split('/').last;
+
+    if (item.type == ItemType.weapon) { 
+      playerCombatStats.equippedWeapon = item; 
+      // Busca a spritesheet usando o nome do arquivo, mas na pasta actors/
+      await changeWeaponSprite('actors/$fileName'); 
+    }
+    else if (item.type == ItemType.armor) { 
+      playerCombatStats.equippedArmor = item; 
+      // Busca a spritesheet usando o nome do arquivo, mas na pasta actors/
+      await changeArmorSprite('actors/$fileName'); 
+    }
+    else if (item.type == ItemType.consumable) { 
+      if (item.onUse != null) item.onUse!(item, this);
+      _consumeItem(item);
+    }
+  }
+
+  void _useCombatConsumable(Item item) {
+    if (item.type == ItemType.consumable) {
+      if (item.onUse != null) item.onUse!(item, this);
+    }
+    _consumeItem(item);
+  }
+
+  void _consumeItem(Item item) {
+    item.quantity--;
+    if (item.quantity <= 0) {
+      playerCombatStats.inventory.remove(item);
+      // Ajusta o cursor caso o último item seja gasto
+      if (selectedConsumableIndex >= playerCombatStats.consumables.length) selectedConsumableIndex = 0;
+      if (inventoryCursor >= playerCombatStats.inventory.length) inventoryCursor = 0;
+    }
+  }
+
+  void _onPlayerStepped() {
+    // 1. Avança a animação das armadilhas no mapa
+    dungeon.advanceSpikes();
+
+    // 2. Verifica se o jogador pisou num espinho E se o espinho está esticado (estado 2)
+    if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 2) {
+      playerCombatStats.hp -= 20; // Dano pesado da armadilha
+      playerCombatStats.applyHitStun(0.3); // Pisca em vermelho igual no combate!
+      showMessage("Você pisou em uma armadilha de espinhos!");
+      if (playerCombatStats.hp <= 0) _handlePlayerDeath();
+    }
+
+    // 3. Checa encontros aleatórios (já existia)
+    _checkRandomEncounter();
+  }
+
+  void _interact() {
+    //int dx = 0, dy = 0;
+    //switch (player.facing) { case Direction.north: dy = -1; break; case Direction.east: dx = 1; break; case Direction.south: dy = 1; break; case Direction.west: dx = -1; break; }
+    //int targetX = player.x + dx; int targetY = player.y + dy;
+    
+    //TileType targetTile = dungeon.getTile(targetX, targetY);
+    TileType playerTile = dungeon.getTile(player.x, player.y);
+
+    if (playerTile == TileType.door) {
+      if (player.hasKey) {
+        // Envia a mensagem, e quando ela fechar (onDismiss), avança de nível!
+        showMessage("🚪 A porta se abre. Descendo para o Andar ${player.floorLevel + 1}...", onDismiss: () {
+          player.floorLevel++;
+          player.hasKey = false;
+          player.noiseLevel = 0;
+          dungeon.generateProceduralMap(); 
+          player.x = dungeon.playerSpawn.x;
+          player.y = dungeon.playerSpawn.y;
+          player.facing = Direction.north;
+        });
+      } else {
+        showMessage("A porta está trancada. Encontre a chave.");
+      }
+    } 
+    // INTERAÇÃO COM O BAÚ
+    else if (playerTile == TileType.chest) {
+      dungeon.grid[player.y][player.x] = TileType.floor; // O baú some ao ser aberto!
+      
+      int chance = Random().nextInt(100);
+      
+      if (chance < 25) { 
+        // 1. 25% DE CHANCE: MÍMICO!
+        showMessage("O baú era um MÍMICO!!", onDismiss: () { _triggerSpecificEncounter(EnemyType.mimic); }); 
+      
+      } else if (chance < 60) { 
+        // 2. 35% DE CHANCE: ESSÊNCIAS (25 a 59)
+        int loot = Random().nextInt(30) + 10; 
+        showMessage("Você achou $loot Essências!", onDismiss: () { playerCombatStats.essence += loot; }); 
+      
+      } else {
+        // 3. 40% DE CHANCE: ITEM (Dividido entre Equipamento e Consumível)
+        
+        // Crie uma lista com todos os equipamentos disponíveis no jogo
+        // (Você pode expandir isso no ItemDatabase depois!)
+        List<Item> allEquipments = [
+          ItemDatabase.shortSword,
+          ItemDatabase.armaduraFerro,
+        ];
+
+        // Filtra a lista deixando APENAS os itens que o jogador NÃO TEM no inventário
+        List<Item> unownedEquipments = allEquipments.where((equip) {
+          return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
+        }).toList();
+
+        // 15% de chance de tentar dropar um equipamento (60 a 74)
+        bool tryEquipment = chance >= 60 && chance < 75;
+
+        // Se tirou a sorte grande E ainda existem equipamentos não coletados:
+        if (tryEquipment && unownedEquipments.isNotEmpty) {
+          
+          unownedEquipments.shuffle(); // Embaralha os equipamentos restantes
+          Item newEquipment = unownedEquipments.first;
+          newEquipment.quantity = 1; // Equipamentos não acumulam, mas garantimos a quantidade 1
+
+          showMessage("Você encontrou um item: ${newEquipment.name}!", onDismiss: () {
+            playerCombatStats.inventory.add(newEquipment);
+          });
+          
+        } else {
+          // CAI AQUI SE: Tirou os 25% do consumível (75 a 99) 
+          // OU tentou equipamento mas o jogador já tem todos!
+
+          List<Item> allConsumables = [
+          ItemDatabase.healthPotion,
+          ItemDatabase.alchemistsFire,
+        ];
+
+          int totalConsumables = allConsumables.length;
+          int randomIndex = Random().nextInt(totalConsumables);
+          
+          Item droppedItem = allConsumables[randomIndex];
+          droppedItem.quantity = 1;
+
+          showMessage("Você encontrou um item: ${droppedItem.name}!", onDismiss: () {
+            var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
+            
+            if (existingItems.isNotEmpty) {
+              existingItems.first.quantity += droppedItem.quantity; 
+            } else {
+              playerCombatStats.inventory.add(droppedItem); 
+            }
+          });
+        }
+      }
+    }
+  }
+}
