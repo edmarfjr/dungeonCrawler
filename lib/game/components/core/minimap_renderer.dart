@@ -1,4 +1,5 @@
 import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
+import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -38,9 +39,9 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
           TileType tile = map.grid[y][x];
           Color color = Colors.transparent;
 
-          if (tile == TileType.floor) color = Colors.grey.shade700;
-          else if (tile == TileType.wall) color = Colors.brown.shade800;
-          else if (tile == TileType.door) color = Colors.amber.shade700;
+          if (tile == TileType.floor) color = Palette.cinza;
+          else if (tile == TileType.wall) color = Palette.marrom;
+          else if (tile == TileType.door) color = Palette.vermelhoEsc;
 
           if (color != Colors.transparent) {
             canvas.drawRect(
@@ -53,17 +54,34 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
           if (map.keyPosition != null && map.keyPosition!.x == x && map.keyPosition!.y == y) {
             canvas.drawRect(
               Rect.fromLTWH(startX + x * tileSize + 1, startY + y * tileSize + 1, tileSize - 2, tileSize - 2),
-              Paint()..color = Colors.yellowAccent
+              Paint()..color = Palette.amarelo
             );
           }
         }
       }
     }
 
+    final enemyPaint = Paint()..color = Palette.vermelho;
+    
+    for (var enemy in gameRef.dungeon.roamingEnemies) {
+      // Opcional: Só desenha no minimapa se a área em que o inimigo está já foi iluminada pelo Fog of War!
+      if (gameRef.dungeon.explored[enemy.y][enemy.x]) {
+        canvas.drawRect(
+          Rect.fromLTWH(
+            startX + (enemy.x * tileSize), 
+            startY + (enemy.y * tileSize), 
+            tileSize, 
+            tileSize
+          ), 
+          enemyPaint
+        );
+      }
+    }
+
     // 3. Desenha o Jogador (Um ponto azul)
     double px = startX + player.x * tileSize;
     double py = startY + player.y * tileSize;
-    canvas.drawRect(Rect.fromLTWH(px, py, tileSize, tileSize), Paint()..color = Colors.blueAccent);
+    canvas.drawRect(Rect.fromLTWH(px, py, tileSize, tileSize), Paint()..color = Palette.azul);
 
     // 4. Desenha um indicador minúsculo apontando a direção do jogador
     double dx = 0, dy = 0;
@@ -75,7 +93,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     }
     canvas.drawRect(
       Rect.fromLTWH(px + dx * 0.6 + 1, py + dy * 0.6 + 1, tileSize - 2, tileSize - 2),
-      Paint()..color = Colors.cyanAccent
+      Paint()..color = Palette.verde
     );
   }
 }

@@ -40,15 +40,22 @@ class PlayerCombatStats {
   double staminaCost = 20.0;
   double damage = 10;
   Color weaponColor = Palette.cinza;
+  double offYWeapon = 0;
 
   //variaveis da armadura
   Color armorColor = Palette.bege;
+  double staminaRegenBonus = 0;
 
   List<Item> inventory = [];
   Item? equippedWeapon;
   Item? equippedArmor;
 
-  List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable).toList();
+  List<PlayerProjectile> activeProjectiles = [];
+  double healVfxTimer = 0.0;
+  double explosionVfxTimer = 0.0;
+  double manaVfxTimer = 0.0;
+
+  List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
   void recoverStamina(double dt) {
     if(staminaTmr > 0) {
@@ -56,7 +63,7 @@ class PlayerCombatStats {
       return; // Ainda no delay, não regenera
     }
     if (!isGuarding && stamina < maxStamina) {
-      stamina += 40.0 * dt; 
+      stamina += (50.0 + staminaRegenBonus) * dt; 
       if (stamina > maxStamina) stamina = maxStamina;
     }
   }
@@ -69,6 +76,9 @@ class PlayerCombatStats {
   }
 
   void updatePhase(double dt) {
+    if (healVfxTimer > 0) healVfxTimer -= dt;
+    if (explosionVfxTimer > 0) explosionVfxTimer -= dt;
+    if (manaVfxTimer > 0) manaVfxTimer -= dt;
     if (hitFlashTimer > 0) {
       hitFlashTimer -= dt;
       if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) {

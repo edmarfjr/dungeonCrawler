@@ -1,12 +1,13 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
+import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart' hide Matrix4;
 import 'package:flutter/material.dart';
 import 'dungeon_map.dart';
 import 'player_state.dart';
 
-class MazeRenderer extends PositionComponent {
+class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final DungeonMap map;
   final PlayerState player;
   final ui.Image wallImage;
@@ -15,6 +16,7 @@ class MazeRenderer extends PositionComponent {
   final ui.Image keyImage;
   final ui.Image chestImage;
   final ui.Image spikeImage;
+  final ui.Image roamerImage;
 
   MazeRenderer({
     required this.map,
@@ -25,6 +27,7 @@ class MazeRenderer extends PositionComponent {
     required this.keyImage,  
     required this.chestImage,
     required this.spikeImage,
+    required this.roamerImage,
   });
 
   @override
@@ -70,17 +73,19 @@ class MazeRenderer extends PositionComponent {
            _drawFloorTile(canvas, cx, cz, doorImage, Palette.vermelhoEsc);
         }
 
+        
+
         // --- 3. LÓGICA DA CHAVE ---
-        if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY) {
+        if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
           // A chave vai do chão (0.5) até uma altura menor (0.1)
-          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.cinzaMed);
+          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.cinza);
         }
 
-        if (tile == TileType.chest) {
+        if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
           _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
         }
 
-        if (tile == TileType.spike) {
+        if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
           _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
 
@@ -92,6 +97,15 @@ class MazeRenderer extends PositionComponent {
 
           // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
           _drawBillboardItem(canvas, cx, cz, spikeImage, 0.7, 0.1,Palette.cinza, srcRect: frameRect);
+        }
+        
+        for (var enemy in map.roamingEnemies) {
+          
+          // Se o inimigo estiver na coordenada que o laço está varrendo agora...
+          if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
+            // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
+            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.5, 0.0,Palette.vermelho);
+          }
         }
       }
     }

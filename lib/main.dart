@@ -80,6 +80,7 @@ class _GameScreenState extends State<GameScreen> {
                         children: [
                           Align(alignment: Alignment.topCenter, child: _buildHoldButton(Icons.arrow_upward, GameInput.up)),
                           Align(alignment: Alignment.bottomCenter, child: _buildHoldButton(Icons.arrow_downward, GameInput.down)),
+                          Align(alignment: Alignment.center, child:Container(width: 75, height: 75,decoration: BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle),)),
                           Align(alignment: Alignment.centerLeft, child: _buildHoldButton(Icons.arrow_back, GameInput.left)),
                           Align(alignment: Alignment.centerRight, child: _buildHoldButton(Icons.arrow_forward, GameInput.right)),
                         ],

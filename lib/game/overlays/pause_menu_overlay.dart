@@ -17,6 +17,8 @@ class PauseMenuOverlay extends StatelessWidget {
             const Text("JOGO PAUSADO", style: TextStyle(color: Palette.branco, fontSize: 28, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Text("Andar Atual: ${game.player.floorLevel}", style: const TextStyle(color: Palette.amarelo, fontSize: 18)),
+            const SizedBox(height: 10),
+            Text("Essências: ${game.playerCombatStats.essence}", style: const TextStyle(color: Palette.azul, fontSize: 18)),
             const SizedBox(height: 40),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Palette.cinza, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),

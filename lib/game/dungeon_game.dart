@@ -18,8 +18,8 @@ enum GameInput { up, down, left, right, buttonA, buttonB, pause }
 enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory }
 
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
-  GameState currentState = GameState.exploration;
-  GameState previousState = GameState.exploration;
+  GameState currentState = GameState.mainMenu;
+  GameState previousState = GameState.mainMenu;
 
   late DungeonMap dungeon;
   late PlayerState player;
@@ -38,6 +38,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late ui.Image doorTexture;
   late ui.Image chestSprite;
   late ui.Image spikeSprite;
+  late ui.Image roamerSprite;
 
   bool leftPressed = false, rightPressed = false, downPressed = false, showHitboxes = false;
   bool showVictoryMessage = false;
@@ -66,10 +67,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _initializeInventory() {
     playerCombatStats.inventory = [
-      ItemDatabase.dagger,
+      ItemDatabase.adaga,
       ItemDatabase.tanga,
       ItemDatabase.healthPotion,
-      ItemDatabase.alchemistsFire,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -84,9 +84,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/potion.png',
       'itens/tanga.png',
       'itens/sword.png',
+      'itens/longSword.png',
+      'itens/sword.png',
+      'itens/axe.png',
+      'itens/bomb.png',
+      'itens/leatherArmor.png',
+      'itens/scroll.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
+    roamerSprite = await images.load('tilesets/enemy.png');
 
     keySprite = await images.load('itens/key.png');     
     doorTexture = await images.load('tilesets/trapdoor.png');
@@ -123,6 +130,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       keyImage: keySprite, 
       chestImage: chestSprite,
       spikeImage: spikeSprite,
+      roamerImage: roamerSprite,
     );
     renderer.size = size; 
     add(renderer);
@@ -268,6 +276,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void togglePause() {
+    if(currentState == GameState.mainMenu || currentState == GameState.gameOver) return;
     if (currentState == GameState.exploration || currentState == GameState.combat) {
       previousState = currentState;
       currentState = GameState.paused;
@@ -300,8 +309,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (activeMessage != null) return;
       // --- SISTEMA DE FOG OF WAR ---
       // Revela uma área 3x3 ao redor do jogador para que ele veja as paredes coladas a ele
-      for (int dy = -1; dy <= 1; dy++) {
-        for (int dx = -1; dx <= 1; dx++) {
+      for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
           dungeon.markExplored(player.x + dx, player.y + dy);
         }
       }
@@ -354,6 +363,26 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         //combatOverlay.enemies.removeWhere((e) => e.hp <= 0);
         if (combatOverlay.enemies.isEmpty) { _endEncounter(); return; }
       }
+
+      for (var proj in playerCombatStats.activeProjectiles) {
+        proj.update(dt);
+        if (!proj.isActive) continue;
+
+        for (var enemy in combatOverlay.enemies) {
+          // Checa colisão com o inimigo
+          if (!enemy.isDying && enemy.isVulnerable && proj.getHitbox(size).overlaps(enemy.getHurtbox(size))) {
+            enemy.hp -= proj.power;
+            enemy.applyHitStun(0.3);
+            if (enemy.hp <= 0) { 
+              enemy.hp = 0; enemy.isDying = true; encounterEssence += enemy.dropEssence; 
+            }
+            proj.isActive = false; // Destrói o pilar após queimar 1 inimigo
+            break; 
+          }
+        }
+      }
+      // Remove os pilares que bateram ou saíram da tela
+      playerCombatStats.activeProjectiles.removeWhere((p) => !p.isActive);
 
       // B. Processamento e Ataque dos Inimigos
       for (var enemy in combatOverlay.enemies) {
@@ -556,12 +585,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (item.type == ItemType.weapon) { 
       playerCombatStats.equippedWeapon = item; 
+      if (item.onUse != null) item.onUse!(item, this);
       // Busca a spritesheet usando o nome do arquivo, mas na pasta actors/
       await changeWeaponSprite('actors/$fileName'); 
     }
     else if (item.type == ItemType.armor) { 
       playerCombatStats.equippedArmor = item; 
       // Busca a spritesheet usando o nome do arquivo, mas na pasta actors/
+      if (item.onUse != null) item.onUse!(item, this);
       await changeArmorSprite('actors/$fileName'); 
     }
     else if (item.type == ItemType.consumable) { 
@@ -573,8 +604,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _useCombatConsumable(Item item) {
     if (item.type == ItemType.consumable) {
       if (item.onUse != null) item.onUse!(item, this);
+      _consumeItem(item); // Perde 1 de quantidade
+    } 
+    else if (item.type == ItemType.spell) {
+      if (playerCombatStats.mana >= item.manaCost) {
+        playerCombatStats.mana -= item.manaCost; // Gasta a mana!
+        if (item.onUse != null) item.onUse!(item, this);
+        // Magias não gastam "quantidade", então não chamamos _consumeItem!
+      } else {
+        // Se não tiver mana, a tela pisca de aviso!
+        // Opcional: tocar um som de erro
+      }
     }
-    _consumeItem(item);
   }
 
   void _consumeItem(Item item) {
@@ -599,8 +640,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (playerCombatStats.hp <= 0) _handlePlayerDeath();
     }
 
-    // 3. Checa encontros aleatórios (já existia)
-    _checkRandomEncounter();
+    dungeon.moveEnemies(Point(player.x, player.y));
+
+    // 3. Checa colisão fatal: Inimigo encostou no Player?
+    for (int i = 0; i < dungeon.roamingEnemies.length; i++) {
+      if (dungeon.roamingEnemies[i].x == player.x && dungeon.roamingEnemies[i].y == player.y) {
+        // Se bater, o ícone do inimigo é deletado do mapa...
+        dungeon.roamingEnemies.removeAt(i); 
+        // ...e a batalha começa!
+        triggerEncounter(); 
+        break; // Impede que o jogador lute contra 2 grupos ao mesmo tempo
+      }
+    }
   }
 
   void _interact() {
@@ -648,8 +699,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         // Crie uma lista com todos os equipamentos disponíveis no jogo
         // (Você pode expandir isso no ItemDatabase depois!)
         List<Item> allEquipments = [
-          ItemDatabase.shortSword,
+          ItemDatabase.espadaCurta,
           ItemDatabase.armaduraFerro,
+          ItemDatabase.espadaLonga,
+          ItemDatabase.armaduraCouro,
+          ItemDatabase.machado,
+          ItemDatabase.firePillar,
         ];
 
         // Filtra a lista deixando APENAS os itens que o jogador NÃO TEM no inventário
@@ -677,7 +732,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
           List<Item> allConsumables = [
           ItemDatabase.healthPotion,
-          ItemDatabase.alchemistsFire,
+          ItemDatabase.manaPotion,
+          ItemDatabase.bomb,
         ];
 
           int totalConsumables = allConsumables.length;
