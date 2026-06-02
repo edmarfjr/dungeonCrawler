@@ -138,7 +138,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     double spriteWidth = spriteHeight * aspectRatio;
 
     Rect dstRect = Rect.fromLTWH(
-      bottom.dx - (spriteWidth / 2), // Centraliza perfeitamente no eixo horizontal do bloco
+      bottom.dx - (spriteWidth / 2),
       top.dy,
       spriteWidth, 
       spriteHeight
@@ -147,7 +147,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     final paint = Paint()
       ..colorFilter = ColorFilter.mode(cor, BlendMode.modulate);
 
-    // Renderiza a imagem
     canvas.drawImageRect(
       image,
       srcRect ?? Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()), // Pega a imagem inteira
@@ -156,7 +155,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     );
   }
 
-  // MÉTODOS 3D MANTIDOS INTACTOS:
+  // MÉTODOS 3D:
   void _drawFrontFace(Canvas canvas, int cx, int cz, ui.Image tex, Color color) {
     _drawSubdividedPolygon(canvas, tex, color, [
       [cx - 0.5, -0.5, cz.toDouble()], 
@@ -206,17 +205,24 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   }
 
   void _drawSubdividedPolygon(Canvas canvas, ui.Image image, Color tintColor, List<List<double>> points3D) {
+    // 1. Removemos o ColorFilter daqui! O Paint agora só carrega a textura.
     final paint = Paint()
       ..shader = ImageShader(
         image, TileMode.clamp, TileMode.clamp, Matrix4.identity().storage,
-      )
-      ..colorFilter = ColorFilter.mode(tintColor, BlendMode.multiply);
+      );
 
     const int segs = 4; 
     int numVertices = (segs + 1) * (segs + 1);
+    
     var positions = Float32List(numVertices * 2);
     var texCoords = Float32List(numVertices * 2);
     var indices = Uint16List(segs * segs * 6);
+    
+    // --- NOVO: Criamos uma lista de cores para cada vértice 3D ---
+    var colors = Int32List(numVertices);
+    for (int i = 0; i < numVertices; i++) {
+      colors[i] = tintColor.value; // Injeta a cor (ex: Marrom, Cinza) em todos os pontos
+    }
 
     int vIdx = 0;
     int tIdx = 0;
@@ -271,13 +277,16 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       }
     }
 
+    // 2. Passamos a lista de cores nativa para a geometria
     final vertices = ui.Vertices.raw(
       ui.VertexMode.triangles,
       positions,
       textureCoordinates: texCoords,
+      colors: colors, // <--- A GPU do telemóvel vai ler isto diretamente!
       indices: indices,
     );
 
-    canvas.drawVertices(vertices, BlendMode.srcOver, paint);
+    // 3. Dizemos ao Canvas para fundir a Cor do Vértice com a Textura (BlendMode.modulate)
+    canvas.drawVertices(vertices, BlendMode.modulate, paint);
   }
 }

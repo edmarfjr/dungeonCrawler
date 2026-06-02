@@ -1,53 +1,70 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
+import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:flame/components.dart';
+import 'package:flutter/material.dart';
+import 'package:dungeon_crawler/game/dungeon_game.dart';
 
-class ArcProjectile {
-  double strafeX; double yPos; double vx; double vy;
-  bool isActive = true;
+class ArcProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
+  double strafeX;
+  double yPos;
+  double vx;
+  double vy;
+  final Enemy owner; // Guarda quem atirou para saber a cor, dano e imagem!
 
-  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy);
+  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner)
+      : super(anchor: Anchor.center);
 
+  @override
   void update(double dt) {
-    vy += 3.0 * dt; // Gravidade puxando para baixo
+    super.update(dt);
+    vy += 3.0 * dt; // Gravidade a puxar para baixo
     strafeX += vx * dt;
     yPos += vy * dt;
-    if (yPos > 0.8) isActive = false; // Bateu no chão
+
+    // Se bater no chão, o Flame destrói-o automaticamente!
+    if (yPos > 0.8) {
+      removeFromParent();
+      return;
+    }
+
+    // 1. Sincroniza a matemática com a posição visual do Flame
+    double scale = gameRef.size.x * 0.35;
+    double cx = (gameRef.size.x / 2) + (strafeX * scale);
+    position = Vector2(cx, gameRef.size.y * yPos);
+    size = Vector2(120, 120); // Tamanho visual da imagem
+
+    // 2. COLISÃO AUTÓNOMA COM O JOGADOR
+    if (isFalling) {
+      Rect myHitbox = Rect.fromCenter(center: position.toOffset(), width: 30, height: 30);
+      if (myHitbox.overlaps(gameRef.playerCombatStats.getHurtbox(gameRef.size))) {
+        
+        gameRef.combatOverlay.applyEnemyDamage(owner); // Aplica o dano!
+        removeFromParent(); // Destrói o projétil ao bater
+        
+        if (gameRef.playerCombatStats.hp <= 0) {
+          gameRef.handlePlayerDeath();
+        }
+      }
+    }
   }
 
-  bool get isFalling => vy > 0; // Só tem hitbox se estiver caindo!
+  // Só tem hitbox e dá dano se estiver a cair!
+  bool get isFalling => vy > 0; 
 
-  Rect getHitbox(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafeX * scale);
-    return Rect.fromCenter(center: Offset(cx, screenSize.y * yPos), width: 30, height: 30);
-  }
+  @override
+  void render(Canvas canvas) {
+    final ui.Image? img = gameRef.combatOverlay.enemySlashImages[owner.type];
+    if (img == null) return;
 
-  Rect getHitboxImageSize(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafeX * scale);
-    return Rect.fromCenter(center: Offset(cx, screenSize.y * yPos), width: 120, height: 120);
+    // Pinta o projétil com a cor do monstro que o atirou
+    Paint projPaint = Paint()..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
+
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+      Rect.fromLTWH(0, 0, size.x, size.y), // Desenha no ponto 0,0 local do componente
+      projPaint
+    );
   }
 }
 
-class PlayerProjectile {
-  double strafeX;
-  double yPos; // Começa de baixo (1.0) e sobe para o fundo da tela (0.0)
-  double speed;
-  double power;
-  Color color;
-  bool isActive = true;
-
-  PlayerProjectile(this.strafeX, this.yPos, this.speed, this.power, this.color);
-
-  void update(double dt) {
-    yPos -= speed * dt; // Se move para o "fundo" do cenário
-    if (yPos < -0.2) isActive = false; // Destrói ao passar da tela
-  }
-
-  Rect getHitbox(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafeX * scale);
-    // Hitbox retangular vertical para imitar o pilar!
-    return Rect.fromCenter(center: Offset(cx, screenSize.y * yPos), width: 80, height: 180);
-  }
-}

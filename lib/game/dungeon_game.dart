@@ -7,6 +7,7 @@ import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/core/player_state.dart';
 import 'package:dungeon_crawler/game/components/core/maze_renderer.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
+import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:dungeon_crawler/game/overlays/combat_overlay.dart';
 import 'package:flame/game.dart';
@@ -33,6 +34,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late Map<EnemyType, ui.Image> enemySlashSprites;
   late ui.Image weaponSheet;
   late ui.Image armorSheet;
+  late ui.Image shieldSheet;
 
   late ui.Image keySprite;
   late ui.Image doorTexture;
@@ -46,6 +48,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   String? activeMessage; 
   VoidCallback? onMessageDismissed; 
+  
+  int mapSize = 20;
 
   // --- VARIÁVEIS DE INVENTÁRIO ---
   int inventoryCursor = 0;
@@ -69,10 +73,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.inventory = [
       ItemDatabase.adaga,
       ItemDatabase.tanga,
+      ItemDatabase.bloquel,
+      ItemDatabase.escudoFerro,
       ItemDatabase.healthPotion,
+      ItemDatabase.staminaPotion,
+      ItemDatabase.toxicCloud,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
+    playerCombatStats.equippedShield = playerCombatStats.inventory[2];
     selectedConsumableIndex = 0;
   }
 
@@ -90,6 +99,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/bomb.png',
       'itens/leatherArmor.png',
       'itens/scroll.png',
+      'itens/woodShield.png',
+      'itens/ironShield.png',
+      'itens/buckler.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
@@ -109,6 +121,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     weaponSheet = await images.load('actors/dagger.png');
     armorSheet = await images.load('actors/tanga.png');
+    shieldSheet = await images.load('actors/buckler.png');
     playerSlashSprite = await images.load('effects/slashV.png'); // O corte da espada do herói
     
     enemySlashSprites = {
@@ -118,7 +131,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.mimic: await images.load('effects/coin.png'),
     };
 
-    dungeon = DungeonMap(width: 20, height: 20);
+    dungeon = DungeonMap(width: mapSize, height: mapSize);
     player = PlayerState(x: dungeon.playerSpawn.x, y: dungeon.playerSpawn.y, facing: Direction.north);
 
     renderer = MazeRenderer(
@@ -142,6 +155,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerSheetImage: playerSheet, 
       weaponSheetImage: weaponSheet,
       armorSheetImage: armorSheet,
+      shieldSheetImage: shieldSheet,
       enemySheets: enemySheets,
       playerSlashImage: playerSlashSprite,    // <--- Passa o do player
       enemySlashImages: enemySlashSprites,    // <--- Passa a lista dos inimigos
@@ -156,7 +170,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void render(Canvas canvas) {
     super.render(canvas); 
 
-    if (activeMessage != null && currentState == GameState.exploration) {
+    if (activeMessage != null /* && currentState == GameState.exploration */) {
       // (Código existente da caixa de diálogo da exploração...)
       double boxWidth = 340; double boxHeight = 100;
       double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
@@ -183,7 +197,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     for (int i = 0; i < playerCombatStats.inventory.length; i++) {
       Item item = playerCombatStats.inventory[i];
       Color textColor = i == inventoryCursor ? Colors.white : Colors.grey;
-      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item) ? " [Equipado]" : "";
+      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " [Equipado]" : "";
       String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
       
       // Fundo de seleção
@@ -242,6 +256,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     combatOverlay.equipNewArmor(armorSheet);
   }
 
+  Future<void> changeShieldSprite(String imagePath) async {
+    ui.Image newShield = await images.load(imagePath);
+    
+    shieldSheet = newShield;
+    
+    combatOverlay.equipNewShield(shieldSheet);
+  }
+
   @override
   void onGameResize(Vector2 gameSize) {
     super.onGameResize(gameSize);
@@ -259,7 +281,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     player.floorLevel = 1;
     player.hasKey = false;
     player.noiseLevel = 0;
-    
+
+    dungeon.width = mapSize;
+    dungeon.height = mapSize;
     dungeon.generateProceduralMap();
     player.x = dungeon.playerSpawn.x;
     player.y = dungeon.playerSpawn.y;
@@ -294,7 +318,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     overlays.add('MainMenu');
   }
 
-  void _handlePlayerDeath() {
+  void handlePlayerDeath() {
     currentState = GameState.gameOver;
     overlays.add('GameOver');
   }
@@ -334,6 +358,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     if (playerCombatStats.currentPhase == CombatPhase.entering || playerCombatStats.currentPhase == CombatPhase.exiting) return;
 
+    if (activeMessage != null) {
+      return; // Pausa o update do jogo enquanto a mensagem estiver ativa
+    }
+
     // --- 1. ATUALIZA A IA E COLISÃO ---
     if (combatOverlay.enemies.isNotEmpty) {
       Rect pHurtbox = playerCombatStats.getHurtbox(size);
@@ -347,10 +375,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             double damage = (playerCombatStats.comboCount >= 3) ? playerCombatStats.damage * 1.5 : playerCombatStats.damage;
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
             if(enemy.isVulnerable){
+              combatOverlay.addFloatingText("-${damage.toInt()}", enemy.getHurtbox(size), Palette.branco);
               enemy.hp -= damage;
               enemy.applyHitStun(0.3);
             }else{
               enemy.applyHitGuard(0.1);
+              combatOverlay.addFloatingText("BLOCK!", enemy.getHurtbox(size), Palette.cinzaCla);
             }
             
             if (enemy.hp <= 0) {
@@ -364,47 +394,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         if (combatOverlay.enemies.isEmpty) { _endEncounter(); return; }
       }
 
-      for (var proj in playerCombatStats.activeProjectiles) {
-        proj.update(dt);
-        if (!proj.isActive) continue;
-
-        for (var enemy in combatOverlay.enemies) {
-          // Checa colisão com o inimigo
-          if (!enemy.isDying && enemy.isVulnerable && proj.getHitbox(size).overlaps(enemy.getHurtbox(size))) {
-            enemy.hp -= proj.power;
-            enemy.applyHitStun(0.3);
-            if (enemy.hp <= 0) { 
-              enemy.hp = 0; enemy.isDying = true; encounterEssence += enemy.dropEssence; 
-            }
-            proj.isActive = false; // Destrói o pilar após queimar 1 inimigo
-            break; 
-          }
-        }
-      }
-      // Remove os pilares que bateram ou saíram da tela
-      playerCombatStats.activeProjectiles.removeWhere((p) => !p.isActive);
-
       // B. Processamento e Ataque dos Inimigos
-      for (var enemy in combatOverlay.enemies) {
-        enemy.update(dt, playerCombatStats, size); // IA é acionada aqui
-        if (enemy.isDying) continue;
-        if (enemy.currentPhase == CombatPhase.active && !enemy.attackHit) {
-          if (enemy.getHitbox(size).overlaps(pHurtbox)) {
-            enemy.attackHit = true;
-            combatOverlay.applyEnemyDamage(enemy);
-            playerCombatStats.hitFlashTimer = 0.20;
-            if (playerCombatStats.hp <= 0) _handlePlayerDeath();
-          }
-        }
-        for (var proj in enemy.projectiles) {
-          // O projétil só machuca se estiver "isFalling" (caindo)
-          if (proj.isActive && proj.isFalling && proj.getHitbox(size).overlaps(pHurtbox)) {
-            proj.isActive = false; // Destrói o projétil que acertou
-            combatOverlay.applyEnemyDamage(enemy); // Causa o dano
-            if (playerCombatStats.hp <= 0) _handlePlayerDeath();
-          }
-        }
-      }
+      
     }
 
     combatOverlay.enemies.removeWhere((e) => !e.isAlive);
@@ -423,11 +414,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     bool isFreeToMove = !showVictoryMessage && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk || playerCombatStats.currentPhase == CombatPhase.guard);
 
     if (isFreeToMove) {
-      if (downPressed) { playerCombatStats.isGuarding = true; playerCombatStats.currentPhase = CombatPhase.guard; } 
+      if (downPressed && !playerCombatStats.cansado) { playerCombatStats.isGuarding = true; playerCombatStats.currentPhase = CombatPhase.guard; } 
       else {
         playerCombatStats.isGuarding = false;
-        if (leftPressed) { playerCombatStats.strafePosition -= 1.5 * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
-        else if (rightPressed) { playerCombatStats.strafePosition += 1.5 * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+        if (leftPressed) { playerCombatStats.strafePosition -= (playerCombatStats.moveSpeed - playerCombatStats.moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+        else if (rightPressed) { playerCombatStats.strafePosition += (playerCombatStats.moveSpeed - playerCombatStats.moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
         else { playerCombatStats.currentPhase = CombatPhase.idle; }
         playerCombatStats.strafePosition = playerCombatStats.strafePosition.clamp(-1.0, 1.0);
       }
@@ -462,8 +453,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _performAttack() {
-    if (playerCombatStats.stamina >= 0 && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk)) {
-      playerCombatStats.stamina -= playerCombatStats.staminaCost;
+    if (playerCombatStats.stamina >= 0 && !playerCombatStats.cansado && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk)) {
+      if (playerCombatStats.staminaInfiniteTmr <= 0) {
+        playerCombatStats.stamina -= playerCombatStats.staminaCost;
+      }
+      if(playerCombatStats.stamina <=0){
+        playerCombatStats.stamina = 0;
+        playerCombatStats.cansado = true; 
+      }
       playerCombatStats.staminaTmr = playerCombatStats.staminaRegenDelay; 
       playerCombatStats.currentPhase = CombatPhase.windup;
       playerCombatStats.animTimer = playerCombatStats.windupTime;
@@ -506,18 +503,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 0.5;
   }
 
-  void _checkRandomEncounter() {
-    // Sorteia um número de 0 a 99
-    int chance = Random().nextInt(100);
-
-    // Se a chance sorteada for menor que o ruído atual, o combate começa!
-    if (chance < player.noiseLevel) {
-      debugPrint("⚠️ Uma emboscada! Ruído estava em ${player.noiseLevel}%");
-      player.noiseLevel = 0; // Zera o ruído para a próxima exploração
-      triggerEncounter();
-    }
-  }
-
   // (Mantenha seus métodos startInput e stopInput que já estavam prontos para a interface touch)
   void startInput(GameInput input) {
     if (input == GameInput.pause) { togglePause(); return; }
@@ -558,7 +543,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (input == GameInput.left) leftPressed = true;
       if (input == GameInput.right) rightPressed = true;
       if (input == GameInput.down) downPressed = true;
-      if (input == GameInput.buttonA) _performAttack();
+      if (input == GameInput.buttonA) {
+        if (activeMessage != null){
+          dismissMessage();
+        }else{
+          _performAttack();
+        }
+        
+      }
       
       // Muda Consumível Selecionado
       if (input == GameInput.up && playerCombatStats.consumables.isNotEmpty) {
@@ -580,20 +572,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
   
   void _useOrEquipItem(Item item) async {
-    // Pega apenas o final do caminho. Ex: "items/espada.png" vira "espada.png"
     String fileName = item.imagePath.split('/').last;
 
     if (item.type == ItemType.weapon) { 
       playerCombatStats.equippedWeapon = item; 
       if (item.onUse != null) item.onUse!(item, this);
-      // Busca a spritesheet usando o nome do arquivo, mas na pasta actors/
       await changeWeaponSprite('actors/$fileName'); 
     }
     else if (item.type == ItemType.armor) { 
       playerCombatStats.equippedArmor = item; 
-      // Busca a spritesheet usando o nome do arquivo, mas na pasta actors/
       if (item.onUse != null) item.onUse!(item, this);
       await changeArmorSprite('actors/$fileName'); 
+    }
+    else if (item.type == ItemType.shield) { 
+      playerCombatStats.equippedShield = item; 
+      if (item.onUse != null) item.onUse!(item, this);
+      await changeShieldSprite('actors/$fileName'); 
     }
     else if (item.type == ItemType.consumable) { 
       if (item.onUse != null) item.onUse!(item, this);
@@ -604,16 +598,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _useCombatConsumable(Item item) {
     if (item.type == ItemType.consumable) {
       if (item.onUse != null) item.onUse!(item, this);
-      _consumeItem(item); // Perde 1 de quantidade
+      _consumeItem(item); 
     } 
     else if (item.type == ItemType.spell) {
       if (playerCombatStats.mana >= item.manaCost) {
-        playerCombatStats.mana -= item.manaCost; // Gasta a mana!
+        playerCombatStats.mana -= item.manaCost; 
         if (item.onUse != null) item.onUse!(item, this);
-        // Magias não gastam "quantidade", então não chamamos _consumeItem!
       } else {
-        // Se não tiver mana, a tela pisca de aviso!
-        // Opcional: tocar um som de erro
+        //showMessage("Mana insuficiente para usar ${item.name}!");
+        combatOverlay.addFloatingText("Mana insuficiente!", playerCombatStats.getHurtbox(size), Palette.cinzaCla);
       }
     }
   }
@@ -631,13 +624,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _onPlayerStepped() {
     // 1. Avança a animação das armadilhas no mapa
     dungeon.advanceSpikes();
-
+    playerCombatStats.recoverMana();
     // 2. Verifica se o jogador pisou num espinho E se o espinho está esticado (estado 2)
     if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 2) {
       playerCombatStats.hp -= 20; // Dano pesado da armadilha
       playerCombatStats.applyHitStun(0.3); // Pisca em vermelho igual no combate!
       showMessage("Você pisou em uma armadilha de espinhos!");
-      if (playerCombatStats.hp <= 0) _handlePlayerDeath();
+      if (playerCombatStats.hp <= 0) handlePlayerDeath();
     }
 
     dungeon.moveEnemies(Point(player.x, player.y));
@@ -665,10 +658,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (playerTile == TileType.door) {
       if (player.hasKey) {
         // Envia a mensagem, e quando ela fechar (onDismiss), avança de nível!
-        showMessage("🚪 A porta se abre. Descendo para o Andar ${player.floorLevel + 1}...", onDismiss: () {
+        showMessage("A porta se abre. Descendo para o Andar ${player.floorLevel + 1}...", onDismiss: () {
           player.floorLevel++;
           player.hasKey = false;
           player.noiseLevel = 0;
+          dungeon.width += 5; 
+          dungeon.height += 5;
           dungeon.generateProceduralMap(); 
           player.x = dungeon.playerSpawn.x;
           player.y = dungeon.playerSpawn.y;
@@ -705,6 +700,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           ItemDatabase.armaduraCouro,
           ItemDatabase.machado,
           ItemDatabase.firePillar,
+          ItemDatabase.escudoMadeira,
+          ItemDatabase.escudoFerro,
+          ItemDatabase.piercingShot,
+          ItemDatabase.toxicCloud,
         ];
 
         // Filtra a lista deixando APENAS os itens que o jogador NÃO TEM no inventário
@@ -734,6 +733,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           ItemDatabase.healthPotion,
           ItemDatabase.manaPotion,
           ItemDatabase.bomb,
+          ItemDatabase.staminaPotion,
         ];
 
           int totalConsumables = allConsumables.length;

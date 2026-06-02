@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
 import 'dart:math';
 
 enum TileType { wall, floor, door, exit, chest, spike }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
-  final int width;
-  final int height;
+  int width;
+  int height;
   late List<List<TileType>> grid;
   late List<List<bool>> explored; 
 
@@ -16,7 +15,6 @@ class DungeonMap {
 
   int spikeState = 0;
   
-  // --- NOVO: Lista de Inimigos no Mapa ---
   List<Point<int>> roamingEnemies = [];
 
   void advanceSpikes() {
@@ -29,16 +27,23 @@ class DungeonMap {
     return (p1.x - p2.x).abs() + (p1.y - p2.y).abs();
   }
 
-  // --- NOVO: Ajuda a IA do inimigo a não andar por paredes ou portas fechadas ---
   bool _isWalkable(int x, int y) {
     TileType t = getTile(x, y);
     return t == TileType.floor || t == TileType.spike;
   }
 
-  // --- NOVO: Move os inimigos 1 passo em direção ao jogador ---
   void moveEnemies(Point<int> playerPos) {
+    // Distância máxima que o inimigo consegue ver o jogador (em blocos)
+    int aggroRange = 5; 
+
     for (int i = 0; i < roamingEnemies.length; i++) {
       Point<int> enemy = roamingEnemies[i];
+
+      // 1. CHECAGEM DE DISTÂNCIA: Se o jogador estiver muito longe, o inimigo ignora e fica parado!
+      if (_calculateDistance(enemy, playerPos) > aggroRange) {
+        continue; 
+      }
+
       int dx = playerPos.x - enemy.x;
       int dy = playerPos.y - enemy.y;
 
@@ -47,7 +52,7 @@ class DungeonMap {
       int stepX = dx == 0 ? 0 : dx.sign;
       int stepY = dy == 0 ? 0 : dy.sign;
 
-      // Tenta andar no eixo onde ele está mais distante do jogador
+      // 2. IA DE PERSEGUIÇÃO (Só roda se o jogador estiver dentro do aggroRange)
       if (dx.abs() > dy.abs()) {
         if (_isWalkable(enemy.x + stepX, enemy.y)) {
           roamingEnemies[i] = Point(enemy.x + stepX, enemy.y);
@@ -102,8 +107,11 @@ class DungeonMap {
     for (int i = 0; i < floorTiles.length; i++) {
       if (_calculateDistance(floorTiles[i], playerSpawn) >= 6) { selectedKey = floorTiles[i]; floorTiles.removeAt(i); break; }
     }
-    if (selectedKey == null && floorTiles.isNotEmpty) selectedKey = floorTiles.removeAt(0); 
-    else if (selectedKey == null) selectedKey = playerSpawn; 
+    if (selectedKey == null && floorTiles.isNotEmpty) {
+      selectedKey = floorTiles.removeAt(0);
+    } else {
+      selectedKey ??= playerSpawn;
+    } 
     keyPosition = selectedKey;
 
     int numChests = random.nextInt(3) + 1; 
@@ -112,7 +120,6 @@ class DungeonMap {
     int numSpikes = random.nextInt(6) + 4; 
     for (int i = 0; i < numSpikes; i++) { if (floorTiles.isNotEmpty) { Point<int> spikePos = floorTiles.removeAt(0); grid[spikePos.y][spikePos.x] = TileType.spike; } }
 
-    // --- NOVO: Distribuição dos Inimigos no Mapa ---
     roamingEnemies.clear();
     int numRoaming = random.nextInt(4) + 3; // de 3 a 6 inimigos patrulhando
     for (int i = 0; i < numRoaming; i++) {

@@ -5,6 +5,7 @@ import 'package:dungeon_crawler/game/overlays/main_menu_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/pause_menu_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const DungeonApp());
@@ -71,47 +72,68 @@ class _GameScreenState extends State<GameScreen> {
                 color: Palette.cinza,
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // D-PAD
-                    SizedBox(
-                      width: 220, height: 220,
-                      child: Stack(
+                    // --- D-PAD REFEITO COM SUPORTE A DESLIZE ---
+                    Expanded(
+                      flex: 5,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Listener(
+                              // Detecta quando o dedo toca, move ou sai da tela
+                              onPointerDown: (event) => _handleDPadSlide(event.localPosition, constraints.biggest),
+                              onPointerMove: (event) => _handleDPadSlide(event.localPosition, constraints.biggest),
+                              onPointerUp: (_) => _handleDPadEnd(),
+                              onPointerCancel: (_) => _handleDPadEnd(),
+                              child: Stack(
+                                children: [
+                                  Align(alignment: Alignment.center, child: Container(width: 63, height: 110, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
+                                  Align(alignment: Alignment.center, child: Container(width: 110, height: 63, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
+                                  Align(alignment: Alignment.topCenter, child: _buildStaticArrow(Icons.arrow_upward)),
+                                  Align(alignment: Alignment.bottomCenter, child: _buildStaticArrow(Icons.arrow_downward)),
+                                  Align(alignment: Alignment.centerLeft, child: _buildStaticArrow(Icons.arrow_back)),
+                                  Align(alignment: Alignment.centerRight, child: _buildStaticArrow(Icons.arrow_forward)),
+                                ],
+                              ),
+                            );
+                          }
+                        ),
+                      ),
+                    ),
+
+                    // --- BOTÃO DE PAUSE ---
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Align(alignment: Alignment.topCenter, child: _buildHoldButton(Icons.arrow_upward, GameInput.up)),
-                          Align(alignment: Alignment.bottomCenter, child: _buildHoldButton(Icons.arrow_downward, GameInput.down)),
-                          Align(alignment: Alignment.center, child:Container(width: 75, height: 75,decoration: BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle),)),
-                          Align(alignment: Alignment.centerLeft, child: _buildHoldButton(Icons.arrow_back, GameInput.left)),
-                          Align(alignment: Alignment.centerRight, child: _buildHoldButton(Icons.arrow_forward, GameInput.right)),
+                          GestureDetector(
+                            onTapDown: (_) => _game.startInput(GameInput.pause),
+                            child: Container(
+                              width: 50, height: 20,
+                              decoration: BoxDecoration(color: Palette.cinzaEsc, borderRadius: BorderRadius.circular(15)),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          const Text("PAUSE", style: TextStyle(color: Palette.cinzaEsc, fontSize: 10, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
 
-                    // --- 2. BOTÃO DE PAUSE NO MEIO (Start/Select) ---
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        GestureDetector(
-                          onTapDown: (_) => _game.startInput(GameInput.pause),
-                          child: Container(
-                            width: 60, height: 25,
-                            decoration: BoxDecoration(color: Palette.cinzaEsc, borderRadius: BorderRadius.circular(15)),
-                          ),
+                    // --- BOTÕES A e B ---
+                    Expanded(
+                      flex: 4,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Stack(
+                          children: [
+                            Align(alignment: Alignment.topRight, child: _buildActionButton("A", GameInput.buttonA, Palette.cinzaEsc)),
+                            Align(alignment: Alignment.bottomLeft, child: _buildActionButton("B", GameInput.buttonB, Palette.cinzaEsc)),
+                          ],
                         ),
-                        const SizedBox(height: 5),
-                        const Text("PAUSE", style: TextStyle(color: Palette.cinzaEsc, fontSize: 10, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-
-                    // BOTÕES A e B
-                    SizedBox(
-                      width: 180, height: 180,
-                      child: Stack(
-                        children: [
-                          Align(alignment: Alignment.topRight, child: _buildActionButton("A", GameInput.buttonA, Palette.cinzaEsc)),
-                          Align(alignment: Alignment.centerLeft, child: _buildActionButton("B", GameInput.buttonB, Palette.cinzaEsc)),
-                        ],
                       ),
                     ),
                   ],
@@ -124,34 +146,65 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  
-  // Novo widget para botões direcionais que suportam segurar
-  Widget _buildHoldButton(IconData icon, GameInput input) {
-    return GestureDetector(
-      onTapDown: (_) => _game.startInput(input), // Dedo pressionou
-      onTapUp: (_) => _game.stopInput(input),    // Dedo soltou
-      onTapCancel: () => _game.stopInput(input), // Dedo arrastou pra fora
-      child: Container(
-        width: 75, 
-        height: 75,
-        decoration: BoxDecoration(
-          color: Palette.cinzaEsc, 
-          shape: BoxShape.rectangle
-        ),
-        child: Icon(icon, color: Palette.branco,size: 30,),
-      ),
+  // --- NOVA LÓGICA DE DESLIZE DO D-PAD ---
+  GameInput? _currentDPadInput;
+
+  void _handleDPadSlide(Offset localPosition, Size dpadSize) {
+    // Encontra o centro do D-Pad
+    double dx = localPosition.dx - (dpadSize.width / 2);
+    double dy = localPosition.dy - (dpadSize.height / 2);
+
+    GameInput? newInput;
+
+    // Cria uma "Zona Morta" no meio para o jogador poder descansar o dedo sem andar
+    if (dx.abs() < 25 && dy.abs() < 25) {
+      newInput = null; 
+    } 
+    // Divide o D-pad em 4 triângulos invisíveis formando um "X"
+    else if (dx.abs() > dy.abs()) {
+      newInput = dx > 0 ? GameInput.right : GameInput.left;
+    } else {
+      newInput = dy > 0 ? GameInput.down : GameInput.up;
+    }
+
+    // Só avisa o jogo se a direção mudar (ex: escorregou do Cima pro Lado)
+    if (newInput != _currentDPadInput) {
+      if (_currentDPadInput != null) _game.stopInput(_currentDPadInput!);
+      _currentDPadInput = newInput;
+      if (_currentDPadInput != null){
+        HapticFeedback.lightImpact();
+        _game.startInput(_currentDPadInput!);
+      } 
+    }
+  }
+
+  void _handleDPadEnd() {
+    if (_currentDPadInput != null) {
+      _game.stopInput(_currentDPadInput!);
+      _currentDPadInput = null;
+    }
+  }
+
+  // Desenha os botões do D-Pad apenas como visual (quem controla a ação agora é o Listener invisível em cima deles)
+  Widget _buildStaticArrow(IconData icon) {
+    return Container(
+      width: 63, height: 63,
+      decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
+      child: Icon(icon, color: Palette.branco, size: 30),
     );
   }
 
-  // Novo widget para botões de ação que suportam segurar
+  // Os botões A e B continuam iguais, pois geralmente você bate o dedo neles
   Widget _buildActionButton(String label, GameInput input, Color color) {
     return GestureDetector(
-      onTapDown: (_) => _game.startInput(input),
+      onTapDown: (_) {
+        HapticFeedback.mediumImpact(); 
+        _game.startInput(input);
+      },
       onTapUp: (_) => _game.stopInput(input),
       onTapCancel: () => _game.stopInput(input),
       child: Container(
-        width: 75, 
-        height: 75,
+        width: 64, height: 64,
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,

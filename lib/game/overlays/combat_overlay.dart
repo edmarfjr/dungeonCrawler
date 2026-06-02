@@ -1,7 +1,10 @@
 import 'dart:ui' as ui;
 import 'dart:math';
+import 'package:dungeon_crawler/game/components/Effects/buff_particles.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
+import 'package:dungeon_crawler/game/components/Effects/floating_text.dart';
+import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
@@ -27,6 +30,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   late SpriteAnimation armorIdle, armorWalk, armorAttackWindup, armorAttackActive, armorAttackRecovery, armorGuard, armorHit;
   late SpriteAnimationTicker armorIdleTicker, armorWalkTicker, armorAttackWindupTicker, armorAttackActiveTicker, armorAttackRecoveryTicker, armorGuardTicker, armorHitTicker;
 
+  late SpriteAnimation shieldIdle, shieldWalk, shieldAttackWindup, shieldAttackActive, shieldAttackRecovery, shieldGuard, shieldHit;
+  late SpriteAnimationTicker shieldIdleTicker, shieldWalkTicker, shieldAttackWindupTicker, shieldAttackActiveTicker, shieldAttackRecoveryTicker, shieldGuardTicker, shieldHitTicker;
+
 
   Map<EnemyType, EnemyAnimationSet> enemyAnimationSets = {}; 
   Map<Enemy, SpriteAnimationTicker> enemyTickers = {};       
@@ -35,10 +41,18 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   final ui.Image playerSlashImage;
   ui.Image weaponSheetImage; 
   ui.Image armorSheetImage; 
+  ui.Image shieldSheetImage;
   final Map<EnemyType, ui.Image> enemySlashImages;         
 
   List<Enemy> enemies = [];
   double _walkTimer = 0.0;
+
+
+  // Função super fácil para você chamar de qualquer lugar!
+  void addFloatingText(String text, Rect targetRect, Color color) {
+    // Nasce bem no meio do alvo, um pouco para cima
+    add(FloatingText(text, targetRect.center.dx, targetRect.top + 20, color));
+  }
 
   CombatOverlay({
     required this.playerStats, 
@@ -47,6 +61,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     required this.playerSlashImage, 
     required this.weaponSheetImage, 
     required this.armorSheetImage, 
+    required this.shieldSheetImage,
     required this.enemySlashImages
   }) {
     _initSpriteSheets();
@@ -71,6 +86,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     // --- ARMADURA DO PLAYER ---
     _initArmorAnimations();
+
+    _initShieldAnimations();
 
     // --- INIMIGOS ---
     enemyAnimationSets.clear();
@@ -99,16 +116,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     weaponAttackActiveTicker = SpriteAnimationTicker(weaponAttackActive); weaponAttackRecoveryTicker = SpriteAnimationTicker(weaponAttackRecovery); weaponGuardTicker = SpriteAnimationTicker(weaponGuard); weaponHitTicker = SpriteAnimationTicker(weaponHit);
   }
 
-  void equipNewWeapon(ui.Image newWeaponImage) {
-    weaponSheetImage = newWeaponImage; 
-    _initWeaponAnimations();           
-  }
-
-  void equipNewArmor(ui.Image newArmorImage) {
-    armorSheetImage = newArmorImage; 
-    _initArmorAnimations();           
-  }
-
+  
   void _initArmorAnimations() {
     final armorSheet = SpriteSheet.fromColumnsAndRows(image: armorSheetImage, columns: 5, rows: 1);
     armorIdle = armorSheet.createAnimation(row: 0, from: 0, to: 1, stepTime: 0.20, loop: true);
@@ -123,11 +131,48 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     armorAttackActiveTicker = SpriteAnimationTicker(armorAttackActive); armorAttackRecoveryTicker = SpriteAnimationTicker(armorAttackRecovery); armorGuardTicker = SpriteAnimationTicker(armorGuard); armorHitTicker = SpriteAnimationTicker(armorHit);
   }
 
-  void startEncounter(List<Enemy> newEnemies) {
-    enemies = newEnemies; enemyTickers.clear(); enemyLastPhase.clear(); playerStats.strafePosition = 0.0; playerIdleTicker.reset();
+  void _initShieldAnimations() {
+    final shieldSheet = SpriteSheet.fromColumnsAndRows(image: shieldSheetImage, columns: 5, rows: 1);
+    shieldIdle = shieldSheet.createAnimation(row: 0, from: 0, to: 1, stepTime: 0.20, loop: true);
+    shieldWalk = shieldSheet.createAnimation(row: 0, from: 0, to: 1, stepTime: 0.15, loop: true);
+    shieldAttackWindup = shieldSheet.createAnimation(row: 0, from: 1, to: 2, stepTime: 0.10, loop: false);
+    shieldAttackActive = shieldSheet.createAnimation(row: 0, from: 2, to: 3, stepTime: 0.10, loop: false);
+    shieldAttackRecovery = shieldSheet.createAnimation(row: 0, from: 2, to: 3, stepTime: 0.5, loop: false);
+    shieldGuard = shieldSheet.createAnimation(row: 0, from: 3, to: 4, stepTime: 0.20, loop: true);
+    shieldHit = shieldSheet.createAnimation(row: 0, from: 4, to: 5, stepTime: 0.10, loop: false);
+
+    shieldIdleTicker = SpriteAnimationTicker(shieldIdle); shieldWalkTicker = SpriteAnimationTicker(shieldWalk); shieldAttackWindupTicker = SpriteAnimationTicker(shieldAttackWindup);
+    shieldAttackActiveTicker = SpriteAnimationTicker(shieldAttackActive); shieldAttackRecoveryTicker = SpriteAnimationTicker(shieldAttackRecovery); shieldGuardTicker = SpriteAnimationTicker(shieldGuard); shieldHitTicker = SpriteAnimationTicker(shieldHit);
   }
 
-  SpriteAnimationTicker _getTickerForEnemy(Enemy enemy) {
+
+  void equipNewWeapon(ui.Image newWeaponImage) {
+    weaponSheetImage = newWeaponImage; 
+    _initWeaponAnimations();           
+  }
+
+  void equipNewArmor(ui.Image newArmorImage) {
+    armorSheetImage = newArmorImage; 
+    _initArmorAnimations();           
+  }
+
+  void equipNewShield(ui.Image newShieldImage) {
+    shieldSheetImage = newShieldImage; 
+    _initShieldAnimations();           
+  }
+
+  void startEncounter(List<Enemy> newEnemies) {
+    enemies = newEnemies; 
+    enemyTickers.clear(); 
+    enemyLastPhase.clear(); 
+    playerStats.strafePosition = 0.0; 
+    playerIdleTicker.reset();
+    
+    // --- NOVO: Pede ao Flame para tomar conta dos inimigos! ---
+    for (var e in enemies) { add(e); } 
+  }
+
+  SpriteAnimationTicker getTickerForEnemy(Enemy enemy) {
     final animSet = enemyAnimationSets[enemy.type] ?? enemyAnimationSets[EnemyType.slime]!;
     SpriteAnimation targetAnim = animSet.idleWalk;
     if (enemy.currentPhase == CombatPhase.windup) targetAnim = animSet.attackWindup;
@@ -144,10 +189,20 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   @override
   void update(double dt) {
     super.update(dt);
-    if (playerStats.currentPhase == CombatPhase.walk || playerStats.currentPhase == CombatPhase.idle) playerStats.recoverStamina(dt);
-    if (gameRef.currentState != GameState.combat) return;
     
+    if (playerStats.currentPhase == CombatPhase.walk || playerStats.currentPhase == CombatPhase.idle) playerStats.recoverStamina(dt);
     playerStats.updatePhase(dt);
+
+    if (playerStats.staminaInfiniteTmr > 0 && gameRef.currentState == GameState.combat) {
+      // 30% de chance por frame de gerar uma partícula nova (ajuste para mais ou menos denso)
+      if (Random().nextDouble() < 0.3) { 
+        double px = (size.x / 2) + (playerStats.strafePosition * size.x * 0.35) + (Random().nextDouble() * 100 - 50);
+        double py = size.y - 50 - (Random().nextDouble() * 50); // Nasce perto do chão
+        add(BuffParticle(px, py, 40 + Random().nextDouble() * 60, 0.8 + Random().nextDouble())); // Vive cerca de 1 a 2 seg
+      }
+    }
+
+    if (gameRef.currentState != GameState.combat) return;
     if (playerStats.currentPhase == CombatPhase.walk) _walkTimer += dt;
     _updateAnimationTimers(dt);
   }
@@ -156,22 +211,39 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     if (playerStats.hitFlashTimer > 0) {
       playerHitTicker.update(dt);
       weaponHitTicker.update(dt); 
+      armorHitTicker.update(dt);  // <--- Faltava a Armadura
+      shieldHitTicker.update(dt); // <--- Faltava o Escudo
     } else {
       switch (playerStats.currentPhase) {
-        case CombatPhase.idle: playerIdleTicker.update(dt); weaponIdleTicker.update(dt); break;
-        case CombatPhase.walk: playerWalkTicker.update(dt); weaponWalkTicker.update(dt); break;
-        case CombatPhase.windup: playerAttackWindupTicker.update(dt); weaponAttackWindupTicker.update(dt); break;
-        case CombatPhase.active: playerAttackActiveTicker.update(dt); weaponAttackActiveTicker.update(dt); break;
-        case CombatPhase.recovery: playerAttackRecoveryTicker.update(dt); weaponAttackRecoveryTicker.update(dt); break;
-        case CombatPhase.guard: playerGuardTicker.update(dt); weaponGuardTicker.update(dt); break;
-        case CombatPhase.hit: break; 
+        case CombatPhase.idle: 
+          playerIdleTicker.update(dt); weaponIdleTicker.update(dt); armorIdleTicker.update(dt); shieldIdleTicker.update(dt); 
+          break;
+        case CombatPhase.walk: 
+          playerWalkTicker.update(dt); weaponWalkTicker.update(dt); armorWalkTicker.update(dt); shieldWalkTicker.update(dt); 
+          break;
+        case CombatPhase.windup: 
+          playerAttackWindupTicker.update(dt); weaponAttackWindupTicker.update(dt); armorAttackWindupTicker.update(dt); shieldAttackWindupTicker.update(dt); 
+          break;
+        case CombatPhase.active: 
+          playerAttackActiveTicker.update(dt); weaponAttackActiveTicker.update(dt); armorAttackActiveTicker.update(dt); shieldAttackActiveTicker.update(dt); 
+          break;
+        case CombatPhase.recovery: 
+          playerAttackRecoveryTicker.update(dt); weaponAttackRecoveryTicker.update(dt); armorAttackRecoveryTicker.update(dt); shieldAttackRecoveryTicker.update(dt); 
+          break;
+        case CombatPhase.guard: 
+          playerGuardTicker.update(dt); weaponGuardTicker.update(dt); armorGuardTicker.update(dt); shieldGuardTicker.update(dt); 
+          break;
+        case CombatPhase.hit: 
+          break; 
         case CombatPhase.entering: 
-        case CombatPhase.exiting: playerIdleTicker.update(dt); weaponIdleTicker.update(dt); break;
+        case CombatPhase.exiting: 
+          playerIdleTicker.update(dt); weaponIdleTicker.update(dt); armorIdleTicker.update(dt); shieldIdleTicker.update(dt); 
+          break;
       }
     }
     for (var enemy in enemies) { 
       if (enemy.hitFlashTimer <= 0) {
-        _getTickerForEnemy(enemy).update(dt); 
+        getTickerForEnemy(enemy).update(dt); 
       }
     }
   }
@@ -180,8 +252,15 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     double defense = playerStats.equippedArmor?.power ?? 0; // Armadura reduz dano!
     double dmg = max(1, enemy.damage - defense);
     if (playerStats.isGuarding) {
-      if (playerStats.stamina >= 25.0) { 
-        playerStats.stamina -= 25.0; 
+      if (playerStats.stamina >= 0) {
+        if (playerStats.staminaInfiniteTmr <= 0){
+          playerStats.stamina -= (25.0 - playerStats.equippedShield!.power); 
+        } 
+        playerStats.stamina = playerStats.stamina.clamp(0, playerStats.maxStamina);
+        if (playerStats.stamina <= 0) {
+          playerStats.cansado = true;
+        }
+        playerStats.flashColor = Palette.cinza;
         playerStats.hitFlashTimer = 0.1; 
       } else { 
         playerStats.stamina = 0; 
@@ -201,26 +280,34 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   @override
   void render(Canvas canvas) {
+    // 1. O que estiver aqui é desenhado ANTES dos inimigos (Lá no fundo da tela)
     if (gameRef.currentState == GameState.combat) {
-      if (enemies.isNotEmpty) {
-        _drawEnemy(canvas);
-      }
-      _drawAttackEffects(canvas);
-      _drawPlayer(canvas);
-      
-      if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
-      
-      _drawVictoryMessage(canvas);
+      _drawAttackEffects(canvas); 
     }
-    _drawPlayerUI(canvas);
-    _drawBottomBarBackground(canvas);
-    if (gameRef.currentState == GameState.combat) {
-      if (enemies.isNotEmpty) _drawEnemyUI(canvas); 
-    }
-
   }
 
-  void _drawAttackEffects(Canvas canvas) {
+  @override
+  void renderTree(Canvas canvas) {
+    // 2. Manda o Flame desenhar o fundo (render acima) e DEPOIS todos os Inimigos, Magias e Partículas
+    super.renderTree(canvas);
+
+    // 3. O que estiver aqui é desenhado POR CIMA dos inimigos (Primeiro Plano da Câmera)
+    if (gameRef.currentState == GameState.combat) {
+      
+      _drawPlayer(canvas); // A arma do jogador volta a tapar os inimigos!
+      
+      if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
+      _drawVictoryMessage(canvas);
+    }
+    
+    // 4. A interface (HP, Mana, Textos) fica sempre por cima de absolutamente tudo
+    _drawPlayerUI(canvas);
+    _drawEffects(canvas);
+    _drawBottomBarBackground(canvas);
+  }
+
+
+  void _drawEffects(Canvas canvas) {
     if (playerStats.healVfxTimer > 0) {
       canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.greenAccent.withOpacity(playerStats.healVfxTimer.clamp(0.0, 0.5)));
     }
@@ -230,6 +317,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     if (playerStats.manaVfxTimer > 0) {
       canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.blueAccent.withOpacity(playerStats.manaVfxTimer.clamp(0.0, 0.5)));
     }
+  }
+
+  void _drawAttackEffects(Canvas canvas) {
     if (playerStats.currentPhase == CombatPhase.active) {
       canvas.drawImageRect(
         playerSlashImage,
@@ -253,23 +343,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         );
       }
 
-      for (var proj in enemy.projectiles) {
-        if (!proj.isActive) continue;
-
-        Paint projPaint = Paint();
-        projPaint.colorFilter =  ColorFilter.mode(enemy.color, BlendMode.modulate); 
-      
-        final projImg = enemySlashImages[enemy.type] ?? enemySlashImages[EnemyType.slime]!;
-       
-        //canvas.drawCircle(proj.getHitbox(size).center, 15, projPaint);
-        //canvas.drawCircle(proj.getHitbox(size).center, 8, Paint()..color = Colors.white);
-        canvas.drawImageRect(
-          projImg,
-          Rect.fromLTWH(0, 0, projImg.width.toDouble(), projImg.height.toDouble()),
-          proj.getHitboxImageSize(size),
-          projPaint 
-        );
-      }
     }
   }
 
@@ -285,12 +358,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       if (enemy.currentPhase == CombatPhase.active && enemy.getHitbox(size).width > 0) {
         canvas.drawRect(enemy.getHitbox(size), Paint()..color = Colors.red.withOpacity(0.4)..style = PaintingStyle.fill);
         canvas.drawRect(enemy.getHitbox(size), Paint()..color = Colors.red..style = PaintingStyle.stroke..strokeWidth = 2);
-      }
-
-      for (var proj in enemy.projectiles) {
-        Color pColor = proj.isFalling ? Colors.red : Colors.yellow;
-        canvas.drawRect(proj.getHitbox(size), Paint()..color = pColor.withOpacity(0.4)..style = PaintingStyle.fill);
-        canvas.drawRect(proj.getHitbox(size), Paint()..color = pColor..style = PaintingStyle.stroke..strokeWidth = 2);
       }
     }
     canvas.drawRect(playerStats.getHurtbox(size), Paint()..color = Colors.blueAccent.withOpacity(0.4)..style = PaintingStyle.fill);
@@ -335,9 +402,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       double yPixel = size.y * enemy.yPosition - (enemy.height / 2);
       final dstRect = Rect.fromLTWH(xPixel, yPixel, enemy.width, enemy.height);
 
-      SpriteAnimationTicker activeTicker = _getTickerForEnemy(enemy);
-      final Color flashColor = enemy.hitFlashTimer > 0 ? enemy.flashColor : enemy.color;
-      final BlendMode blendMode = BlendMode.modulate;//enemy.hitFlashTimer > 0 ? BlendMode.srcATop : BlendMode.modulate;
+      SpriteAnimationTicker activeTicker = getTickerForEnemy(enemy);
+      final Color flashColor = enemy.hitFlashTimer > 0 ? enemy.flashColor : Colors.white;
+      final BlendMode blendMode = enemy.hitFlashTimer > 0 ? BlendMode.srcATop : BlendMode.modulate;
 
       final tintPaint = Paint()..colorFilter = ColorFilter.mode(flashColor, blendMode);
 
@@ -360,15 +427,16 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     SpriteAnimationTicker activeTicker;
     SpriteAnimationTicker activeWeaponTicker; 
     SpriteAnimationTicker activeArmorTicker;
+    SpriteAnimationTicker activeShieldTicker;
 
     switch (playerStats.currentPhase) {
-      case CombatPhase.windup: activeTicker = playerAttackWindupTicker; activeWeaponTicker = weaponAttackWindupTicker; activeArmorTicker = armorAttackWindupTicker; break;
-      case CombatPhase.active: activeTicker = playerAttackActiveTicker; activeWeaponTicker = weaponAttackActiveTicker; activeArmorTicker = armorAttackActiveTicker; break;
-      case CombatPhase.recovery: activeTicker = playerAttackRecoveryTicker; activeWeaponTicker = weaponAttackRecoveryTicker; activeArmorTicker = armorAttackRecoveryTicker; break;
-      case CombatPhase.guard: activeTicker = playerGuardTicker; activeWeaponTicker = weaponGuardTicker; activeArmorTicker = armorGuardTicker; break;
-      case CombatPhase.walk: activeTicker = playerWalkTicker; activeWeaponTicker = weaponWalkTicker; activeArmorTicker = armorWalkTicker; break;
-      case CombatPhase.hit: activeTicker = playerHitTicker; activeWeaponTicker = weaponHitTicker; activeArmorTicker = armorHitTicker; break;
-      default: activeTicker = playerIdleTicker; activeWeaponTicker = weaponIdleTicker; activeArmorTicker = armorIdleTicker; break;
+      case CombatPhase.windup: activeTicker = playerAttackWindupTicker; activeWeaponTicker = weaponAttackWindupTicker; activeArmorTicker = armorAttackWindupTicker; activeShieldTicker = shieldAttackWindupTicker; break;
+      case CombatPhase.active: activeTicker = playerAttackActiveTicker; activeWeaponTicker = weaponAttackActiveTicker; activeArmorTicker = armorAttackActiveTicker; activeShieldTicker = shieldAttackActiveTicker; break;
+      case CombatPhase.recovery: activeTicker = playerAttackRecoveryTicker; activeWeaponTicker = weaponAttackRecoveryTicker; activeArmorTicker = armorAttackRecoveryTicker; activeShieldTicker = shieldAttackRecoveryTicker; break;
+      case CombatPhase.guard: activeTicker = playerGuardTicker; activeWeaponTicker = weaponGuardTicker; activeArmorTicker = armorGuardTicker; activeShieldTicker = shieldGuardTicker; break;
+      case CombatPhase.walk: activeTicker = playerWalkTicker; activeWeaponTicker = weaponWalkTicker; activeArmorTicker = armorWalkTicker; activeShieldTicker = shieldWalkTicker; break;
+      case CombatPhase.hit: activeTicker = playerHitTicker; activeWeaponTicker = weaponHitTicker; activeArmorTicker = armorHitTicker; activeShieldTicker = shieldHitTicker; break;
+      default: activeTicker = playerIdleTicker; activeWeaponTicker = weaponIdleTicker; activeArmorTicker = armorIdleTicker; activeShieldTicker = shieldIdleTicker; break;
     }
 
     final playerPaint = Paint();
@@ -376,6 +444,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     Color corArma = playerStats.equippedWeapon?.cor ?? Colors.white;
     Color corArmadura = playerStats.equippedArmor?.cor ?? Colors.white;
+    Color corEscudo = playerStats.equippedShield?.cor ?? Colors.white;
 
     final weaponPaint = Paint();
     weaponPaint.colorFilter = ColorFilter.mode(corArma, BlendMode.modulate); 
@@ -383,10 +452,14 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     final armorPaint = Paint();
     armorPaint.colorFilter =  ColorFilter.mode(corArmadura, BlendMode.modulate); 
 
+    final shieldPaint = Paint();
+    shieldPaint.colorFilter =  ColorFilter.mode(corEscudo, BlendMode.modulate); 
+
     if (playerStats.hitFlashTimer > 0) { 
-      playerPaint.colorFilter = const ColorFilter.mode(Palette.vermelho, BlendMode.modulate); 
-      weaponPaint.colorFilter = const ColorFilter.mode(Palette.vermelho, BlendMode.modulate); // Adicionado para a arma piscar junto
-      armorPaint.colorFilter = const ColorFilter.mode(Palette.vermelho, BlendMode.modulate); // Adicionado para a armadura piscar junto
+      playerPaint.colorFilter =  ColorFilter.mode(playerStats.flashColor, BlendMode.modulate); 
+    }
+    if(playerStats.cansado) {
+      playerPaint.colorFilter = const ColorFilter.mode(Palette.bege, BlendMode.modulate); 
     }
     
     // 1. Desenha o Corpo
@@ -397,6 +470,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     
     // 3. Desenha a Armadura
     activeArmorTicker.getSprite().renderRect(canvas, dstRect, overridePaint: armorPaint);
+    
+    // 4. Desenha o Escudo
+    activeShieldTicker.getSprite().renderRect(canvas, dstRect, overridePaint: shieldPaint);
   }
 
   void _drawPlayerUI(Canvas canvas) {

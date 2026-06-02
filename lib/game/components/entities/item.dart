@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
-import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
+import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 
   
-enum ItemType { weapon, armor, consumable, spell }
+enum ItemType { weapon, armor, shield, consumable, spell }
 
 class Item {
   final String name;
@@ -22,7 +22,7 @@ class Item {
 }
 
 class ItemDatabase {
-  static Item get adaga => Item("Adaga", ItemType.weapon, 'itens/dagger.png', 5, cor: Palette.cinza, onUse: (item, game) {
+  static Item get adaga => Item("Adaga", ItemType.weapon, 'itens/dagger.png', 0, cor: Palette.cinza, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
@@ -30,24 +30,24 @@ class ItemDatabase {
   });
 
   static Item get espadaCurta => Item("Espada Curta", ItemType.weapon, 'itens/sword.png', 10, cor: Palette.cinza, onUse: (item, game) {
-    game.playerCombatStats.windupTime = 0.2;
-    game.playerCombatStats.activeTime = 0.2;
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
     game.playerCombatStats.staminaCost = 20.0;
   });
 
   static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 15, cor: Palette.cinzaCla, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.2;
-    game.playerCombatStats.activeTime = 0.2;
+    game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
     game.playerCombatStats.staminaCost = 25.0;
   });
 
-  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 15, cor: Palette.cinza, onUse: (item, game) {
+  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Palette.cinza, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.2;
-    game.playerCombatStats.activeTime = 0.2;
-    game.playerCombatStats.recoveryTime = 0.2;
-    game.playerCombatStats.staminaCost = 25.0;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.3;
+    game.playerCombatStats.staminaCost = 30.0;
   });
 
   static Item get tanga => Item("Tanga", ItemType.armor, 'itens/tanga.png', 0, cor: Palette.bege, onUse: (item, game) {
@@ -59,6 +59,18 @@ class ItemDatabase {
   });
   static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 10, cor: Palette.cinzaMed, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = -10.0;
+  });
+
+  static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 0, cor: Palette.marromEsc, onUse: (item, game) {
+    game.playerCombatStats.moveSpeedPenalty = 0.0;
+  });
+
+  static Item get escudoMadeira => Item("Escudo de Madeira", ItemType.shield, 'itens/woodShield.png', 10, cor: Palette.marromEsc, onUse: (item, game) {
+    game.playerCombatStats.moveSpeedPenalty = 0.0;
+  });
+
+  static Item get escudoFerro => Item("Escudo de Ferro", ItemType.shield, 'itens/ironShield.png', 15, cor: Palette.cinzaMed, onUse: (item, game) {
+    game.playerCombatStats.moveSpeedPenalty = 0.5;
   });
 
   static Item get healthPotion => Item("Poção de Cura", ItemType.consumable, 'itens/potion.png', cor: Palette.vermelho, 40, quantity: 1, onUse: (item, game) {
@@ -74,6 +86,15 @@ class ItemDatabase {
     game.playerCombatStats.manaVfxTimer = 0.5;
     //if (game.currentState == GameState.exploration) {
     game.showMessage("Você recuperou ${item.power} de Mana!");
+    //}
+  });
+
+  static Item get staminaPotion => Item("Poção de Vigor", ItemType.consumable, 'itens/potion.png', cor: Palette.verde, 50, quantity: 1, onUse: (item, game) {
+    game.playerCombatStats.cansado = false;
+    game.playerCombatStats.stamina = game.playerCombatStats.maxStamina;
+    game.playerCombatStats.staminaInfiniteTmr = 5;
+    //if (game.currentState == GameState.exploration) {
+   // game.showMessage("Você recuperou ${item.power} de Stamina!");
     //}
   });
 
@@ -106,8 +127,31 @@ class ItemDatabase {
     }
 
     // Instancia o projétil exatamente na posição horizontal do jogador!
-    game.playerCombatStats.activeProjectiles.add(
-      PlayerProjectile(game.playerCombatStats.strafePosition, 1.0, 1.5, item.power, item.cor)
-    );
+    game.combatOverlay.add(PlayerProjectile(
+       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power, item.cor, width: 80, height: 180
+    ));
+  });
+
+  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/scroll.png', 25, manaCost: 30, cor: Palette.cinzaCla, onUse: (item, game) {
+    if (game.currentState != GameState.combat) {
+      game.showMessage("Guarde a sua mana para as batalhas!");
+      game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
+      return;
+    }
+
+    // Instancia o projétil exatamente na posição horizontal do jogador!
+    
+    game.combatOverlay.add(PlayerProjectile(
+      game.playerCombatStats.strafePosition, 0.0, 2.5, item.power, item.cor, yDir: 1, isPiercing: true, width: 40, height: 180
+    ));
+  });
+
+  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.verde, onUse: (item, game) {
+    if (game.currentState != GameState.combat) { game.playerCombatStats.mana += item.manaCost; return; }
+
+    game.combatOverlay.add(PlayerProjectile(
+       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power, item.cor, width: 80, height: 180
+      , isPiercing: true,hitCooldown: 0.5
+    ));
   });
 }
