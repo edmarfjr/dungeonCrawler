@@ -29,7 +29,7 @@ class BuffParticle extends PositionComponent {
       4.0, 
       Paint()
         ..color = Palette.verdeCla.withOpacity(opacity)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3)
+        ..isAntiAlias = false,
     );
   }
 }

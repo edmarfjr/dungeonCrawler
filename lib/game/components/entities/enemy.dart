@@ -29,6 +29,19 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   bool get isVulnerable => true;
   bool isMelee;
 
+  bool isFrontRow = true;
+  bool get canChangeRow => true;
+  double visualScale = 1.0; 
+  double visualYOffset = 0.0;
+  double visualDarkness = 0.0;
+
+  double rowSwapTimer = 2.0;
+
+  bool _lastRow = true;   
+  double jumpTimer = 0.0;
+  double maxJumpTime = 0.7;  
+  double maxJumpHeight = 0.1;
+
 
   Enemy({
     required this.type, required this.color, required this.hp, required this.maxHp,
@@ -36,7 +49,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     required this.hurtboxWidth, required this.hurtboxHeight, this.hurtboxOffsetX = 0.0, this.hurtboxOffsetY = 0.0,
     required this.hitboxWidth, required this.hitboxHeight, this.hitboxOffsetX = 0.0, this.hitboxOffsetY = 0.0,
     this.yPosition = 0.7, this.targetY = 0.7,
-    this.speed = 0.4, this.maxAttackCooldown = 2.0, this.damage = 10,
+    this.speed = 0.4, this.maxAttackCooldown = 2.0, this.damage = 3,
     this.isMelee = true,
   }) : attackCooldown = maxAttackCooldown, super(anchor: Anchor.center); // Anchor Center ajuda muito no Flame!
 
@@ -58,32 +71,58 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
   @override
   void update(double dt) {
+    if(gameRef.currentState == GameState.paused)return;
     super.update(dt);
     if (!isAlive) return;
 
-    // FLAME MAGIC: Sincroniza a posição matemática com a posição visual do Flame
+    priority = isFrontRow ? 10 : 0;
+
+    // --- Animação suave entre a linha de frente e de trás ---
+    if (isFrontRow != _lastRow) {
+      _lastRow = isFrontRow;
+      jumpTimer = maxJumpTime; // A duração do salto será de 400 milissegundos
+    }
+
+    // 2. Calcula a altura do salto usando um arco de Seno (Sobe e Desce)
+    double jumpOffset = 0.0;
+    if (jumpTimer > 0) {
+      jumpTimer -= dt;
+      // Transforma o tempo num progresso de 0.0 a 1.0
+      double progress = 1.0 - (jumpTimer / maxJumpTime).clamp(0.0, 1.0);
+      
+      // O sin() com pi desenha o arco. Multiplicamos por -0.2 para ele subir no ecrã!
+      jumpOffset = -sin(progress * pi) * maxJumpHeight; 
+    }
+
+    // 3. Destinos da profundidade
+    double targetScale = isFrontRow ? 1.0 : 0.85;
+    double targetYOffset = isFrontRow ? 0.0 : -0.02; 
+    double targetDarkness = isFrontRow ? 0.0 : 0.6; 
+
+    double transitionSpeed = 4.6 / maxJumpTime;
+
+    visualScale += (targetScale - visualScale) * transitionSpeed * dt;
+    visualYOffset += (targetYOffset - visualYOffset) * transitionSpeed * dt;
+    visualDarkness += (targetDarkness - visualDarkness) * transitionSpeed * dt;
+
+    // 4. Aplica a posição visual final somando o Pulo (jumpOffset)
     double scale = gameRef.size.x * 0.35;
     double cx = (gameRef.size.x / 2) + (strafePosition * scale);
-    double cy = gameRef.size.y * yPosition;
+    double cy = gameRef.size.y * (yPosition + visualYOffset + jumpOffset); 
+    
     position = Vector2(cx, cy);
-    size = Vector2(width, height);
-
+    size = Vector2(width * visualScale, height * visualScale);
+    // ----------------------------------------------------------------------
 
     if (isDying) {
       deathTimer -= dt;
-      if (deathTimer <= 0) {
-        isAlive = false;
-        removeFromParent(); // Apaga da memória do Flame!
-        gameRef.combatOverlay.enemies.remove(this); // Remove da barra de HP superior
-      }
+      if (deathTimer <= 0) { isAlive = false; removeFromParent(); gameRef.combatOverlay.enemies.remove(this); }
       return; 
     }
 
     if (hitFlashTimer > 0) {
       hitFlashTimer -= dt;
-      if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) {
-        currentPhase = CombatPhase.idle;
-      }
+      if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) currentPhase = CombatPhase.idle;
       return; 
     }
 
@@ -92,20 +131,70 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
     
     if (!isAttacking) {
-      if ((yPosition - targetY).abs() > 0.01) {
-        yPosition += (targetY > yPosition ? 1 : -1) * 0.4 * dt; 
-      }
+      if ((yPosition - targetY).abs() > 0.01) yPosition += (targetY > yPosition ? 1 : -1) * 0.4 * dt; 
       updateBehavior(dt, gameRef.playerCombatStats);
       checkAttackDecision(dt, gameRef.playerCombatStats, gameRef.size);
+
+      
+      rowSwapTimer -= dt;
+      if (!isFrontRow && canChangeRow && rowSwapTimer <= 0) {
+        int frontRowCount = gameRef.combatOverlay.enemies.where((e) => e.isFrontRow && e.isAlive).length;
+        if (frontRowCount < 2) {
+          isFrontRow = true; 
+          rowSwapTimer = 1.5; // Dá um tempo para ele respirar antes de tentar recuar de novo
+        }
+      }
+
+      // 2. DECISÃO VOLUNTÁRIA (Recuar ou Trocar de lugar)
+      // Só entra aqui se o Vácuo não tiver puxado ele neste exato milissegundo.
+      if (rowSwapTimer <= 0) {
+        rowSwapTimer = 1.0 + Random().nextDouble() * 2.0; // Pensa novamente entre 1s e 3s
+        
+        if (canChangeRow) { 
+          if (isFrontRow) {
+            // --- REGRA DE RECUO ---
+            // Conta quantos inimigos existem no TOTAL na batalha
+            int totalEnemies = gameRef.combatOverlay.enemies.where((e) => e.isAlive).length;
+            
+            // Se a batalha tem 2 ou menos inimigos no total, a chance de recuar é pequena (15%)
+            // Se for uma horda (3 ou mais), eles recuam mais vezes (40%) para rodar os monstros.
+            double retreatChance = totalEnemies <= 2 ? 0.15 : 0.40;
+
+            if (Random().nextDouble() < retreatChance) { 
+               isFrontRow = false; // Recua voluntariamente!
+               rowSwapTimer = 2.0; // TRAVA DE SEGURANÇA: Fica no MÍNIMO 2 segundos lá atrás imune ao Vácuo
+            }
+          } else {
+            // --- REGRA DE TROCA ---
+            // Está atrás, mas o Vácuo não o puxou (ou seja, a frente já tem 2 monstros). 
+            // Ele tenta forçar uma troca com um colega!
+            var swappableEnemies = gameRef.combatOverlay.enemies.where((e) => 
+                e.isFrontRow && 
+                e.isAlive && 
+                (e.currentPhase == CombatPhase.idle || e.currentPhase == CombatPhase.walk) &&
+                e != this
+              ).toList();
+
+            if (swappableEnemies.isNotEmpty && Random().nextDouble() < 0.40) {
+                // Manda o colega da frente recuar...
+                swappableEnemies.first.isFrontRow = false; 
+                swappableEnemies.first.rowSwapTimer = 2.0; // Trava o colega atrás para ele não dar bate-volta!
+                
+                // ...e avança para o lugar dele!
+                isFrontRow = true; 
+                rowSwapTimer = 2.0;
+            }
+          }
+        }
+      }
     }
 
-    // --- IA DE COMBATE AUTÓNOMA (O inimigo processa o seu próprio ataque!) ---
-    if (currentPhase == CombatPhase.active && !attackHit && isMelee) {
+    if (currentPhase == CombatPhase.active && !attackHit && isMelee && isFrontRow) {
       if (getHitbox(gameRef.size).overlaps(gameRef.playerCombatStats.getHurtbox(gameRef.size))) {
         attackHit = true;
         gameRef.combatOverlay.applyEnemyDamage(this);
         gameRef.playerCombatStats.hitFlashTimer = 0.20;
-        if (gameRef.playerCombatStats.hp <= 0) gameRef.handlePlayerDeath(); // Aciona a morte autonomamente
+        if (gameRef.playerCombatStats.hp <= 0) gameRef.handlePlayerDeath();
       }
     }
   }
@@ -120,7 +209,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     attackCooldown -= dt;
     bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
 
-    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+    // NOVO: Adicionado '&& isFrontRow' - Inimigos na linha de trás NUNCA atacam!
+    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
       currentPhase = CombatPhase.windup;
       animTimer = 0.5; 
       attackCooldown = maxAttackCooldown;
@@ -148,30 +238,41 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       
       // Desenha a teia para cima a partir do centro do componente
       double screenTopLocalY = -(position.y - size.y / 2);
-      canvas.drawLine(Offset(size.x / 2, size.y / 2), Offset(size.x / 2, screenTopLocalY), webPaintBorder);
-      canvas.drawLine(Offset(size.x / 2, size.y / 2), Offset(size.x / 2, screenTopLocalY), webPaint);
+      double posX = size.x / 2 + 4;
+      canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
+      canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaint);
     }
 
     SpriteAnimationTicker activeTicker = gameRef.combatOverlay.getTickerForEnemy(this);
     final Color flashC = hitFlashTimer > 0 ? flashColor : Colors.white;
-    final tintPaint = Paint()..colorFilter = ColorFilter.mode(flashC, BlendMode.modulate);
+    int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
+    int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
+    int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
+    Color finalColor = Color.fromARGB(flashC.alpha, r, g, b);
     
-    // Desenha a partir do 0,0 local do Flame!
+    final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
     activeTicker.getSprite().render(canvas, size: size, overridePaint: tintPaint);
+    
   }
 
   Rect getHurtbox(Vector2 screenSize) {
     double scale = screenSize.x * 0.35;
     double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y * yPosition;
-    return Rect.fromCenter(center: Offset(cx + hurtboxOffsetX, cy + hurtboxOffsetY), width: hurtboxWidth, height: hurtboxHeight);
+    double cy = screenSize.y * (yPosition + visualYOffset);
+    return Rect.fromCenter(
+      center: Offset(cx + hurtboxOffsetX * visualScale, cy + hurtboxOffsetY * visualScale), 
+      width: hurtboxWidth * visualScale, height: hurtboxHeight * visualScale
+    );
   }
 
   Rect getHitbox(Vector2 screenSize) {
     double scale = screenSize.x * 0.35;
     double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y * yPosition;
-    return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: hitboxWidth, height: hitboxHeight);
+    double cy = screenSize.y * (yPosition + visualYOffset);
+    return Rect.fromCenter(
+      center: Offset(cx + hitboxOffsetX * visualScale, cy + hitboxOffsetY * visualScale), 
+      width: hitboxWidth * visualScale, height: hitboxHeight * visualScale
+    );
   }
 
   Rect getHitboxImageSize(Vector2 screenSize) {
@@ -194,12 +295,17 @@ class SlimeEnemy extends Enemy {
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30,  // O ataque dele se expande do corpo
   );
 
-  @override void updateBehavior(double dt, PlayerCombatStats player) {
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
     moveTimer -= dt;
     if (moveTimer <= 0) {
+      // 1. Escolhe uma nova direção horizontal (Esquerda, Direita ou Parado)
       currentDir = (Random().nextInt(3) - 1).toDouble();
       moveTimer = 1.0 + Random().nextDouble() * 1.5;
+
     }
+    
+    // 2. Aplica o movimento horizontal
     strafePosition += currentDir * speed * dt;
     if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
     if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
@@ -209,7 +315,7 @@ class SlimeEnemy extends Enemy {
 class GoblinEnemy extends Enemy {
   bool isFleeing = false;
   GoblinEnemy() : super(
-    type: EnemyType.goblin, color: Palette.verde, hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 15,
+    type: EnemyType.goblin, color: Palette.verde, hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 5,
     hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 50, maxAttackCooldown: 1.0 
   );
@@ -267,6 +373,9 @@ class SpiderEnemy extends Enemy {
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, 
   );
 
+  @override
+  bool get canChangeRow => (yPosition - targetY).abs() < 0.01 && yPosition < 0.4;
+
   @override void onHitStun() {
     isDropping = false; 
     hasAttacked = false; 
@@ -274,19 +383,23 @@ class SpiderEnemy extends Enemy {
   }
   
   @override void updateBehavior(double dt, PlayerCombatStats player) {
-    // 1. GATILHO PARA DESCER
-    if (!isDropping && yPosition <= 0.15 && (player.strafePosition - strafePosition).abs() < 0.2) {
-      isDropping = true; 
-      hasAttacked = false; // Prepara o bote
-      targetY = 0.7; // Vai pro chão
+    if(isFrontRow){
+      // 1. GATILHO PARA DESCER
+      if (!isDropping && yPosition <= 0.15 && (player.strafePosition - strafePosition).abs() < 0.2) {
+        isDropping = true; 
+        hasAttacked = false; // Prepara o bote
+        targetY = 0.7; // Vai p
+      }
+      
+      // 2. GATILHO PARA SUBIR (SÓ DEPOIS QUE ATACAR)
+      // Se a aranha desceu, já completou o ataque e voltou para o modo Idle, ela sobe para o teto.
+      if (isDropping && hasAttacked && currentPhase == CombatPhase.idle) {
+        isDropping = false; 
+        targetY = 0.1; // Volta pro teto
+
+      }
     }
     
-    // 2. GATILHO PARA SUBIR (SÓ DEPOIS QUE ATACAR)
-    // Se a aranha desceu, já completou o ataque e voltou para o modo Idle, ela sobe para o teto.
-    if (isDropping && hasAttacked && currentPhase == CombatPhase.idle) {
-      isDropping = false; 
-      targetY = 0.1; // Volta pro teto
-    }
   }
 
   @override
@@ -294,7 +407,7 @@ class SpiderEnemy extends Enemy {
     attackCooldown -= dt;
 
     // A Aranha ignora a distância X! Se ela estiver descendo, não atacou ainda, e tocou no chão, ela explode num ataque instantâneo!
-    if (isDropping && !hasAttacked && yPosition >= 0.69 && currentPhase == CombatPhase.idle) {
+    if (isDropping && !hasAttacked && yPosition >= 0.69 && currentPhase == CombatPhase.idle && isFrontRow) {
       currentPhase = CombatPhase.windup;
       animTimer = 1.0; 
       hasAttacked = true; // Marca que o bote foi dado
@@ -309,7 +422,7 @@ class MimicEnemy extends Enemy {
   bool _spawnedProjectiles = false;
 
   MimicEnemy() : super(
-    type: EnemyType.mimic, color: Palette.amarelo, hp: 40, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 15,
+    type: EnemyType.mimic, color: Palette.amarelo, hp: 40, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 5,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 0, hitboxHeight: 0, isMelee: false, 
   );
@@ -335,7 +448,7 @@ class MimicEnemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
    
-    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
       currentPhase = CombatPhase.windup; 
       animTimer = 1.0; 
       attackCooldown = maxAttackCooldown;

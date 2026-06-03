@@ -22,6 +22,7 @@ class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
 
   @override
   void update(double dt) {
+    if(gameRef.currentState == GameState.paused)return;
     super.update(dt);
     
     // 1. Lógica de Vida e Movimento

@@ -16,13 +16,14 @@ class ArcProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   @override
   void update(double dt) {
+    if(gameRef.currentState == GameState.paused)return;
     super.update(dt);
     vy += 3.0 * dt; // Gravidade a puxar para baixo
     strafeX += vx * dt;
     yPos += vy * dt;
 
     // Se bater no chão, o Flame destrói-o automaticamente!
-    if (yPos > 0.8) {
+    if (yPos > 0.8 || !owner.isAlive) {
       removeFromParent();
       return;
     }

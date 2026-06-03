@@ -157,7 +157,7 @@ class _GameScreenState extends State<GameScreen> {
     GameInput? newInput;
 
     // Cria uma "Zona Morta" no meio para o jogador poder descansar o dedo sem andar
-    if (dx.abs() < 25 && dy.abs() < 25) {
+    if (dx.abs() < 15 && dy.abs() < 15) {
       newInput = null; 
     } 
     // Divide o D-pad em 4 triângulos invisíveis formando um "X"
@@ -188,7 +188,7 @@ class _GameScreenState extends State<GameScreen> {
   // Desenha os botões do D-Pad apenas como visual (quem controla a ação agora é o Listener invisível em cima deles)
   Widget _buildStaticArrow(IconData icon) {
     return Container(
-      width: 63, height: 63,
+      width: 80, height: 80,
       decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
       child: Icon(icon, color: Palette.branco, size: 30),
     );
@@ -204,7 +204,7 @@ class _GameScreenState extends State<GameScreen> {
       onTapUp: (_) => _game.stopInput(input),
       onTapCancel: () => _game.stopInput(input),
       child: Container(
-        width: 64, height: 64,
+        width: 80, height: 80,
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,

@@ -189,6 +189,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   @override
   void update(double dt) {
     super.update(dt);
+
+    if(gameRef.currentState == GameState.paused)return;
     
     if (playerStats.currentPhase == CombatPhase.walk || playerStats.currentPhase == CombatPhase.idle) playerStats.recoverStamina(dt);
     playerStats.updatePhase(dt);
@@ -254,9 +256,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     if (playerStats.isGuarding) {
       if (playerStats.stamina >= 0) {
         if (playerStats.staminaInfiniteTmr <= 0){
-          playerStats.stamina -= (25.0 - playerStats.equippedShield!.power); 
+          playerStats.stamina -= (16 - playerStats.equippedShield!.power); 
         } 
-        playerStats.stamina = playerStats.stamina.clamp(0, playerStats.maxStamina);
+        playerStats.stamina = playerStats.stamina.clamp(0, playerStats.con * 3);
         if (playerStats.stamina <= 0) {
           playerStats.cansado = true;
         }
@@ -278,13 +280,13 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     if (playerStats.hp < 0) playerStats.hp = 0;
   }
 
-  @override
-  void render(Canvas canvas) {
+  //@override
+  //void render(Canvas canvas) {
     // 1. O que estiver aqui é desenhado ANTES dos inimigos (Lá no fundo da tela)
-    if (gameRef.currentState == GameState.combat) {
-      _drawAttackEffects(canvas); 
-    }
-  }
+  //  if (gameRef.currentState == GameState.combat) {
+       
+  //  }
+  //}
 
   @override
   void renderTree(Canvas canvas) {
@@ -293,7 +295,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     // 3. O que estiver aqui é desenhado POR CIMA dos inimigos (Primeiro Plano da Câmera)
     if (gameRef.currentState == GameState.combat) {
-      
+      _drawAttackEffects(canvas);
       _drawPlayer(canvas); // A arma do jogador volta a tapar os inimigos!
       
       if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
@@ -304,6 +306,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     _drawPlayerUI(canvas);
     _drawEffects(canvas);
     _drawBottomBarBackground(canvas);
+
+    if (gameRef.currentState == GameState.combat)_drawEnemyUI(canvas);
   }
 
 
@@ -477,18 +481,19 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   void _drawPlayerUI(Canvas canvas) {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, 60), Paint()..color = Palette.preto);
-    double barWidth = (size.x - 40) / 3;
-    _drawHorizontalBar(canvas, 10, 15, barWidth, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
-    _drawHorizontalBar(canvas, 10, 30, barWidth, 12, Palette.verde, playerStats.stamina / playerStats.maxStamina);
-    _drawHorizontalBar(canvas, 10, 45, barWidth, 12, Palette.azul, playerStats.mana / playerStats.maxMana);
+    //double barWidth = (size.x - 40) / 3;
+    _drawHorizontalBar(canvas, 10, 10, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
+    _drawHorizontalBar(canvas, 10, 25, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
+    _drawHorizontalBar(canvas, 10, 40, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
       Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
       double boxX = size.x/2 - 35;
       double boxY = 5;
 
+      //inventario
       // Desenha a caixa de fundo
-      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 60, 60), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 60, 60), Paint()..color = Palette.cinzaCla..style = PaintingStyle.stroke);
+      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 50, 50), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 50, 50), Paint()..color = Palette.cinzaCla..style = PaintingStyle.stroke);
       try {
         ui.Image itemImg = gameRef.images.fromCache(sel.imagePath);
         
@@ -498,7 +503,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         canvas.drawImageRect(
           itemImg,
           Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
-          Rect.fromLTWH(boxX + 5, boxY + 0, 55, 55), 
+          Rect.fromLTWH(boxX + 5, boxY + 0, 40, 40), 
           tintPaint // <--- Usa o paint com cor aqui!
         );
       } catch (e) {
@@ -510,11 +515,11 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       TextPainter(
         text: TextSpan(text: amountText, style: TextStyle(color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(size.x/2 - 30, 35));
-      TextPainter(
-        text: const TextSpan(text: 'Uso[B]', style: TextStyle(color: Palette.amarelo, fontSize: 10)),
-        textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(size.x/2 - 30, 8));
+      )..layout()..paint(canvas, Offset(size.x/2 - 30, 40));
+     // TextPainter(
+     //   text: const TextSpan(text: 'Uso[B]', style: TextStyle(color: Palette.amarelo, fontSize: 10)),
+     //   textDirection: TextDirection.ltr,
+     // )..layout()..paint(canvas, Offset(size.x/2 - 30, 8));
     }
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
       double keyX = size.x/2 - 20;
@@ -530,7 +535,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           gameRef.keySprite, 
           Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
           Rect.fromLTWH(keyX + 5, keyY + 5, 30, 30), // Margem de 5px dentro do quadrado
-          Paint()..colorFilter = ColorFilter.mode(Palette.cinza, BlendMode.modulate)
+          Paint()..colorFilter = ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
         );
       } catch (e) {
         // Fallback caso a imagem dê erro

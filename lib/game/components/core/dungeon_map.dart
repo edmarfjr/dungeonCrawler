@@ -1,6 +1,8 @@
 import 'dart:math';
 
-enum TileType { wall, floor, door, exit, chest, spike }
+import 'package:dungeon_crawler/game/components/entities/item.dart';
+
+enum TileType { wall, floor, door, chest, spike, shrine }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -16,6 +18,8 @@ class DungeonMap {
   int spikeState = 0;
   
   List<Point<int>> roamingEnemies = [];
+
+  Map<Point<int>, List<Item>> droppedItems = {};
 
   void advanceSpikes() {
     spikeState = (spikeState + 1) % 3;
@@ -119,6 +123,11 @@ class DungeonMap {
 
     int numSpikes = random.nextInt(6) + 4; 
     for (int i = 0; i < numSpikes; i++) { if (floorTiles.isNotEmpty) { Point<int> spikePos = floorTiles.removeAt(0); grid[spikePos.y][spikePos.x] = TileType.spike; } }
+
+    if (floorTiles.isNotEmpty) {
+      Point<int> shrinePos = floorTiles.removeAt(0); // Pega um bloco livre aleatório
+      grid[shrinePos.y][shrinePos.x] = TileType.shrine;
+    }
 
     roamingEnemies.clear();
     int numRoaming = random.nextInt(4) + 3; // de 3 a 6 inimigos patrulhando

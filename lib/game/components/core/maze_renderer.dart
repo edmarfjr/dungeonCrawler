@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'dart:math';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart' hide Matrix4;
@@ -78,11 +79,15 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         // --- 3. LÓGICA DA CHAVE ---
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
           // A chave vai do chão (0.5) até uma altura menor (0.1)
-          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.cinza);
+          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
         }
 
         if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
           _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
+        }
+
+        if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.azul);
         }
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
@@ -97,6 +102,24 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
           // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
           _drawBillboardItem(canvas, cx, cz, spikeImage, 0.7, 0.1,Palette.cinza, srcRect: frameRect);
+        }
+
+        Point<int> currentMapPos = Point(mapX, mapY);
+        if (map.droppedItems.containsKey(currentMapPos) && map.droppedItems[currentMapPos]!.isNotEmpty) {
+          
+          // Pega sempre o item que está no topo da pilha do chão (last)
+          var dropItem = map.droppedItems[currentMapPos]!.last;
+          
+          try {
+            // Puxa a imagem verdadeira do item usando o cache do Flame!
+            ui.Image itemImg = gameRef.images.fromCache(dropItem.imagePath);
+            
+            // Desenha usando o Billboarding. O item flutua da altura 0.5 (chão) até a 0.2
+            _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, dropItem.cor);
+          } catch (e) {
+            // Fallback de segurança: Se a imagem falhar ao carregar, desenha uma caixinha/baú
+            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, dropItem.cor);
+          }
         }
         
         for (var enemy in map.roamingEnemies) {

@@ -6,17 +6,18 @@ import 'package:flutter/material.dart';
 enum CombatPhase { idle, walk, guard, windup, active, recovery, entering, exiting, hit }
 
 class PlayerCombatStats {
-  double hp = 100, maxHp = 100, mana = 50, maxMana = 50, essence = 0;
-  double manaRegen = 1 ;
-  double stamina = 100.0, maxStamina = 100.0; 
+  double hp = 30, maxHp = 30, mana = 15, essence = 0;
+  double stamina = 15.0; 
   double staminaTmr = 0.0; 
-  double staminaRegenDelay = 1.0;
+  double staminaRegenDelay = 0.5;
   double staminaInfiniteTmr = 0;
   double strafePosition = 0.0; 
   bool isGuarding = false, attackHit = false;
   int comboCount = 0;
   double comboTimer = 0.0, animTimer = 0.0;
   CombatPhase currentPhase = CombatPhase.idle;
+
+  int str = 5, con = 5, wis = 5, base = 5;
 
   double moveSpeed = 2;
   double moveSpeedIni = 2;
@@ -41,9 +42,10 @@ class PlayerCombatStats {
   double windupTime = 0.1;
   double activeTime = 0.1;
   double recoveryTime = 0.1;
-  double staminaCost = 20.0;
-  double damage = 10;
+  double staminaCost = 3.0;
   double offYWeapon = 0;
+  double critChance = 5;
+  double critMultiplier = 1.5;
 
   //variaveis da armadura
   double staminaRegenBonus = 0;
@@ -55,6 +57,8 @@ class PlayerCombatStats {
   bool cansado = false;
 
   List<Item> inventory = [];
+  int maxInventory = 8;
+
   Item? equippedWeapon;
   Item? equippedArmor;
   Item? equippedShield;
@@ -66,15 +70,38 @@ class PlayerCombatStats {
 
   List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
+  void recalculateMaxHp() {
+    // 1. Descobre quantos pontos foram adicionados acima do valor base
+    int pontosAdicionados = con - base;
+    
+    // 2. Divide por 3 usando divisão inteira (~/) para descobrir os blocos de 3 pontos
+    int blocosDeTres = pontosAdicionados ~/ 3; 
+    
+    // 3. Define quanta vida o jogador ganha por bloco (ex: +20 de HP máximo a cada 3 pontos de CON)
+    double hpBonusPorBloco = 5.0; 
+    
+    double vidaBaseOriginal = 100.0;
+    double antigaMaxHp = maxHp;
+
+    // 4. Calcula o novo valor final de maxHp
+    maxHp = vidaBaseOriginal + (blocosDeTres * hpBonusPorBloco);
+
+    // 5. BONUS DE QUALIDADE DE VIDA: Se a vida máxima subiu, cura o jogador 
+    // pela diferença exata para que ele não precise gastar poção só porque subiu de nível!
+    if (maxHp > antigaMaxHp) {
+      hp += (maxHp - antigaMaxHp);
+    }
+  }
+
   void recoverStamina(double dt) {
     if(staminaTmr > 0) {
       staminaTmr -= dt;
       return; // Ainda no delay, não regenera
     }
-    if (!isGuarding && stamina < maxStamina) {
-      stamina += (75.0 + staminaRegenBonus) * dt; 
-      if (stamina > maxStamina){
-        stamina = maxStamina;
+    if (!isGuarding && stamina < (con*3)) {
+      stamina += ((str*3) + staminaRegenBonus) * dt; 
+      if (stamina > (con*3)){
+        stamina = (con*3);
         if(cansado) {
           cansado = false; // Recuperou o fôlego!
         }
@@ -83,10 +110,10 @@ class PlayerCombatStats {
   }
 
   void recoverMana() {
-    if (mana < maxMana) {
-      mana += manaRegen; 
-      if (mana > maxMana){
-        mana = maxMana;
+    if (mana < wis*3) {
+      mana += (wis * 0.2); 
+      if (mana > wis*3){
+        mana = wis*3;
       } 
     }
     
