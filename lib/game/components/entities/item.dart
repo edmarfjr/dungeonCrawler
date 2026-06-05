@@ -34,7 +34,7 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 2;
   });
 
-  static Item get espadaCurta => Item("Espada Curta", ItemType.weapon, 'itens/sword.png', 10, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaCurta => Item("Espada Curta", ItemType.weapon, 'itens/sword.png', 7, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
@@ -43,16 +43,16 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 15, cor: Colors.white, hasReach: true, onUse: (item, game) {
+  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 10, cor: Colors.white, hasReach: true, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.2;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
     game.playerCombatStats.staminaCost = 5.0;
     game.playerCombatStats.critChance = 5;
-    game.playerCombatStats.critMultiplier = 1.5;
+    game.playerCombatStats.critMultiplier = 2;
   });
 
-  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Colors.white, onUse: (item, game) {
+  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 15, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.2;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.3;
@@ -65,14 +65,14 @@ class ItemDatabase {
     game.playerCombatStats.staminaRegenBonus = 5.0;
   });
 
-  static Item get armaduraCouro => Item("Armadura de Couro", ItemType.armor, 'itens/leatherArmor.png', 5, cor: Colors.white, onUse: (item, game) {
+  static Item get armaduraCouro => Item("Armadura de Couro", ItemType.armor, 'itens/leatherArmor.png', 2, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = 0.0;
   });
-  static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 10, cor: Colors.white, onUse: (item, game) {
+  static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 3, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = -10.0;
   });
 
-  static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 0, cor: Colors.white, onUse: (item, game) {
+  static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 3, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.moveSpeedPenalty = 0.0;
   });
 
@@ -130,7 +130,7 @@ class ItemDatabase {
     }
   });
 
-  static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/scroll.png', 25, manaCost: 20, cor: Palette.laranja, onUse: (item, game) {
+  static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.laranja, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde a sua mana para as batalhas!");
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
@@ -139,29 +139,27 @@ class ItemDatabase {
 
     // Instancia o projétil exatamente na posição horizontal do jogador!
     game.combatOverlay.add(PlayerProjectile(
-       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power, item.cor, width: 80, height: 180
+       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, item.cor, width: 80, height: 180
     ));
   });
 
-  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/scroll.png', 25, manaCost: 30, cor: Palette.cinzaCla, onUse: (item, game) {
+  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/scroll.png', 4, manaCost: 10, cor: Palette.cinzaCla, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde a sua mana para as batalhas!");
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
       return;
     }
-
-    // Instancia o projétil exatamente na posição horizontal do jogador!
     
     game.combatOverlay.add(PlayerProjectile(
-      game.playerCombatStats.strafePosition, 0.0, 2.5, item.power, item.cor, yDir: 1, isPiercing: true, width: 40, height: 180
+      game.playerCombatStats.strafePosition, 0.0, 2.5, item.power*game.playerCombatStats.wis, item.cor, yDir: 1, isPiercing: true, width: 40, height: 180
     ));
   });
 
-  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.verde, onUse: (item, game) {
+  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 1, manaCost: 15, cor: Palette.verde, onUse: (item, game) {
     if (game.currentState != GameState.combat) { game.playerCombatStats.mana += item.manaCost; return; }
 
     game.combatOverlay.add(PlayerProjectile(
-       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power, item.cor, width: 80, height: 180
+       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, item.cor, width: 80, height: 180
       , isPiercing: true,hitCooldown: 0.5
     ));
   });

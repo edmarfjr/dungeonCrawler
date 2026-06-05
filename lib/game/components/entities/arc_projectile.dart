@@ -39,7 +39,7 @@ class ArcProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame
       Rect myHitbox = Rect.fromCenter(center: position.toOffset(), width: 30, height: 30);
       if (myHitbox.overlaps(gameRef.playerCombatStats.getHurtbox(gameRef.size))) {
         
-        gameRef.combatOverlay.applyEnemyDamage(owner); // Aplica o dano!
+        gameRef.applyEnemyDamage(owner); // Aplica o dano!
         removeFromParent(); // Destrói o projétil ao bater
         
         if (gameRef.playerCombatStats.hp <= 0) {

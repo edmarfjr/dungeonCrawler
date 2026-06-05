@@ -1,6 +1,8 @@
 import 'package:dungeon_crawler/game/components/core/palette.dart';
+import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/components.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum CombatPhase { idle, walk, guard, windup, active, recovery, entering, exiting, hit }
@@ -160,7 +162,7 @@ class PlayerCombatStats {
       animTimer -= dt;
       if (animTimer <= 0) {
         switch (currentPhase) {
-          case CombatPhase.windup: currentPhase = CombatPhase.active; animTimer = windupTime; break;
+          case CombatPhase.windup: currentPhase = CombatPhase.active; animTimer = windupTime; FlameAudio.play('sfx/attack.wav'); break;
           case CombatPhase.active: currentPhase = CombatPhase.recovery; animTimer = recoveryTime; break;
           case CombatPhase.recovery: currentPhase = CombatPhase.idle; attackHit = false; break;
           case CombatPhase.entering: currentPhase = CombatPhase.idle; break;

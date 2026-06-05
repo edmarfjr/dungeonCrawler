@@ -2,13 +2,12 @@ import 'dart:math';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
-import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic }
+enum EnemyType { slime, spider, goblin, mimic, orc }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -42,9 +41,11 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   double maxJumpTime = 0.7;  
   double maxJumpHeight = 0.1;
 
+  String name;
+
 
   Enemy({
-    required this.type, required this.color, required this.hp, required this.maxHp,
+    required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
     required this.dropEssence, required this.width, required this.height,
     required this.hurtboxWidth, required this.hurtboxHeight, this.hurtboxOffsetX = 0.0, this.hurtboxOffsetY = 0.0,
     required this.hitboxWidth, required this.hitboxHeight, this.hitboxOffsetX = 0.0, this.hitboxOffsetY = 0.0,
@@ -171,6 +172,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
             var swappableEnemies = gameRef.combatOverlay.enemies.where((e) => 
                 e.isFrontRow && 
                 e.isAlive && 
+                e.canChangeRow &&
                 (e.currentPhase == CombatPhase.idle || e.currentPhase == CombatPhase.walk) &&
                 e != this
               ).toList();
@@ -192,7 +194,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (currentPhase == CombatPhase.active && !attackHit && isMelee && isFrontRow) {
       if (getHitbox(gameRef.size).overlaps(gameRef.playerCombatStats.getHurtbox(gameRef.size))) {
         attackHit = true;
-        gameRef.combatOverlay.applyEnemyDamage(this);
+        gameRef.applyEnemyDamage(this);
         gameRef.playerCombatStats.hitFlashTimer = 0.20;
         if (gameRef.playerCombatStats.hp <= 0) gameRef.handlePlayerDeath();
       }
@@ -232,6 +234,41 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   void render(Canvas canvas) {
     if (isDying && (deathTimer * 15).toInt() % 2 == 0) return;
 
+    if (hitFlashTimer>0 && (hitFlashTimer * 15).toInt() % 2 == 0) return;
+
+    final shadowPaint = Paint()..color = Palette.preto..isAntiAlias = false;
+      
+      // A sombra tem 60% da largura do inimigo e é achatada (15% da altura)
+    double shadowWidth = size.x * 0.6;
+    double shadowHeight = size.y * 0.15;
+    
+    // 1. Descobrimos onde é o chão 
+    // (Como a Aranha paira no ar, fixamos o chão virtual dela no 0.65 da tela)
+    double groundYPos = (type == EnemyType.spider) ? 0.65 : yPosition; 
+    double floorGlobalY = gameRef.size.y * (groundYPos + visualYOffset);
+    
+    // 2. Calculamos a distância entre o inimigo (flutuando ou saltando) e o chão
+    double distanceToFloor = floorGlobalY - position.y;
+    
+    // 3. Empurramos a sombra para o chão verdadeiro!
+    double shadowLocalY = size.y - (shadowHeight / 2) + distanceToFloor;
+
+    // 4. Detalhe visual: Se a aranha estiver muito alta, a sombra fica mais pequena!
+    double altitudeScale = 1.0;
+    if (type == EnemyType.spider) {
+        altitudeScale = (1.0 - (distanceToFloor / gameRef.size.y) * 2).clamp(0.3, 1.0);
+    }
+
+    // Desenha a elipse (sombra) devidamente projetada
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.x / 2, shadowLocalY), 
+        width: shadowWidth * altitudeScale, 
+        height: shadowHeight * altitudeScale
+      ),
+      shadowPaint,
+    );
+
     if (type == EnemyType.spider) {
       final webPaint = Paint()..color = Palette.branco..strokeWidth = 5.0..style = PaintingStyle.stroke..isAntiAlias = false;
       final webPaintBorder = Paint()..color = Palette.preto..strokeWidth = 15.0..isAntiAlias = false..style = PaintingStyle.stroke;  
@@ -244,7 +281,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     }
 
     SpriteAnimationTicker activeTicker = gameRef.combatOverlay.getTickerForEnemy(this);
-    final Color flashC = hitFlashTimer > 0 ? flashColor : Colors.white;
+    final Color flashC = Colors.white;// hitFlashTimer > 0 ? flashColor : Colors.white;
     int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
@@ -289,8 +326,8 @@ class SlimeEnemy extends Enemy {
   double moveTimer = 0.0;
   double currentDir = 1.0;
 
-  SlimeEnemy() : super(
-    type: EnemyType.slime, color: Palette.verdeCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, speed: 0.4,
+  SlimeEnemy() : super(name:'slime',
+    type: EnemyType.slime, color: Palette.verdeCla, hp: 50, maxHp: 30, dropEssence: 20, width: 144, height: 144, speed: 0.4,
     hurtboxWidth: 80, hurtboxHeight: 70, hurtboxOffsetY: 0, // Hurtbox achatada no chão
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30,  // O ataque dele se expande do corpo
   );
@@ -314,8 +351,8 @@ class SlimeEnemy extends Enemy {
 
 class GoblinEnemy extends Enemy {
   bool isFleeing = false;
-  GoblinEnemy() : super(
-    type: EnemyType.goblin, color: Palette.verde, hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 5,
+  GoblinEnemy() : super(name:'goblin',
+    type: EnemyType.goblin, color: Palette.verde, hp: 60, maxHp: 50, dropEssence: 30, width: 144, height: 144, speed: 0.6, damage: 5,
     hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 50, maxAttackCooldown: 1.0 
   );
@@ -323,6 +360,27 @@ class GoblinEnemy extends Enemy {
   @override 
   void onHitStun() { 
     isFleeing = true; 
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    attackCooldown -= dt;
+    bool isCloseY = true;
+
+    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      if(isFrontRow){
+        currentPhase = CombatPhase.windup;
+        animTimer = 0.5; 
+        attackCooldown = maxAttackCooldown;
+      }else{
+        isFleeing = true;
+      }
+      
+    }
   }
   
   @override 
@@ -367,8 +425,8 @@ class SpiderEnemy extends Enemy {
   bool hasAttacked = false;
   double landTmr = 0.0;
 
-  SpiderEnemy() : super(
-    type: EnemyType.spider, color: Palette.marromCla, hp: 20, maxHp: 20, dropEssence: 15, width: 144, height: 144, yPosition: 0.1, targetY: 0.1,
+  SpiderEnemy() : super(name:'aranha',
+    type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 20, dropEssence: 15, width: 144, height: 144, yPosition: 0.1, targetY: 0.1,
     hurtboxWidth: 60, hurtboxHeight: 70, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, 
   );
@@ -421,15 +479,15 @@ class MimicEnemy extends Enemy {
   double currentDir = 1.0;
   bool _spawnedProjectiles = false;
 
-  MimicEnemy() : super(
-    type: EnemyType.mimic, color: Palette.amarelo, hp: 40, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 5,
+  MimicEnemy() : super(name:'mimico',
+    type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 60, width: 144, height: 144, speed: 0.5, damage: 5,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 0, hitboxHeight: 0, isMelee: false, 
   );
 
   // MÁGICA 1: Só toma dano enquanto ataca!
   @override
-  bool get isVulnerable => currentPhase == CombatPhase.windup ||  currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
+  bool get isVulnerable => currentPhase == CombatPhase.hit || currentPhase == CombatPhase.windup ||  currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
@@ -467,6 +525,64 @@ class MimicEnemy extends Enemy {
       parent?.add(ArcProjectile(strafePosition, yPosition, -1, -1.2, this)); 
       parent?.add(ArcProjectile(strafePosition, yPosition,  0.0, -1.4, this)); 
       parent?.add(ArcProjectile(strafePosition, yPosition,  1, -1.2, this));
+    }
+  }
+}
+
+class OrcEnemy extends Enemy {
+  OrcEnemy() : super(name: 'orc',
+    type: EnemyType.orc, 
+    color: Palette.cinza, // Cor do escudo/armadura
+    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 60,
+  ) {
+    isMelee = true;
+  }
+
+  // --- REGRA DE OURO: Só recebe dano se NÃO estiver a guarder ---
+  @override
+  bool get isVulnerable => currentPhase != CombatPhase.guard;
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    // 2. Lê o próprio estado: Eu já comecei a atacar?
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery;
+
+    // --- INTELIGÊNCIA DE DEFESA ---
+    if (isPlayerAttacking && !isSelfAttacking) {
+      // O jogador tentou bater e o Goblin não estava ocupado: DEFESA IMEDIATA!
+      currentPhase = CombatPhase.guard;
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      // O jogador parou de atacar, o Goblin baixa o escudo
+      currentPhase = CombatPhase.idle;
+    }
+
+    // --- MOVIMENTO NORMAL (Só anda se não estiver a guarder) ---
+    if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
+      double targetStrafe = player.strafePosition;
+      if ((strafePosition - targetStrafe).abs() > 0.05) {
+        strafePosition += (targetStrafe > strafePosition ? 1 : -1) * speed * dt;
+        currentPhase = CombatPhase.walk;
+      } else {
+        currentPhase = CombatPhase.idle;
+      }
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+    // Só toma a decisão de atacar se a guarda estiver baixa (idle)
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 0.8; 
+      attackCooldown = maxAttackCooldown;
     }
   }
 }

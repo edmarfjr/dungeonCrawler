@@ -22,7 +22,7 @@ class DungeonMap {
   Map<Point<int>, List<Item>> droppedItems = {};
 
   void advanceSpikes() {
-    spikeState = (spikeState + 1) % 3;
+    spikeState = (spikeState + 1) % 4;
   }
 
   DungeonMap({this.width = 20, this.height = 20}) { generateProceduralMap(); }
@@ -38,7 +38,7 @@ class DungeonMap {
 
   void moveEnemies(Point<int> playerPos) {
     // Distância máxima que o inimigo consegue ver o jogador (em blocos)
-    int aggroRange = 5; 
+    int aggroRange = 7; 
 
     for (int i = 0; i < roamingEnemies.length; i++) {
       Point<int> enemy = roamingEnemies[i];
@@ -70,6 +70,53 @@ class DungeonMap {
           roamingEnemies[i] = Point(enemy.x + stepX, enemy.y);
         }
       }
+    }
+  }
+
+  void spawnEnemyAwayFrom(Point<int> playerPos, int minDistance) {
+    List<Point<int>> validSpots = [];
+
+    // 1. Vasculha o mapa inteiro atrás de blocos de chão vazios
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        if (grid[y][x] == TileType.floor) {
+          Point<int> pt = Point(x, y);
+          
+          // Calcula a distância nos eixos X e Y (Distância de Chebyshev, ideal para grid)
+          int distX = (x - playerPos.x).abs();
+          int distY = (y - playerPos.y).abs();
+
+          // 2. Verifica se está fora do minimapa (mais longe que a distância mínima)
+          if (distX > minDistance || distY > minDistance) {
+            // Garante que já não tem outro inimigo pisando lá
+            if (!roamingEnemies.contains(pt)) {
+              validSpots.add(pt);
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback de segurança: Se o andar for muito pequeno e não houver vaga "longe",
+    // pega qualquer bloco de chão que não seja exatamente na cara do jogador.
+    if (validSpots.isEmpty) {
+      for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+          if (grid[y][x] == TileType.floor) {
+             Point<int> pt = Point(x, y);
+             int dist = _calculateDistance(pt, playerPos);
+             if (dist > 2 && !roamingEnemies.contains(pt)) {
+               validSpots.add(pt);
+             }
+          }
+        }
+      }
+    }
+
+    // 3. Sorteia um dos locais válidos e adiciona o inimigo!
+    if (validSpots.isNotEmpty) {
+      validSpots.shuffle(Random());
+      roamingEnemies.add(validSpots.first);
     }
   }
 
@@ -121,7 +168,7 @@ class DungeonMap {
     int numChests = random.nextInt(3) + 1; 
     for (int i = 0; i < numChests; i++) { if (floorTiles.isNotEmpty) { Point<int> chestPos = floorTiles.removeAt(0); grid[chestPos.y][chestPos.x] = TileType.chest; } }
 
-    int numSpikes = random.nextInt(6) + 4; 
+    int numSpikes = random.nextInt((width/6).toInt() + 1) + (width/6).toInt() - 1; 
     for (int i = 0; i < numSpikes; i++) { if (floorTiles.isNotEmpty) { Point<int> spikePos = floorTiles.removeAt(0); grid[spikePos.y][spikePos.x] = TileType.spike; } }
 
     if (floorTiles.isNotEmpty) {

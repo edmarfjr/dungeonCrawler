@@ -18,6 +18,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image chestImage;
   final ui.Image spikeImage;
   final ui.Image roamerImage;
+  final ui.Image shrineImage;
 
   MazeRenderer({
     required this.map,
@@ -29,6 +30,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.chestImage,
     required this.spikeImage,
     required this.roamerImage,
+    required this.shrineImage,
   });
 
   @override
@@ -87,17 +89,17 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         }
 
         if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.azul);
+          _drawBillboardItem(canvas, cx, cz, shrineImage, 0.5, 0.1, Colors.white);
         }
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
           _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
 
-          // Calcula a largura de 1 frame (divide a spritesheet por 3)
-          double frameWidth = spikeImage.width / 3;
+          // Calcula a largura de 1 frame (divide a spritesheet por 4)
+          double frameWidth = spikeImage.width / 4;
           
-          // O frameX é o estado atual do mapa (0, 1 ou 2)
+          // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
           Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, spikeImage.height.toDouble());
 
           // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
@@ -105,21 +107,24 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         }
 
         Point<int> currentMapPos = Point(mapX, mapY);
-        if (map.droppedItems.containsKey(currentMapPos) && map.droppedItems[currentMapPos]!.isNotEmpty) {
+        if (map.droppedItems.containsKey(currentMapPos) && map.droppedItems[currentMapPos]!.isNotEmpty && gameRef.currentState == GameState.exploration) {
           
-          // Pega sempre o item que está no topo da pilha do chão (last)
-          var dropItem = map.droppedItems[currentMapPos]!.last;
-          
-          try {
+          for(var item in map.droppedItems[currentMapPos]!.reversed){
+            try {
             // Puxa a imagem verdadeira do item usando o cache do Flame!
-            ui.Image itemImg = gameRef.images.fromCache(dropItem.imagePath);
+            ui.Image itemImg = gameRef.images.fromCache(item.imagePath);
             
             // Desenha usando o Billboarding. O item flutua da altura 0.5 (chão) até a 0.2
-            _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, dropItem.cor);
+            _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, item.cor);
           } catch (e) {
             // Fallback de segurança: Se a imagem falhar ao carregar, desenha uma caixinha/baú
-            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, dropItem.cor);
+            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, item.cor);
           }
+          }
+          // Pega sempre o item que está no topo da pilha do chão (last)
+         // var dropItem = map.droppedItems[currentMapPos]!.last;
+          
+          
         }
         
         for (var enemy in map.roamingEnemies) {
@@ -127,7 +132,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Se o inimigo estiver na coordenada que o laço está varrendo agora...
           if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
             // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
-            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.5, 0.0,Palette.vermelho);
+            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.5, 0.0,Palette.roxo);
           }
         }
       }

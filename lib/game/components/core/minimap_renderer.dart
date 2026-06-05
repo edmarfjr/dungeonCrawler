@@ -25,14 +25,14 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     double mapHeight = viewDiameter * tileSize;
     
     // Posiciona o minimapa no canto superior direito da tela
-    double startX = gameRef.size.x - mapWidth - 5.0;
-    double startY = 5.0; 
+    double startX = gameRef.size.x - mapWidth - 0.0;
+    double startY = 0.0; 
 
     // Guardar o estado do canvas para aplicar o recorte seguro (Clip)
     canvas.save();
 
     // 1. Fundo do Minimapa (Borda preta translúcida fixa)
-    final backgroundRect = Rect.fromLTWH(startX - 2, startY - 2, mapWidth + 4, mapHeight + 4);
+    final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth, mapHeight);
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
     canvas.drawRect(backgroundRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.5);
 
@@ -66,11 +66,11 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
 
         switch (tile) {
           case TileType.wall:
-            tilePaint.color = Palette.marrom;
+            tilePaint.color = Palette.branco;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.floor:
-            tilePaint.color = Palette.bege;
+            tilePaint.color = Palette.preto;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.door:
@@ -78,12 +78,12 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.chest:
-            tilePaint.color = Palette.laranja;
+            tilePaint.color = Palette.amarelo;
             canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
             break;
           case TileType.spike:
             // Spikes mudam de cor conforme o estado da armadilha
-            tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.preto;
+            tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.shrine:
@@ -95,7 +95,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
         // Desenha a Chave se ela estiver nessa posição e o jogador ainda não pegou
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && !player.hasKey) {
           canvas.drawRect(
-            Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize),
+            Rect.fromLTWH(renderX + 1, renderY + 1, tileSize/2, tileSize/2),
             Paint()..color = Palette.amarelo
           );
         }
@@ -120,7 +120,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
         if (map.explored[enemy.y][enemy.x]) {
           double renderX = startX + (offsetX + viewRadius) * tileSize;
           double renderY = startY + (offsetY + viewRadius) * tileSize;
-          canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), enemyPaint);
+          canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize-1, tileSize-1), enemyPaint);
         }
       }
     }

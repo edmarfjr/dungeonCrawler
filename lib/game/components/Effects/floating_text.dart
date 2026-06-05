@@ -20,6 +20,7 @@ class FloatingText extends PositionComponent {
     super.update(dt);
     lifeTime -= dt;
     position.y -= speedY * dt; // Flutua para cima
+    priority = 50;
 
     if (lifeTime <= 0) {
       removeFromParent(); // O Flame destrói-o automaticamente!
