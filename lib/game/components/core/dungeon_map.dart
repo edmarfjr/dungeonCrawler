@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 
-enum TileType { wall, floor, door, chest, spike, shrine }
+enum TileType {entry, wall, floor, door, chest, spike, shrine }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -129,7 +129,7 @@ class DungeonMap {
     int currentY = height ~/ 2;
     
     playerSpawn = Point(currentX, currentY);
-    grid[currentY][currentX] = TileType.floor;
+    grid[currentY][currentX] = TileType.entry;
 
     int floorCount = 1;
     final int maxFloors = (width * height * 0.35).toInt(); 

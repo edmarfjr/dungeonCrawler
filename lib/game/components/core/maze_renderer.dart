@@ -38,7 +38,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     super.render(canvas);
 
     // Fundo preto (teto e o vazio distante)
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto );
 
     // Vetores de direção
     int dx = 0, dy = 0;
@@ -60,20 +60,24 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         TileType tile = map.getTile(mapX, mapY);
 
         // Sempre desenha o chão
-        _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
-        _drawCeiling(canvas, cx, cz);
+        _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaMed);
+        _drawCeiling(canvas, cx, cz,floorImage, Palette.cinzaMed);
 
         // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
         if (tile == TileType.wall) {
-          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.marrom); 
-          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.marrom); 
-          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.marrom);
+          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
+          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
+          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinzaMed);
         }
 
         // --- 2. LÓGICA DA PORTA ---
         if (tile == TileType.door) {
           // A porta vai do chão (0.5) até quase o teto (-0.1)
-           _drawFloorTile(canvas, cx, cz, doorImage, Palette.vermelhoEsc);
+           _drawFloorTile(canvas, cx, cz, doorImage, Palette.marrom);
+        }
+
+        if (tile == TileType.entry) {
+           _drawCeiling(canvas, cx, cz, doorImage, Palette.marrom);
         }
 
         
@@ -94,7 +98,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
-          _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
+          //_drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
 
           // Calcula a largura de 1 frame (divide a spritesheet por 4)
           double frameWidth = spikeImage.width / 4;
@@ -153,6 +157,15 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   void _drawBillboardItem(Canvas canvas, int cx, int cz, ui.Image image, double bottomY, double topY, Color cor, {Rect? srcRect}) {
     double zCenter = cz + 0.5;
 
+    // Calcula a escuridão bruta
+    double rawDarkness = (zCenter / 5.0).clamp(0.0, 1.0);
+    
+    // O EFEITO CROCANTE: Quebra o degradê em 4 níveis rígidos (0%, 25%, 50%, 75%, 100%)
+    double darkness = (rawDarkness * 4).round() / 4.0;
+    
+    // Mistura a cor
+    Color darkenedColor = Color.lerp(cor, Colors.black, darkness)!;
+
     // Projeta as alturas baseadas nos parâmetros informados
     Offset bottom = _project(cx.toDouble(), bottomY, zCenter);
     Offset top = _project(cx.toDouble(), topY, zCenter);
@@ -161,7 +174,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
     double sourceWidth = srcRect != null ? srcRect.width : image.width.toDouble();
     double sourceHeight = srcRect != null ? srcRect.height : image.height.toDouble();
-    // Calcula a largura mantendo a proporção original do sprite da imagem
     double aspectRatio = sourceWidth / sourceHeight;
     double spriteWidth = spriteHeight * aspectRatio;
 
@@ -172,12 +184,13 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       spriteHeight
     );
 
+    // Usa a nova cor escurecida no ColorFilter
     final paint = Paint()
-      ..colorFilter = ColorFilter.mode(cor, BlendMode.modulate);
+      ..colorFilter = ColorFilter.mode(darkenedColor, BlendMode.modulate);
 
     canvas.drawImageRect(
       image,
-      srcRect ?? Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()), // Pega a imagem inteira
+      srcRect ?? Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       dstRect,
       paint
     );
@@ -222,9 +235,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     ]);
   }
 
-  void _drawCeiling(Canvas canvas, int cx, int cz) {
+  void _drawCeiling(Canvas canvas, int cx, int cz, ui.Image img, Color color) {
     // Usamos a mesma floorImage, mas mudamos o eixo Y de 0.5 para -0.5
-    _drawSubdividedPolygon(canvas, floorImage, Palette.cinzaEsc, [
+    _drawSubdividedPolygon(canvas, img, color, [
       [cx - 0.5, -0.5, cz + 1.0], 
       [cx + 0.5, -0.5, cz + 1.0], 
       [cx + 0.5, -0.5, cz.toDouble()], 
@@ -233,7 +246,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   }
 
   void _drawSubdividedPolygon(Canvas canvas, ui.Image image, Color tintColor, List<List<double>> points3D) {
-    // 1. Removemos o ColorFilter daqui! O Paint agora só carrega a textura.
     final paint = Paint()
       ..shader = ImageShader(
         image, TileMode.clamp, TileMode.clamp, Matrix4.identity().storage,
@@ -245,15 +257,11 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     var positions = Float32List(numVertices * 2);
     var texCoords = Float32List(numVertices * 2);
     var indices = Uint16List(segs * segs * 6);
-    
-    // --- NOVO: Criamos uma lista de cores para cada vértice 3D ---
-    var colors = Int32List(numVertices);
-    for (int i = 0; i < numVertices; i++) {
-      colors[i] = tintColor.value; // Injeta a cor (ex: Marrom, Cinza) em todos os pontos
-    }
+    var colors = Int32List(numVertices); // Lista de cores pronta para receber dados
 
     int vIdx = 0;
     int tIdx = 0;
+    int cIdx = 0; // NOVO: Índice para rastrear a cor de cada vértice
 
     final p0 = points3D[0];
     final p1 = points3D[1];
@@ -276,6 +284,17 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         double finalX = topX + (botX - topX) * ty;
         double finalY = topY + (botY - topY) * ty;
         double finalZ = topZ + (botZ - topZ) * ty;
+
+       // Escuridão bruta baseada na profundidade daquele pedacinho
+        double rawDarkness = (finalZ / 4.5).clamp(0.0, 1.0);
+        
+        // Aplica a mesma quebra para criar faixas duras de sombra na parede
+        double darkness = (rawDarkness * 4).round() / 4.0;
+        
+        Color vertexColor = Color.lerp(tintColor, Colors.black, darkness)!;
+        
+        // Aplica a cor escurecida diretamente no vértice atual
+        colors[cIdx++] = vertexColor.value;
 
         Offset proj = _project(finalX, finalY, finalZ);
 
@@ -305,16 +324,14 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       }
     }
 
-    // 2. Passamos a lista de cores nativa para a geometria
     final vertices = ui.Vertices.raw(
       ui.VertexMode.triangles,
       positions,
       textureCoordinates: texCoords,
-      colors: colors, // <--- A GPU do telemóvel vai ler isto diretamente!
+      colors: colors, 
       indices: indices,
     );
 
-    // 3. Dizemos ao Canvas para fundir a Cor do Vértice com a Textura (BlendMode.modulate)
     canvas.drawVertices(vertices, BlendMode.modulate, paint);
   }
 }

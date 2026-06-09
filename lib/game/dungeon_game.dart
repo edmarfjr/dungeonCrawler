@@ -143,7 +143,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.armaduraFerro
+      ItemDatabase.machado,
+      ItemDatabase.espadaLonga
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -196,6 +197,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.spider: await images.load('actors/spider.png'),
       EnemyType.mimic: await images.load('actors/mimic.png'),
       EnemyType.orc: await images.load('actors/orc.png'),
+      EnemyType.bat: await images.load('actors/bat.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -210,6 +212,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.orc: await images.load('effects/golpe.png'),
       EnemyType.spider: await images.load('effects/bite.png'), 
       EnemyType.mimic: await images.load('effects/coin.png'),
+      EnemyType.bat: await images.load('effects/bite.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -593,14 +596,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               //combatOverlay.addFloatingText("-${damage.toInt()}", enemy.getHurtbox(size), Palette.branco);
               enemy.hp -= damage;
               enemy.applyHitStun(0.4);
+              playerCombatStats.recoverMana();
               FlameAudio.play('sfx/hit.wav');
             }else{
               enemy.applyHitGuard(0.1);
+              playerCombatStats.stamina = max(playerCombatStats.stamina - playerCombatStats.staminaCost,0);
               combatOverlay.addFloatingText("BLOCK!", enemy.getHurtbox(size), Palette.cinzaCla);
               FlameAudio.play('sfx/block.wav');
             }
             
             if (enemy.hp <= 0) {
+              FlameAudio.play('sfx/enemy_die.wav');
               enemy.hp = 0;
               enemy.isDying = true; // Inicia animação de morte (piscar)
               encounterEssence += enemy.dropEssence; // Guarda a essência provisoriamente
@@ -709,6 +715,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double defense = playerCombatStats.equippedArmor?.power ?? 0; // Armadura reduz dano!
     double dmg = max(1, enemy.damage - defense);
     if (playerCombatStats.isGuarding) {
+      FlameAudio.play('sfx/block.wav');
       if (playerCombatStats.stamina >= 0) {
         if (playerCombatStats.staminaInfiniteTmr <= 0){
           playerCombatStats.stamina -= (16 - playerCombatStats.equippedShield!.power); 
@@ -727,6 +734,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.weaponHitTicker.reset();
       }
     } else { 
+      FlameAudio.play('sfx/hit.wav');
       playerCombatStats.hp -= dmg; 
       playerCombatStats.applyHitStun(0.3); 
       combatOverlay.playerHitTicker.reset(); 
@@ -736,6 +744,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void triggerEncounter() {
+    FlameAudio.play('sfx/encounter.wav');
     encounterEssence = 0;         
     showVictoryMessage = false;
     currentState = GameState.combat;
@@ -744,11 +753,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     List<Enemy Function()> iniPool = [
       () => SlimeEnemy(),
       () => GoblinEnemy(),
-      () => SpiderEnemy()
+      () => SpiderEnemy(),
     ];
     
     if(player.floorLevel > 1){
       iniPool.add(() => OrcEnemy());
+      iniPool.add(() => BatEnemy());
     }
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
@@ -1007,6 +1017,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
     else if (item.type == ItemType.consumable) { 
       if (item.onUse != null) item.onUse!(item, this);
+      FlameAudio.play('sfx/use_item.wav');
       _consumeItem(item);
     }
   }
@@ -1015,6 +1026,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (item.type == ItemType.consumable) {
       if (item.onUse != null) item.onUse!(item, this);
       _consumeItem(item); 
+      FlameAudio.play('sfx/use_item.wav');
     } 
     else if (item.type == ItemType.spell) {
       if (playerCombatStats.mana >= item.manaCost) {

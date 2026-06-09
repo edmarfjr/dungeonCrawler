@@ -1,5 +1,4 @@
 import 'package:dungeon_crawler/game/components/core/palette.dart';
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/components.dart';
 import 'package:flame_audio/flame_audio.dart';
@@ -73,23 +72,14 @@ class PlayerCombatStats {
   List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
   void recalculateMaxHp() {
-    // 1. Descobre quantos pontos foram adicionados acima do valor base
     int pontosAdicionados = con - base;
-    
-    // 2. Divide por 3 usando divisão inteira (~/) para descobrir os blocos de 3 pontos
     int blocosDeTres = pontosAdicionados ~/ 3; 
-    
-    // 3. Define quanta vida o jogador ganha por bloco (ex: +20 de HP máximo a cada 3 pontos de CON)
     double hpBonusPorBloco = 5.0; 
-    
-    double vidaBaseOriginal = 100.0;
+    double vidaBaseOriginal = 30.0;
     double antigaMaxHp = maxHp;
 
-    // 4. Calcula o novo valor final de maxHp
     maxHp = vidaBaseOriginal + (blocosDeTres * hpBonusPorBloco);
 
-    // 5. BONUS DE QUALIDADE DE VIDA: Se a vida máxima subiu, cura o jogador 
-    // pela diferença exata para que ele não precise gastar poção só porque subiu de nível!
     if (maxHp > antigaMaxHp) {
       hp += (maxHp - antigaMaxHp);
     }

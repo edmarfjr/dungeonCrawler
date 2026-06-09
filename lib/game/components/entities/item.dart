@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
   
@@ -28,7 +29,7 @@ class ItemDatabase {
   static Item get adaga => Item("Adaga", ItemType.weapon, 'itens/dagger.png', 5, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
-    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.05;
     game.playerCombatStats.staminaCost = 3.0;
     game.playerCombatStats.critChance = 10;
     game.playerCombatStats.critMultiplier = 2;
@@ -37,26 +38,26 @@ class ItemDatabase {
   static Item get espadaCurta => Item("Espada Curta", ItemType.weapon, 'itens/sword.png', 7, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
-    game.playerCombatStats.recoveryTime = 0.2;
-    game.playerCombatStats.staminaCost = 4.0;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.staminaCost = 3.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 10, cor: Colors.white, hasReach: true, onUse: (item, game) {
-    game.playerCombatStats.windupTime = 0.2;
+  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 15, cor: Colors.white, hasReach: true, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
-    game.playerCombatStats.recoveryTime = 0.2;
-    game.playerCombatStats.staminaCost = 5.0;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.staminaCost = 4.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 2;
   });
 
-  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 15, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.windupTime = 0.2;
+  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
-    game.playerCombatStats.recoveryTime = 0.3;
-    game.playerCombatStats.staminaCost = 6.0;
+    game.playerCombatStats.recoveryTime = 0.2;
+    game.playerCombatStats.staminaCost = 5.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 1.2;
   });
@@ -115,6 +116,7 @@ class ItemDatabase {
       item.quantity++; // Devolve o item
       return;
     }
+    FlameAudio.play('sfx/fire.wav');
     game.playerCombatStats.explosionVfxTimer = 0.5;
     // Dano em área para todos os inimigos vivos no Overlay de Combate
     for (var enemy in game.combatOverlay.enemies) {
@@ -138,6 +140,7 @@ class ItemDatabase {
     }
 
     // Instancia o projétil exatamente na posição horizontal do jogador!
+    FlameAudio.play('sfx/fire.wav');
     game.combatOverlay.add(PlayerProjectile(
        game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, item.cor, width: 80, height: 180
     ));
@@ -149,7 +152,7 @@ class ItemDatabase {
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
       return;
     }
-    
+    FlameAudio.play('sfx/charge.wav');
     game.combatOverlay.add(PlayerProjectile(
       game.playerCombatStats.strafePosition, 0.0, 2.5, item.power*game.playerCombatStats.wis, item.cor, yDir: 1, isPiercing: true, width: 40, height: 180
     ));
@@ -157,7 +160,7 @@ class ItemDatabase {
 
   static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 1, manaCost: 15, cor: Palette.verde, onUse: (item, game) {
     if (game.currentState != GameState.combat) { game.playerCombatStats.mana += item.manaCost; return; }
-
+    FlameAudio.play('sfx/poison.wav');
     game.combatOverlay.add(PlayerProjectile(
        game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, item.cor, width: 80, height: 180
       , isPiercing: true,hitCooldown: 0.5

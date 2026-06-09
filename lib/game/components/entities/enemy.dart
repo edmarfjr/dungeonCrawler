@@ -5,9 +5,10 @@ import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -15,7 +16,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   final double width, height, maxAttackCooldown;
   double hitFlashTimer = 0.0;
   Color flashColor = Palette.branco;
-  double deathTimer = 0.6;
+  double deathTimer = 1;
 
   final double hurtboxWidth, hurtboxHeight, hurtboxOffsetX, hurtboxOffsetY;
   final double hitboxWidth, hitboxHeight, hitboxOffsetX, hitboxOffsetY;
@@ -74,9 +75,9 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   void update(double dt) {
     if(gameRef.currentState == GameState.paused)return;
     super.update(dt);
-    if (!isAlive) return;
-
     priority = isFrontRow ? 10 : 0;
+
+    if (!isAlive) return;
 
     // --- Animação suave entre a linha de frente e de trás ---
     if (isFrontRow != _lastRow) {
@@ -98,7 +99,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // 3. Destinos da profundidade
     double targetScale = isFrontRow ? 1.0 : 0.85;
     double targetYOffset = isFrontRow ? 0.0 : -0.02; 
-    double targetDarkness = isFrontRow ? 0.0 : 0.6; 
+    double targetDarkness = (game.playerCombatStats.currentPhase == CombatPhase.entering) ? 1 :isFrontRow  ? 0.0 : 0.6; 
 
     double transitionSpeed = 4.6 / maxJumpTime;
 
@@ -117,7 +118,11 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
     if (isDying) {
       deathTimer -= dt;
-      if (deathTimer <= 0) { isAlive = false; removeFromParent(); gameRef.combatOverlay.enemies.remove(this); }
+      if (deathTimer <= 0) {
+        isAlive = false; 
+        removeFromParent(); 
+        gameRef.combatOverlay.enemies.remove(this); 
+      }
       return; 
     }
 
@@ -126,7 +131,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) currentPhase = CombatPhase.idle;
       return; 
     }
-
+    if (game.playerCombatStats.currentPhase == CombatPhase.entering) return;
     _updatePhase(dt);
 
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
@@ -223,7 +228,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
       animTimer -= dt;
       if (animTimer <= 0) {
-        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; }
+        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
         else if (currentPhase == CombatPhase.active) { currentPhase = CombatPhase.recovery; animTimer = 1.0; } 
         else { currentPhase = CombatPhase.idle; }
       }
@@ -235,7 +240,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (isDying && (deathTimer * 15).toInt() % 2 == 0) return;
 
     if (hitFlashTimer>0 && (hitFlashTimer * 15).toInt() % 2 == 0) return;
-
+    
+  // sombra
     final shadowPaint = Paint()..color = Palette.preto..isAntiAlias = false;
       
       // A sombra tem 60% da largura do inimigo e é achatada (15% da altura)
@@ -244,7 +250,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     
     // 1. Descobrimos onde é o chão 
     // (Como a Aranha paira no ar, fixamos o chão virtual dela no 0.65 da tela)
-    double groundYPos = (type == EnemyType.spider) ? 0.65 : yPosition; 
+    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat) ? 0.65 : yPosition; 
     double floorGlobalY = gameRef.size.y * (groundYPos + visualYOffset);
     
     // 2. Calculamos a distância entre o inimigo (flutuando ou saltando) e o chão
@@ -281,11 +287,11 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     }
 
     SpriteAnimationTicker activeTicker = gameRef.combatOverlay.getTickerForEnemy(this);
-    final Color flashC = Colors.white;// hitFlashTimer > 0 ? flashColor : Colors.white;
+    final Color flashC =  Colors.white;// hitFlashTimer > 0 ? flashColor : Colors.white;
     int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
-    Color finalColor = Color.fromARGB(flashC.alpha, r, g, b);
+    Color finalColor = game.playerCombatStats.currentPhase == CombatPhase.entering? Palette.preto : Color.fromARGB(flashC.alpha, r, g, b);
     
     final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
     activeTicker.getSprite().render(canvas, size: size, overridePaint: tintPaint);
@@ -583,6 +589,99 @@ class OrcEnemy extends Enemy {
       currentPhase = CombatPhase.windup; 
       animTimer = 0.8; 
       attackCooldown = maxAttackCooldown;
+    }
+  }
+}
+
+class BatEnemy extends Enemy {
+  double currentDir = 1.0;
+  
+  final double flightHeight = 0.15; 
+  final double attackHeight = 0.65;   
+  double targetStrafe = 0;
+
+  BatEnemy() : super(
+    type: EnemyType.bat, name: 'morcego',
+    color: Palette.roxo, 
+    hp: 40, maxHp: 40, dropEssence: 10, width: 120, height: 120, speed: 0.5,
+    hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,
+  ) {
+    isMelee = true;
+    yPosition = flightHeight; // Já nasce colado no teto
+    targetY = flightHeight;
+  }
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // FASE DE PATRULHA
+    if (currentPhase == CombatPhase.idle) {
+      targetY = flightHeight; // Garante que a intenção é ficar no teto
+
+      // Só flutua de um lado pro outro se já tiver chegado lá em cima
+      if ((yPosition - flightHeight).abs() < 0.05) {
+        strafePosition += currentDir * speed * dt;
+        
+        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+      }
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+   
+    // Decide atacar se o tempo estourou E se ele estiver fisicamente lá no alto
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 1.0; // Tempo de preparo/mergulho
+      targetY = attackHeight; // Comando para a classe pai: "Desça para o chão!"
+      attackCooldown = maxAttackCooldown;
+      targetStrafe = gameRef.playerCombatStats.strafePosition;
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); // A classe pai resolve a cor, timers e sprites
+
+    if (currentPhase == CombatPhase.windup) {
+      targetY = attackHeight;
+
+      // 1. Descobre a diferença nos eixos X e Y
+      double dx = targetStrafe - strafePosition;
+      double dy = targetY - yPosition;
+      
+      // 2. Calcula a distância total em linha reta (Teorema de Pitágoras)
+      double distance = sqrt(dx * dx + dy * dy);
+
+      // 3. Move o morcego simultaneamente nos dois eixos se ainda não chegou ao alvo
+      if (distance > 0.01) {
+        double diveSpeed = speed*3; // Velocidade do mergulho (Aumente se quiser mais agressivo)
+        double moveStep = diveSpeed * dt;
+
+        // Trava de segurança para ele não "passar do ponto" e tremer
+        if (moveStep > distance) moveStep = distance;
+
+        // Distribui a velocidade perfeitamente na diagonal
+        strafePosition += (dx / distance) * moveStep;
+        yPosition += (dy / distance) * moveStep;
+      }
+
+    } else {
+      // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
+      if ((yPosition - targetY).abs() > 0.01) {
+        double verticalSpeed = speed; // Velocidade que ele volta para o teto
+        yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
+      }
+
+      // Controla a intenção de altura baseada na fase
+      if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
+        targetY = attackHeight; // Mantém no chão para você poder bater nele
+      } else if (currentPhase == CombatPhase.idle) {
+        targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
+      }
     }
   }
 }

@@ -352,7 +352,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawBottomBarBackground(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, size.y - 70, size.x, 70), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(0, size.y - 75, size.x, 75), Paint()..color = Colors.black);
   }
 
   void _drawDebugBoxes(Canvas canvas) {
