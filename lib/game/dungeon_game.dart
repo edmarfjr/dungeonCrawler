@@ -146,8 +146,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.machado,
-      ItemDatabase.espadaLonga
+      ItemDatabase.reflexPotion,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -167,6 +166,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'sfx/fire.wav',
       'sfx/charge.wav',
       'sfx/poison.wav',
+      'sfx/confirm.wav',
+      'sfx/hover.wav',
     ]);
     
     await images.loadAll([
@@ -633,6 +634,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             double damage = playerCombatStats.str.toDouble();//(playerCombatStats.comboCount >= 3) ? playerCombatStats.str * 1.5 : playerCombatStats.str.toDouble();
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
             if(enemy.isVulnerable){
+              playerCombatStats.reflex = false;
               bool isCrit = Random().nextDouble() * 100 < playerCombatStats.critChance;
               if (isCrit) {
                 damage *= playerCombatStats.critMultiplier;
@@ -858,6 +860,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     // level up
     if (currentState == GameState.levelUp) {
+      FlameAudio.play('sfx/hover.wav');
       if (input == GameInput.up) {
         levelUpCursor = (levelUpCursor - 1 + 4) % 4; // Navega pelas 3 opções + botão confirmar
       }
@@ -867,6 +870,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       // Adicionar pontos (Botão Direita ou Botão A nas opções de status)
       if (input == GameInput.right || (input == GameInput.buttonA && levelUpCursor < 3)) {
+        FlameAudio.play('sfx/hover.wav');
         if (pointsToDistribute > 0 && levelUpCursor < 3) {
           pointsToDistribute--;
           if (levelUpCursor == 0) tempStr++;
@@ -919,11 +923,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       // SUBMENU DO ITEM (Aberto)
       if (isItemActionMenuOpen) {
         if (input == GameInput.up) {
+          FlameAudio.play('sfx/hover.wav');
           itemActionCursor = (itemActionCursor - 1 + 3) % 3;
         } else if (input == GameInput.down) {
+          FlameAudio.play('sfx/hover.wav');
           itemActionCursor = (itemActionCursor + 1) % 3;
         } else if (input == GameInput.buttonA) {
-          
+          FlameAudio.play('sfx/confirm.wav');
           if (itemActionCursor == 0) {
             Item item = playerCombatStats.inventory[inventoryCursor];
             _useOrEquipItem(item); 
@@ -940,19 +946,24 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           }
           
         } else if (input == GameInput.buttonB || input == GameInput.pause) {
+          FlameAudio.play('sfx/decline.wav');
           isItemActionMenuOpen = false; 
         }
       } 
       // NAVEGAÇÃO NORMAL DO INVENTÁRIO (Submenu Fechado)
       else {
         if (input == GameInput.up) {
+          FlameAudio.play('sfx/hover.wav');
           inventoryCursor = max(0, inventoryCursor - 1);
         } else if (input == GameInput.down) {
+          FlameAudio.play('sfx/hover.wav');
           inventoryCursor = min(playerCombatStats.inventory.length - 1, inventoryCursor + 1);
         } else if (input == GameInput.buttonA && playerCombatStats.inventory.isNotEmpty) {
+          FlameAudio.play('sfx/confirm.wav');
           isItemActionMenuOpen = true;
           itemActionCursor = 0;
         } else if (input == GameInput.buttonB || input == GameInput.pause) {
+          FlameAudio.play('sfx/decline.wav');
           currentState = GameState.exploration; 
         }
       }
@@ -1008,6 +1019,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
       
       if (input == GameInput.buttonB) { 
+        FlameAudio.play('sfx/confirm.wav');
         currentState = GameState.inventory; 
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
@@ -1067,20 +1079,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   // Chame esta função quando o jogador encostar o dedo no botão da tela
-void onTouchStart(GameInput input) {
-  if (input == GameInput.up) upPressed = true;
-  if (input == GameInput.down) downPressed = true;
-  if (input == GameInput.left) leftPressed = true;
-  if (input == GameInput.right) rightPressed = true;
-}
+  void onTouchStart(GameInput input) {
+    if (input == GameInput.up) upPressed = true;
+    if (input == GameInput.down) downPressed = true;
+    if (input == GameInput.left) leftPressed = true;
+    if (input == GameInput.right) rightPressed = true;
 
-// Chame esta função quando o jogador levantar o dedo do botão da tela
-void onTouchEnd(GameInput input) {
-  if (input == GameInput.up) upPressed = false;
-  if (input == GameInput.down) downPressed = false;
-  if (input == GameInput.left) leftPressed = false;
-  if (input == GameInput.right) rightPressed = false;
-}
+    explorationMoveCooldown = 0.5;
+  }
+
   
   void _useOrEquipItem(Item item) async {
     String fileName = item.imagePath.split('/').last;
@@ -1274,6 +1281,7 @@ void onTouchEnd(GameInput input) {
           ItemDatabase.manaPotion,
           ItemDatabase.bomb,
           ItemDatabase.staminaPotion,
+          ItemDatabase.reflexPotion,
         ];
 
           int totalConsumables = allConsumables.length;

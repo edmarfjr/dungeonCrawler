@@ -103,7 +103,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // 3. Destinos da profundidade
     double targetScale = isFrontRow ? 1.0 : 0.85;
     double targetYOffset = isFrontRow ? 0.0 : -0.02; 
-    double targetDarkness = (game.playerCombatStats.currentPhase == CombatPhase.entering) ? 1 :isFrontRow  ? 0.0 : 0.6; 
+    double targetDarkness = isFrontRow  ? 0.0 : 0.6; 
 
     double transitionSpeed = 4.6 / maxJumpTime;
 
@@ -140,7 +140,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) currentPhase = CombatPhase.idle;
       return; 
     }
-    if (game.playerCombatStats.currentPhase == CombatPhase.entering) return;
+    if (game.playerCombatStats.currentPhase == CombatPhase.entering || game.playerCombatStats.reflex) return;
     _updatePhase(dt);
 
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
@@ -300,7 +300,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
-    Color finalColor = game.playerCombatStats.currentPhase == CombatPhase.entering? Palette.preto : Color.fromARGB(flashC.alpha, r, g, b);
+    Color finalColor = Color.fromARGB(flashC.alpha, r, g, b);
     
     final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
     activeTicker.getSprite().render(canvas, size: size, overridePaint: tintPaint);
@@ -334,8 +334,6 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: 120, height: 120);
   }
 }
-
-// --- SUBCLASSES COM CAIXAS TOTALMENTE PERSONALIZADAS ---
 
 class SlimeEnemy extends Enemy {
   double moveTimer = 0.0;

@@ -85,7 +85,7 @@ class ItemDatabase {
     game.playerCombatStats.moveSpeedPenalty = 0.5;
   });
 
-  static Item get healthPotion => Item("Poção de Cura", ItemType.consumable, 'itens/potion.png', cor: Palette.vermelho, 40, quantity: 1, onUse: (item, game) {
+  static Item get healthPotion => Item("Poção Vermelha", ItemType.consumable, 'itens/potion.png', cor: Palette.vermelho, 40, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
     game.playerCombatStats.healVfxTimer = 0.5;
     //if (game.currentState == GameState.exploration) {
@@ -93,7 +93,7 @@ class ItemDatabase {
     //}
   });
 
-  static Item get manaPotion => Item("Poção de Mana", ItemType.consumable, 'itens/potion.png', cor: Palette.azul, 100, quantity: 1, onUse: (item, game) {
+  static Item get manaPotion => Item("Poção Azul", ItemType.consumable, 'itens/potion.png', cor: Palette.azul, 100, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.mana = min(game.playerCombatStats.wis*3, game.playerCombatStats.mana + item.power);
     game.playerCombatStats.manaVfxTimer = 0.5;
     //if (game.currentState == GameState.exploration) {
@@ -101,10 +101,17 @@ class ItemDatabase {
     //}
   });
 
-  static Item get staminaPotion => Item("Poção de Vigor", ItemType.consumable, 'itens/potion.png', cor: Palette.verde, 50, quantity: 1, onUse: (item, game) {
+  static Item get staminaPotion => Item("Poção Verde", ItemType.consumable, 'itens/potion.png', cor: Palette.verde, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.cansado = false;
     game.playerCombatStats.stamina = game.playerCombatStats.con*3;
     game.playerCombatStats.staminaInfiniteTmr = 6;
+    //if (game.currentState == GameState.exploration) {
+   // game.showMessage("Você recuperou ${item.power} de Stamina!");
+    //}
+  });
+
+  static Item get reflexPotion => Item("Poção Amarela", ItemType.consumable, 'itens/potion.png', cor: Palette.amarelo, 50, quantity: 1, onUse: (item, game) {
+    game.playerCombatStats.reflex = true;
     //if (game.currentState == GameState.exploration) {
    // game.showMessage("Você recuperou ${item.power} de Stamina!");
     //}

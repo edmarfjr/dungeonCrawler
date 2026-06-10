@@ -17,6 +17,7 @@ class PlayerCombatStats {
   int comboCount = 0;
   double comboTimer = 0.0, animTimer = 0.0;
   CombatPhase currentPhase = CombatPhase.idle;
+  bool reflex = false;
 
   int str = 5, con = 5, wis = 5, base = 5;
 

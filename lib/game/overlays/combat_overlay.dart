@@ -352,7 +352,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawBottomBarBackground(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, size.y - 75, size.x, 75), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(0, size.y - 76, size.x, 75), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(0, size.y - 76, size.x, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.5);
   }
 
   void _drawDebugBoxes(Canvas canvas) {
@@ -468,6 +469,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   void _drawPlayerUI(Canvas canvas) {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, 60), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, 60), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.5);
     //double barWidth = (size.x - 40) / 3;
     _drawHorizontalBar(canvas, 10, 10, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
     _drawHorizontalBar(canvas, 10, 25, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
@@ -508,6 +510,13 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         text: const TextSpan(text: 'Uso[B]', style: TextStyle(color: Palette.amarelo, fontSize: 10)),
         textDirection: TextDirection.ltr,
       )..layout()..paint(canvas, Offset(size.x/2 - 10, 45));
+      if(playerStats.reflex){
+        TextPainter(
+          text: const TextSpan(text: 'REFLEX', style: TextStyle(color: Palette.branco, fontSize: 10)),
+          textDirection: TextDirection.ltr,
+        )..layout()..paint(canvas, Offset(size.x-'REFLEX'.length*10, 45));
+      }
+
     }
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
       double keyX = size.x/2 - 20;
@@ -550,7 +559,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   void _drawHorizontalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
     canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(x, y, w * r.clamp(0.0, 1.0), h), Paint()..color = c);
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.cinzaMed..style = PaintingStyle.stroke);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke);
   }
 
   void _drawVictoryMessage(Canvas canvas) {

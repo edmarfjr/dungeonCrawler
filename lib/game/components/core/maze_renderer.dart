@@ -80,9 +80,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
            _drawFloorTile(canvas, cx, cz, doorImage, Palette.marrom);
         }
 
-        if (tile == TileType.entry) {
-           _drawCeiling(canvas, cx, cz, doorImage, Palette.marrom);
-        }
+        //if (tile == TileType.entry) {
+        //   _drawCeiling(canvas, cx, cz, doorImage, Palette.marrom);
+        //}
 
         
 
@@ -97,7 +97,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         }
 
         if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, bossImage, 0.5, 0.1, Palette.roxo);
+          _drawBillboardItem(canvas, cx, cz, bossImage, 0.5, 0.1, Palette.vermelho);
         }
 
         if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
@@ -110,7 +110,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
-          //_drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
+          _drawFloorTile(canvas, cx, cz, floorImage, Palette.preto);
 
           // Calcula a largura de 1 frame (divide a spritesheet por 4)
           double frameWidth = spikeImage.width / 4;
@@ -148,7 +148,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Se o inimigo estiver na coordenada que o laço está varrendo agora...
           if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
             // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
-            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.5, 0.0,Palette.roxo);
+            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.5, 0.0,Palette.vermelho);
           }
         }
       }
