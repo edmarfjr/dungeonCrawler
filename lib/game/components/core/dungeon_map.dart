@@ -1,8 +1,9 @@
 import 'dart:math';
 
 import 'package:dungeon_crawler/game/components/entities/item.dart';
+import 'package:flame/game.dart';
 
-enum TileType {entry, wall, floor, door, chest, spike, shrine }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -21,11 +22,13 @@ class DungeonMap {
 
   Map<Point<int>, List<Item>> droppedItems = {};
 
+  int level;
+
   void advanceSpikes() {
     spikeState = (spikeState + 1) % 4;
   }
 
-  DungeonMap({this.width = 20, this.height = 20}) { generateProceduralMap(); }
+  DungeonMap({this.width = 20, this.height = 20, this.level = 1}) { generateProceduralMap(); }
 
   int _calculateDistance(Point<int> p1, Point<int> p2) {
     return (p1.x - p2.x).abs() + (p1.y - p2.y).abs();
@@ -163,7 +166,12 @@ class DungeonMap {
     } else {
       selectedKey ??= playerSpawn;
     } 
-    keyPosition = selectedKey;
+    if (level == 3){
+      grid[selectedKey.y][selectedKey.x] = TileType.boss;
+    }else{
+      keyPosition = selectedKey;
+    }
+    
 
     int numChests = random.nextInt(3) + 1; 
     for (int i = 0; i < numChests; i++) { if (floorTiles.isNotEmpty) { Point<int> chestPos = floorTiles.removeAt(0); grid[chestPos.y][chestPos.x] = TileType.chest; } }

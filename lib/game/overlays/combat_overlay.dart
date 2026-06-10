@@ -102,13 +102,13 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     enemyAnimationSets.clear();
     for (var entry in enemySheets.entries) {
       // 1. Descobre quantas colunas a imagem tem. 
-      int totalColumns = (entry.key == EnemyType.orc) ? 6 : 5;
+      int totalColumns = (entry.key == EnemyType.orc || entry.key == EnemyType.boss1) ? 6 : 5;
 
       // 2. Cria o SpriteSheet com o número correto de colunas para aquele monstro
       final sheet = SpriteSheet.fromColumnsAndRows(image: entry.value, columns: totalColumns, rows: 1);
       
       SpriteAnimation? defendAnim;
-      if (entry.key == EnemyType.orc) {
+      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1) {
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
@@ -535,18 +535,22 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   void _drawEnemyUI(Canvas canvas) {
     for (int i = 0; i < enemies.length; i++) {
       if (!enemies[i].isAlive) continue;
-      _drawHorizontalBar(canvas, 15, size.y - 70 + 10 + i*14, enemies[i].maxHp * 4 , 10, Palette.vermelho, enemies[i].hp / enemies[i].maxHp);
-       TextPainter(
-        text: TextSpan(text: enemies[i].name, style: TextStyle(color: Palette.branco, fontSize: 10, fontWeight: FontWeight.bold )),
+      _drawHorizontalBar(canvas, 15, size.y - 75 + 2 + i*18, size.x - 30 , 16, Palette.vermelho, enemies[i].hp / enemies[i].maxHp);
+      TextPainter(
+        text: TextSpan(text: enemies[i].name.toUpperCase(), style: TextStyle(color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold )),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(15, size.y - 70 + 10 + i*14));
+      )..layout()..paint(canvas, Offset(size.x/2 - enemies[i].name.length*7, size.y - 75 + 2 + i*18));
+      //TextPainter(
+      //  text: TextSpan(text: "${enemies[i].hp} / ${enemies[i].maxHp}", style: TextStyle(color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold )),
+      //  textDirection: TextDirection.ltr,
+      //)..layout()..paint(canvas, Offset(size.x/2, size.y - 75 + 2 + i*18));
     }
   }
 
   void _drawHorizontalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(x, y, w * r.clamp(0.0, 1.0), h), Paint()..color = c);
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Colors.white24..style = PaintingStyle.stroke);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.cinzaMed..style = PaintingStyle.stroke);
   }
 
   void _drawVictoryMessage(Canvas canvas) {

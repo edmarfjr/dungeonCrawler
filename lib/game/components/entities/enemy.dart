@@ -8,7 +8,7 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1 }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -42,8 +42,11 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   double maxJumpTime = 0.7;  
   double maxJumpHeight = 0.1;
 
-  String name;
+  bool isBoss;
 
+  String name;
+  
+  bool isHeavyAttack = false;
 
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
@@ -53,6 +56,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     this.yPosition = 0.7, this.targetY = 0.7,
     this.speed = 0.4, this.maxAttackCooldown = 2.0, this.damage = 3,
     this.isMelee = true,
+    this.isBoss = false,
   }) : attackCooldown = maxAttackCooldown, super(anchor: Anchor.center); // Anchor Center ajuda muito no Flame!
 
   void applyHitStun(double duration) {
@@ -119,9 +123,14 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (isDying) {
       deathTimer -= dt;
       if (deathTimer <= 0) {
+        if(isBoss){
+          gameRef.player.hasKey = true;
+          gameRef.showMessage("Você encontrou a Chave da Masmorra!");
+        }
         isAlive = false; 
         removeFromParent(); 
         gameRef.combatOverlay.enemies.remove(this); 
+       
       }
       return; 
     }
@@ -333,7 +342,7 @@ class SlimeEnemy extends Enemy {
   double currentDir = 1.0;
 
   SlimeEnemy() : super(name:'slime',
-    type: EnemyType.slime, color: Palette.verdeCla, hp: 50, maxHp: 30, dropEssence: 20, width: 144, height: 144, speed: 0.4,
+    type: EnemyType.slime, color: Palette.verdeCla, hp: 50, maxHp: 50, dropEssence: 10, width: 144, height: 144, speed: 0.4,
     hurtboxWidth: 80, hurtboxHeight: 70, hurtboxOffsetY: 0, // Hurtbox achatada no chão
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30,  // O ataque dele se expande do corpo
   );
@@ -358,7 +367,7 @@ class SlimeEnemy extends Enemy {
 class GoblinEnemy extends Enemy {
   bool isFleeing = false;
   GoblinEnemy() : super(name:'goblin',
-    type: EnemyType.goblin, color: Palette.verde, hp: 60, maxHp: 50, dropEssence: 30, width: 144, height: 144, speed: 0.6, damage: 5,
+    type: EnemyType.goblin, color: Palette.verde, hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.6, damage: 5,
     hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 50, maxAttackCooldown: 1.0 
   );
@@ -432,7 +441,7 @@ class SpiderEnemy extends Enemy {
   double landTmr = 0.0;
 
   SpiderEnemy() : super(name:'aranha',
-    type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 20, dropEssence: 15, width: 144, height: 144, yPosition: 0.1, targetY: 0.1,
+    type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, yPosition: 0.1, targetY: 0.1,
     hurtboxWidth: 60, hurtboxHeight: 70, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, 
   );
@@ -486,7 +495,7 @@ class MimicEnemy extends Enemy {
   bool _spawnedProjectiles = false;
 
   MimicEnemy() : super(name:'mimico',
-    type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 60, width: 144, height: 144, speed: 0.5, damage: 5,
+    type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 5,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 0, hitboxHeight: 0, isMelee: false, 
   );
@@ -603,7 +612,7 @@ class BatEnemy extends Enemy {
   BatEnemy() : super(
     type: EnemyType.bat, name: 'morcego',
     color: Palette.roxo, 
-    hp: 40, maxHp: 40, dropEssence: 10, width: 120, height: 120, speed: 0.5,
+    hp: 40, maxHp: 40, dropEssence: 10, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,
   ) {
@@ -683,5 +692,164 @@ class BatEnemy extends Enemy {
         targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
       }
     }
+  }
+}
+
+class OrcChefe extends Enemy {
+  bool isSummoning = false;
+  double summonCooldown = 12.0;
+
+  OrcChefe() : super(
+    name: 'orc chefe',isBoss: true,
+    type: EnemyType.boss1, 
+    color: Palette.vermelhoEsc, 
+    hp: 250, maxHp: 250, dropEssence: 100, 
+    width: 192, height: 192, speed: 0.45,
+    hurtboxWidth: 100, hurtboxHeight: 120, hurtboxOffsetY: 0,
+    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 60,
+  ) {
+    isMelee = true;
+    damage = 5; // Dano base do ataque normal
+  }
+
+  // MÁGICA 1: Se ele estiver invocando, desligamos o melee para a hitbox não machucar o jogador!
+  @override
+  bool get isMelee => !isSummoning;
+
+  @override
+  bool get isVulnerable => currentPhase != CombatPhase.guard;
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // 1. Lê a mente do jogador (Igual ao Orc comum)
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    // 2. Verifica se o próprio chefe está ocupado atacando ou invocando
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery;
+
+    // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
+    if (isPlayerAttacking && !isSelfAttacking) {
+      // O jogador tentou bater e o Chefe está livre: Levanta o Escudo!
+      currentPhase = CombatPhase.guard;
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      // O jogador parou de bater: Abaixa o Escudo!
+      currentPhase = CombatPhase.idle;
+    }
+
+    // --- MOVIMENTO NORMAL (Só anda se não estiver defendendo e nem atacando/invocando) ---
+    if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
+      double targetStrafe = player.strafePosition;
+      if ((strafePosition - targetStrafe).abs() > 0.05) {
+        strafePosition += (targetStrafe > strafePosition ? 1 : -1) * speed * dt;
+        currentPhase = CombatPhase.walk;
+      } else {
+        currentPhase = CombatPhase.idle;
+      }
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+    summonCooldown -= dt;
+
+    if (currentPhase == CombatPhase.idle && isFrontRow) {
+      
+      // 1. PRIORIDADE: Invocar o lacaio
+      if (summonCooldown <= 0) {
+        isSummoning = true;
+        currentPhase = CombatPhase.windup;
+        animTimer = 1.5; // Fica 1.5s tocando o berrante / fazendo a pose
+        summonCooldown = 15.0 + Random().nextDouble() * 5.0; // Próximo goblin só daqui a ~17s
+        return;
+      }
+
+      // 2. ALTERNÂNCIA DE ATAQUES
+      if (attackCooldown <= 0) {
+        isSummoning = false;
+        isHeavyAttack = !isHeavyAttack; // Alterna entre normal e pesado!
+
+        currentPhase = CombatPhase.windup;
+        
+        // O ataque pesado tem um aviso (windup) BEM MAIOR para dar tempo de o jogador esquivar
+        animTimer = isHeavyAttack ? 1.2 : 0.6; 
+        attackCooldown = maxAttackCooldown;
+        
+        // O dano sobe violentamente no ataque pesado
+        damage = isHeavyAttack ? 10 : 5; 
+      }
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    // MÁGICA 2: Interceptamos a troca de fases para tratar a invocação em paz
+    if (isSummoning) {
+      if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+        animTimer -= dt;
+        if (animTimer <= 0) {
+          if (currentPhase == CombatPhase.windup) {
+            currentPhase = CombatPhase.active;
+            animTimer = 0.5; // Tempo da animação com o goblin aparecendo
+            _spawnGoblin();
+          } else if (currentPhase == CombatPhase.active) {
+            currentPhase = CombatPhase.recovery;
+            animTimer = 0.5;
+          } else {
+            currentPhase = CombatPhase.idle;
+            isSummoning = false;
+          }
+        }
+      }
+      return; // Interrompe para NÃO rodar a lógica original de _updatePhase
+    }
+
+    // Se for ataque normal/pesado, deixa a classe pai assumir
+    super._updatePhase(dt);
+  }
+
+  void _spawnGoblin() {
+    var goblin = GoblinEnemy();
+    
+    // Nasce na fileira de trás para não se encavalar em cima do Chefe
+    goblin.isFrontRow = false; 
+    
+    // Nasce ao lado do Chefe (esquerda ou direita)
+    goblin.strafePosition = strafePosition + (Random().nextBool() ? 0.3 : -0.3);
+    goblin.strafePosition = goblin.strafePosition.clamp(-1.0, 1.0);
+
+    // Registra o coitado no motor do seu jogo
+    gameRef.combatOverlay.enemies.add(goblin);
+    parent?.add(goblin);
+    
+    // Se quiser um som épico: FlameAudio.play('sfx/horn.wav');
+  }
+
+  @override
+  void render(Canvas canvas) {
+    // DESENHA AVISOS VISUAIS ATRÁS DO SPRITE (Auras)
+    if (currentPhase == CombatPhase.windup) {
+      Paint? auraPaint;
+      
+      if (isHeavyAttack && !isSummoning) {
+        // Aura vermelha do mal (Ataque Indefensável)
+        auraPaint = Paint()
+          ..color = Palette.vermelho.withOpacity(0.6)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      } else if (isSummoning) {
+        // Aura verde brilhante (Invocação)
+        auraPaint = Paint()
+          ..color = Palette.verde.withOpacity(0.6)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      }
+
+      if (auraPaint != null) {
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.5, auraPaint);
+      }
+    }
+
+    super.render(canvas); // Desenha a sombra e o sprite normalmente
   }
 }

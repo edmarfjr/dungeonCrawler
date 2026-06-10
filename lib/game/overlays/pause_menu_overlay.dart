@@ -46,15 +46,28 @@ class PauseMenuOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Palette.cinza, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Palette.preto, 
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero, 
+                ),
+              ),
               onPressed: () => game.togglePause(),
               child: const Text("CONTINUAR", style: TextStyle(fontSize: 18, color: Palette.branco)),
             ),
             const SizedBox(height: 10),
-            TextButton(
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Palette.preto, 
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero, 
+                ),
+              ),
               onPressed: () => game.quitToMainMenu(),
-              child: const Text("VOLTAR AO MENU PRINCIPAL", style: TextStyle(color: Palette.vermelho, fontSize: 16)),
-            ),
+              child: const Text("VOLTAR AO MENU PRINCIPAL", style: TextStyle(fontSize: 18, color: Palette.branco)),
+            ),  
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => {game.showHitboxes = !game.showHitboxes},

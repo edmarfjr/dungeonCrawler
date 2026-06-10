@@ -16,8 +16,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image doorImage;
   final ui.Image keyImage;
   final ui.Image chestImage;
+  final ui.Image openChestImage;
   final ui.Image spikeImage;
   final ui.Image roamerImage;
+  final ui.Image bossImage;
   final ui.Image shrineImage;
 
   MazeRenderer({
@@ -30,7 +32,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.chestImage,
     required this.spikeImage,
     required this.roamerImage,
+    required this.bossImage,
     required this.shrineImage,
+    required this.openChestImage,
   });
 
   @override
@@ -38,7 +42,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     super.render(canvas);
 
     // Fundo preto (teto e o vazio distante)
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto );
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black );
 
     // Vetores de direção
     int dx = 0, dy = 0;
@@ -60,14 +64,14 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         TileType tile = map.getTile(mapX, mapY);
 
         // Sempre desenha o chão
-        _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaMed);
-        _drawCeiling(canvas, cx, cz,floorImage, Palette.cinzaMed);
+        _drawFloorTile(canvas, cx, cz, floorImage, Palette.preto);
+        _drawCeiling(canvas, cx, cz,floorImage, Palette.preto);
 
         // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
         if (tile == TileType.wall) {
-          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
-          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
-          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinzaMed);
+          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinzaEsc); 
+          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinzaEsc); 
+          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinzaEsc);
         }
 
         // --- 2. LÓGICA DA PORTA ---
@@ -90,6 +94,14 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
           _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
+        }
+
+        if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, bossImage, 0.5, 0.1, Palette.roxo);
+        }
+
+        if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, openChestImage, 0.5, 0.1, Palette.amarelo);
         }
 
         if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
@@ -286,7 +298,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         double finalZ = topZ + (botZ - topZ) * ty;
 
        // Escuridão bruta baseada na profundidade daquele pedacinho
-        double rawDarkness = (finalZ / 4.5).clamp(0.0, 1.0);
+        double rawDarkness = (finalZ / 4.5).clamp(0.0, 0.5);
         
         // Aplica a mesma quebra para criar faixas duras de sombra na parede
         double darkness = (rawDarkness * 4).round() / 4.0;

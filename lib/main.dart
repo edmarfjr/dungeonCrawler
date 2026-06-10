@@ -174,6 +174,7 @@ class _GameScreenState extends State<GameScreen> {
       if (_currentDPadInput != null){
         HapticFeedback.lightImpact();
         _game.startInput(_currentDPadInput!);
+        _game.onTouchStart(_currentDPadInput!);
       } 
     }
   }
@@ -181,6 +182,7 @@ class _GameScreenState extends State<GameScreen> {
   void _handleDPadEnd() {
     if (_currentDPadInput != null) {
       _game.stopInput(_currentDPadInput!);
+      _game.onTouchEnd(_currentDPadInput!);
       _currentDPadInput = null;
     }
   }

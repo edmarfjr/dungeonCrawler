@@ -86,6 +86,15 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             tilePaint.color = Palette.amarelo;
             canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
             break;
+          case TileType.boss:
+            tilePaint.color = Palette.vermelho;
+            canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
+            break; 
+          case TileType.openChest:
+            tilePaint.color = Palette.amarelo;
+            tilePaint.style = PaintingStyle.stroke;
+            canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
+            break;
           case TileType.spike:
             // Spikes mudam de cor conforme o estado da armadilha
             tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
