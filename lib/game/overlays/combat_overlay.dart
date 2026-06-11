@@ -13,7 +13,8 @@ import 'package:flutter/material.dart';
 
 class EnemyAnimationSet {
   final SpriteAnimation idleWalk, attackWindup, attackActive, attackRecovery, hit;
-  final SpriteAnimation? defend; // <--- NOVO (Opcional, pois nem todos têm)
+  final SpriteAnimation? defend;
+  final SpriteAnimation? summon;
 
   EnemyAnimationSet({
     required this.idleWalk, 
@@ -21,7 +22,8 @@ class EnemyAnimationSet {
     required this.attackActive, 
     required this.attackRecovery, 
     required this.hit,
-    this.defend, // <--- NOVO
+    this.defend, 
+    this.summon, 
   });
 }
 
@@ -102,7 +104,19 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     enemyAnimationSets.clear();
     for (var entry in enemySheets.entries) {
       // 1. Descobre quantas colunas a imagem tem. 
-      int totalColumns = (entry.key == EnemyType.orc || entry.key == EnemyType.boss1) ? 6 : 5;
+      int totalColumns = 5;
+
+      switch (entry.key){
+        case EnemyType.orc:
+          totalColumns = 6;
+          break;
+        case EnemyType.boss1:
+          totalColumns = 7;
+          break;
+        default:
+          totalColumns = 5;
+          break;
+      }
 
       // 2. Cria o SpriteSheet com o número correto de colunas para aquele monstro
       final sheet = SpriteSheet.fromColumnsAndRows(image: entry.value, columns: totalColumns, rows: 1);
@@ -112,6 +126,11 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
+      SpriteAnimation? summonAnim;
+      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1) {
+        summonAnim = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: true);
+      }
+
       // 4. Salva as animações (O 'defend' entra como null para os monstros normais)
       enemyAnimationSets[entry.key] = EnemyAnimationSet(
         idleWalk: sheet.createAnimation(row: 0, from: 0, to: 2, stepTime: 0.20, loop: true),
@@ -119,8 +138,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         attackActive: sheet.createAnimation(row: 0, from: 3, to: 4, stepTime: 0.15, loop: false),
         attackRecovery: sheet.createAnimation(row: 0, from:  3, to: 4, stepTime: 1.0, loop: false),
         hit: sheet.createAnimation(row: 0, from:  4, to: 5, stepTime: 0.3, loop: false),
-        
-        defend: defendAnim, // <--- ADICIONA AQUI!
+        defend: defendAnim, 
+        summon: summonAnim,
       );
     }
   }
@@ -202,9 +221,10 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     else if (enemy.currentPhase == CombatPhase.recovery) targetAnim = animSet.attackRecovery;
     else if (enemy.currentPhase == CombatPhase.hit) targetAnim = animSet.hit;
     else if (enemy.currentPhase == CombatPhase.guard) {
-      // Tenta usar a animação de defesa. Se ela for nula (inimigo não tem escudo),
-      // o '??' garante que ele volta para o idleWalk, evitando a tela vermelha de erro!
       targetAnim = animSet.defend ?? animSet.idleWalk; 
+    }
+    else if (enemy.currentPhase == CombatPhase.summon) {
+      targetAnim = animSet.summon ?? animSet.idleWalk; 
     }
 
     if (!enemyTickers.containsKey(enemy) || enemyLastPhase[enemy] != enemy.currentPhase) {
@@ -267,6 +287,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           break; 
         case CombatPhase.entering: 
         case CombatPhase.exiting: 
+          playerIdleTicker.update(dt); weaponIdleTicker.update(dt); armorIdleTicker.update(dt); shieldIdleTicker.update(dt); 
+          break;
+        default:
           playerIdleTicker.update(dt); weaponIdleTicker.update(dt); armorIdleTicker.update(dt); shieldIdleTicker.update(dt); 
           break;
       }
@@ -503,16 +526,16 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       String amountText = sel.type == ItemType.spell ? '${sel.manaCost} MP' : '${sel.quantity}x';
       
       TextPainter(
-        text: TextSpan(text: amountText, style: TextStyle(color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
+        text: TextSpan(text: amountText, style: TextStyle(fontFamily: 'pixelFont', color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       )..layout()..paint(canvas, Offset(size.x/2 - 20, 20));
       TextPainter(
-        text: const TextSpan(text: 'Uso[B]', style: TextStyle(color: Palette.amarelo, fontSize: 10)),
+        text: const TextSpan(text: 'Uso[B]', style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 10)),
         textDirection: TextDirection.ltr,
       )..layout()..paint(canvas, Offset(size.x/2 - 10, 45));
       if(playerStats.reflex){
         TextPainter(
-          text: const TextSpan(text: 'REFLEX', style: TextStyle(color: Palette.branco, fontSize: 10)),
+          text: const TextSpan(text: 'REFLEX', style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 10)),
           textDirection: TextDirection.ltr,
         )..layout()..paint(canvas, Offset(size.x-'REFLEX'.length*10, 45));
       }
@@ -522,15 +545,13 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       double keyX = size.x/2 - 20;
       double keyY = 5;
       
-      // Fundo escuro com borda dourada
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, 40, 40), Paint()..color = Palette.preto);
-      // Desenha o Sprite da Chave
       try {
         canvas.drawImageRect(
           gameRef.keySprite, 
           Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
-          Rect.fromLTWH(keyX, keyY, 40, 40), // Margem de 5px dentro do quadrado
-          Paint()..colorFilter = ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
+          Rect.fromLTWH(keyX, keyY, 40, 40),
+          Paint()..colorFilter = ColorFilter.mode(Palette.laranja, BlendMode.modulate)
         );
       } catch (e) {
         // Fallback caso a imagem dê erro
@@ -546,7 +567,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       if (!enemies[i].isAlive) continue;
       _drawHorizontalBar(canvas, 15, size.y - 75 + 2 + i*18, size.x - 30 , 16, Palette.vermelho, enemies[i].hp / enemies[i].maxHp);
       TextPainter(
-        text: TextSpan(text: enemies[i].name.toUpperCase(), style: TextStyle(color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold )),
+        text: TextSpan(text: enemies[i].name.toUpperCase(), style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold )),
         textDirection: TextDirection.ltr,
       )..layout()..paint(canvas, Offset(size.x/2 - enemies[i].name.length*7, size.y - 75 + 2 + i*18));
       //TextPainter(
@@ -576,7 +597,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     final textSpan = TextSpan(
       text: 'VITÓRIA!\n\nVocê obteve ${gameRef.encounterEssence} Essências.\n\n[A] Continuar',
-      style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.3, fontFamily: 'Courier', fontWeight: FontWeight.bold),
+      style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.3, fontFamily: 'pixelFont', fontWeight: FontWeight.bold),
     );
     final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
     textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);

@@ -48,6 +48,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   bool leftPressed = false, rightPressed = false, downPressed = false, showHitboxes = false, upPressed = false;
   double explorationMoveCooldown = 0.0;
+  double explorationMoveCooldownTime = 0.3;
 
   double leftTapTimer = 0.0;  // Janela de tempo para o clique duplo (Esquerda)
   double rightTapTimer = 0.0; // Janela de tempo para o clique duplo (Direita)
@@ -57,10 +58,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   bool showVictoryMessage = false;
   double encounterEssence = 0;
 
+  List<Item> encounterDrop = [];
+
   String? activeMessage; 
   VoidCallback? onMessageDismissed; 
   
-  int mapSize = 20;
+  int mapSize = 30;
 
   // --- VARIÁVEIS DE INVENTÁRIO ---
   int inventoryCursor = 0;
@@ -146,7 +149,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.reflexPotion,
+      ItemDatabase.slimeEye,
+
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -168,6 +172,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'sfx/poison.wav',
       'sfx/confirm.wav',
       'sfx/hover.wav',
+      'sfx/step.wav',
+      'sfx/landing.wav',
     ]);
     
     await images.loadAll([
@@ -185,8 +191,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/woodShield.png',
       'itens/ironShield.png',
       'itens/buckler.png',
+      'itens/slime_eye.png',
     ]);
-    final ui.Image wallImg = await images.load('tilesets/wall.png');
+    final ui.Image wallImg = await images.load('tilesets/wall3.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
@@ -253,10 +260,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       armorSheetImage: armorSheet,
       shieldSheetImage: shieldSheet,
       enemySheets: enemySheets,
-      playerSlashImage: playerSlashSprite,    // <--- Passa o do player
-      enemySlashImages: enemySlashSprites,    // <--- Passa a lista dos inimigos
+      playerSlashImage: playerSlashSprite, 
+      enemySlashImages: enemySlashSprites,
     );
     combatOverlay.size = size; add(combatOverlay);
+    combatOverlay.add(EnemyShadowsRenderer());
 
     minimap = MinimapRenderer();
     add(minimap);
@@ -273,7 +281,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
       canvas.drawRect(rect, Paint()..color = Colors.black.withOpacity(0.95));
       canvas.drawRect(rect, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2);
-      final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Courier', fontWeight: FontWeight.bold));
+      final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
       textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
       textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
@@ -294,7 +302,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       // Texto Principal
       final titleSpan = const TextSpan(
         text: "Passar o turno?",
-        style: TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'Courier', fontWeight: FontWeight.bold)
+        style: TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
       );
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: promptWidth);
       titlePainter.paint(canvas, Offset(promptX, promptY + 15));
@@ -302,7 +310,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       // Botões de Ação
       final optionsSpan = const TextSpan(
         text: "[A] Sim   [B] Não",
-        style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'Courier')
+        style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'pixelFont')
       );
       final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: promptWidth);
       optionsPainter.paint(canvas, Offset(promptX, promptY + 45));
@@ -322,7 +330,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       final titleSpan = const TextSpan(
         text: "Distribua seus Pontos",
-        style: TextStyle(color: Palette.roxo, fontSize: 22, fontFamily: 'Courier', fontWeight: FontWeight.bold)
+        style: TextStyle(color: Palette.roxo, fontSize: 22, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
       );
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: size.x);
       titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 40));
@@ -330,7 +338,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       // Mostra os pontos restantes
       final ptSpan = TextSpan(
         text: "Pontos Disponíveis: $pointsToDistribute",
-        style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: 18, fontFamily: 'Courier')
+        style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: 18, fontFamily: 'pixelFont')
       );
       final ptPainter = TextPainter(text: ptSpan, textDirection: TextDirection.ltr)..layout();
       ptPainter.paint(canvas, Offset((size.x - ptPainter.width) / 2, 100));
@@ -351,7 +359,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
         final labelSpan = TextSpan(
           text: "$prefix${labels[i]}",
-          style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'Courier', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)
+          style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)
         );
         final labelPainter = TextPainter(text: labelSpan, textDirection: TextDirection.ltr)..layout();
         labelPainter.paint(canvas, Offset(40, 160 + (i * 45)));
@@ -360,7 +368,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       // Ajuda rápida no rodapé da janela
       final helpSpan = const TextSpan(
         text: "[▲▼] Mudar Linha   [◄►] Alterar Pontos   [A] Confirmar",
-        style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'Courier')
+        style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'pixelFont')
       );
       final helpPainter = TextPainter(text: helpSpan, textDirection: TextDirection.ltr)..layout();
       helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
@@ -369,7 +377,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _drawInventoryScreen(Canvas canvas) {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
-    final titlePainter = TextPainter(text: TextSpan(text: "INVENTÁRIO", style: TextStyle(color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+    final titlePainter = TextPainter(text: TextSpan(text: "INVENTÁRIO", style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
 
     double startY = 80;
@@ -409,13 +417,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
 
       // Texto do Item (Agora com Offset 60 para não ficar em cima da imagem)
-      TextPainter(text: TextSpan(text: "${item.name}$equipTag$qtyTag", style: TextStyle(color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(70, startY + (i * 50) + 12));
+      TextPainter(text: TextSpan(text: "${item.name}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(70, startY + (i * 50) + 12));
     }
 
     if (isActionMenuOpen) {
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke);
-      TextPainter(text: const TextSpan(text: "A - Confirmar\nB - Cancelar", style: TextStyle(color: Palette.branco, fontSize: 24)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
+      TextPainter(text: const TextSpan(text: "A - Confirmar\nB - Cancelar", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
     }
     if (isItemActionMenuOpen) {
       double menuWidth = 200;
@@ -437,7 +445,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         
         final optSpan = TextSpan(
           text: "$prefix${options[i]}", 
-          style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'Courier', fontWeight: FontWeight.bold)
+          style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
         );
         final optPainter = TextPainter(text: optSpan, textDirection: TextDirection.ltr)..layout();
         optPainter.paint(canvas, Offset(menuX + 15, menuY + 20 + (i * 35)));
@@ -564,19 +572,19 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           
           if (upPressed) {
             startInput(GameInput.up);
-            explorationMoveCooldown = 0.5;
+            explorationMoveCooldown = explorationMoveCooldownTime;
           } 
           else if (downPressed) {
             startInput(GameInput.down);
-            explorationMoveCooldown = 0.5;
+            explorationMoveCooldown = explorationMoveCooldownTime;
           } 
           else if (leftPressed) {
             startInput(GameInput.left);
-            explorationMoveCooldown = 0.5;
+            explorationMoveCooldown = explorationMoveCooldownTime;
           } 
           else if (rightPressed) {
             startInput(GameInput.right);
-            explorationMoveCooldown = 0.5;
+            explorationMoveCooldown = explorationMoveCooldownTime;
           }
           
         }
@@ -657,6 +665,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               enemy.hp = 0;
               enemy.isDying = true; // Inicia animação de morte (piscar)
               encounterEssence += enemy.dropEssence; // Guarda a essência provisoriamente
+              encounterDrop.addAll(enemy.drop);
             }
           }
         }
@@ -675,6 +684,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (playerCombatStats.currentPhase == CombatPhase.idle) {
         showVictoryMessage = true; // Mostra a caixa na tela
         playerCombatStats.essence += encounterEssence; // Transfere pra carteira do player
+
+        for (var drop in encounterDrop){
+          if(Random().nextInt(100) <= 10) receiveItem(drop);
+        }
         
         playerCombatStats.isGuarding = false; // Solta o escudo se tiver segurando
       }
@@ -974,29 +987,43 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (currentState == GameState.exploration) {
       if (isPassTurnPromptOpen) {
         if (input == GameInput.buttonA) {
-          isPassTurnPromptOpen = false; // Fecha o diálogo
-          _onPlayerStepped(); // MÁGICA: Executa o turno (move inimigos, etc) sem mover o jogador!
+          isPassTurnPromptOpen = false; 
+          _onPlayerStepped(); 
         } else if (input == GameInput.buttonB) {
-          isPassTurnPromptOpen = false; // Apenas cancela e fecha o diálogo
+          isPassTurnPromptOpen = false; 
         }
-        return; // Sai da função para não processar outros botões
+        return;
       }
 
       if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
       if (input == GameInput.up) { 
-        if (player.move(true, dungeon)) _onPlayerStepped(); 
+        if (player.move(true, dungeon)){
+          _onPlayerStepped(); 
+          FlameAudio.play('sfx/step.wav');
+        } else {
+          renderer.triggerWallBump(forward: true);
+          FlameAudio.play('sfx/landing.wav');
+        } 
         //upPressed = true;
       }
       if (input == GameInput.down) { 
-        if (player.move(false, dungeon)) _onPlayerStepped(); 
+        if (player.move(false, dungeon)){
+          _onPlayerStepped(); 
+          FlameAudio.play('sfx/step.wav');
+        } else {
+          renderer.triggerWallBump(forward: true);
+          FlameAudio.play('sfx/landing.wav');
+        } 
         //downPressed = true;
       }
       if (input == GameInput.left){ 
         player.turn(false);
+        FlameAudio.play('sfx/step.wav');
         //leftPressed = true;
       }
       if (input == GameInput.right) { 
         player.turn(true);
+        FlameAudio.play('sfx/step.wav');
         //leftPressed = true;
       }
       if (input == GameInput.buttonA) {
@@ -1085,7 +1112,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (input == GameInput.left) leftPressed = true;
     if (input == GameInput.right) rightPressed = true;
 
-    explorationMoveCooldown = 0.5;
+    explorationMoveCooldown = explorationMoveCooldownTime;
   }
 
   

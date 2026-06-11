@@ -4,7 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum CombatPhase { idle, walk, guard, windup, active, recovery, entering, exiting, hit }
+enum CombatPhase { idle, walk, guard, windup, active, recovery, entering, exiting, hit, summon }
 
 class PlayerCombatStats {
   double hp = 30, maxHp = 30, mana = 15, essence = 0;

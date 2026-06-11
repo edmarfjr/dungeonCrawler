@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
+import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
@@ -48,6 +49,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   
   bool isHeavyAttack = false;
 
+  List<Item> drop ;
+
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
     required this.dropEssence, required this.width, required this.height,
@@ -57,6 +60,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     this.speed = 0.4, this.maxAttackCooldown = 2.0, this.damage = 3,
     this.isMelee = true,
     this.isBoss = false,
+    required this.drop,
   }) : attackCooldown = maxAttackCooldown, super(anchor: Anchor.center); // Anchor Center ajuda muito no Flame!
 
   void applyHitStun(double duration) {
@@ -82,6 +86,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     priority = isFrontRow ? 10 : 0;
 
     if (!isAlive) return;
+    if (gameRef.activeMessage != null) return;
 
     // --- Animação suave entre a linha de frente e de trás ---
     if (isFrontRow != _lastRow) {
@@ -127,6 +132,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
           gameRef.player.hasKey = true;
           gameRef.showMessage("Você encontrou a Chave da Masmorra!");
         }
+
         isAlive = false; 
         removeFromParent(); 
         gameRef.combatOverlay.enemies.remove(this); 
@@ -244,46 +250,57 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     }
   }
 
-  @override
-  void render(Canvas canvas) {
-    if (isDying && (deathTimer * 15).toInt() % 2 == 0) return;
-
-    if (hitFlashTimer>0 && (hitFlashTimer * 15).toInt() % 2 == 0) return;
-    
-  // sombra
+  void renderShadow(Canvas canvas) {
     final shadowPaint = Paint()..color = Palette.preto..isAntiAlias = false;
       
-      // A sombra tem 60% da largura do inimigo e é achatada (15% da altura)
-    double shadowWidth = size.x * 0.6;
-    double shadowHeight = size.y * 0.15;
+    // 1. DIMENSÕES BASEADAS NA HURTBOX REAL (Já aplicando a escala visual)
+    double actualHurtboxWidth = hurtboxWidth * visualScale;
+    double actualHurtboxHeight = hurtboxHeight * visualScale;
+
+    // A sombra agora se adapta ao corpo real do inimigo, não ao tamanho do componente (ex: 144x144)
+    double shadowWidth = actualHurtboxWidth * 1;  
+    double shadowHeight = shadowWidth * 0.4; 
     
-    // 1. Descobrimos onde é o chão 
-    // (Como a Aranha paira no ar, fixamos o chão virtual dela no 0.65 da tela)
-    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat) ? 0.65 : yPosition; 
+    // 2. LOGICA DO CHÃO (Mantemos a sua estrutura original intacta)
+    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat) ? 0.75 : yPosition; 
     double floorGlobalY = gameRef.size.y * (groundYPos + visualYOffset);
     
-    // 2. Calculamos a distância entre o inimigo (flutuando ou saltando) e o chão
+    // 3. DISTÂNCIA DO CENTRO ATÉ O CHÃO
     double distanceToFloor = floorGlobalY - position.y;
     
-    // 3. Empurramos a sombra para o chão verdadeiro!
-    double shadowLocalY = size.y - (shadowHeight / 2) + distanceToFloor;
+    // 4. O PULO DO GATO: Encontrar a base dos "pés" dentro do espaço local do Canvas
+    // Pegamos o centro local (size.y / 2), somamos o deslocamento Y e adicionamos metade da altura da hurtbox.
+    double localHurtboxBottomY = (size.y / 2) + (hurtboxOffsetY * visualScale) + (actualHurtboxHeight / 2);
+    
+    // A posição final da sombra será na base dos pés, empurrada para baixo caso o inimigo suba (pule/voe)
+    double shadowLocalY = localHurtboxBottomY + distanceToFloor;
 
-    // 4. Detalhe visual: Se a aranha estiver muito alta, a sombra fica mais pequena!
+    // Alinhamento horizontal: Centraliza a sombra exatamente abaixo do miolo do sprite (hurtbox)
+    double shadowLocalX = (size.x / 2) + (hurtboxOffsetX * visualScale);
+
+    // 5. ESCALA DE ALTITUDE (Garante que a sombra encolha se o inimigo se afastar do chão)
     double altitudeScale = 1.0;
-    if (type == EnemyType.spider) {
-        altitudeScale = (1.0 - (distanceToFloor / gameRef.size.y) * 2).clamp(0.3, 1.0);
+    if (distanceToFloor > 0) {
+        altitudeScale = (1.0 - (distanceToFloor / gameRef.size.y) * 2).clamp(0.2, 1.0);
     }
 
-    // Desenha a elipse (sombra) devidamente projetada
+    // Desenha a elipse perfeitamente sincronizada com a posição do desenho real
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(size.x / 2, shadowLocalY), 
+        center: Offset(shadowLocalX, shadowLocalY), 
         width: shadowWidth * altitudeScale, 
         height: shadowHeight * altitudeScale
       ),
       shadowPaint,
     );
 
+  }
+  @override
+  void render(Canvas canvas) {
+    if (isDying && (deathTimer * 15).toInt() % 2 == 0) return;
+
+    if (hitFlashTimer>0 && (hitFlashTimer * 15).toInt() % 2 == 0) return;
+    
     if (type == EnemyType.spider) {
       final webPaint = Paint()..color = Palette.branco..strokeWidth = 5.0..style = PaintingStyle.stroke..isAntiAlias = false;
       final webPaintBorder = Paint()..color = Palette.preto..strokeWidth = 15.0..isAntiAlias = false..style = PaintingStyle.stroke;  
@@ -300,7 +317,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
-    Color finalColor = Color.fromARGB(flashC.alpha, r, g, b);
+    Color finalColor = gameRef.playerCombatStats.currentPhase == CombatPhase.entering ? Palette.preto : Color.fromARGB(flashC.alpha, r, g, b);
     
     final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
     activeTicker.getSprite().render(canvas, size: size, overridePaint: tintPaint);
@@ -341,8 +358,9 @@ class SlimeEnemy extends Enemy {
 
   SlimeEnemy() : super(name:'slime',
     type: EnemyType.slime, color: Palette.verdeCla, hp: 50, maxHp: 50, dropEssence: 10, width: 144, height: 144, speed: 0.4,
-    hurtboxWidth: 80, hurtboxHeight: 70, hurtboxOffsetY: 0, // Hurtbox achatada no chão
+    hurtboxWidth: 110, hurtboxHeight: 70, hurtboxOffsetY: 0, // Hurtbox achatada no chão
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30,  // O ataque dele se expande do corpo
+    drop: [ItemDatabase.slimeEye]
   );
 
   @override
@@ -366,8 +384,8 @@ class GoblinEnemy extends Enemy {
   bool isFleeing = false;
   GoblinEnemy() : super(name:'goblin',
     type: EnemyType.goblin, color: Palette.verde, hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.6, damage: 5,
-    hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 10,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 50, maxAttackCooldown: 1.0 
+    hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 50, maxAttackCooldown: 1.0,drop: []
   );
 
   @override 
@@ -441,7 +459,7 @@ class SpiderEnemy extends Enemy {
   SpiderEnemy() : super(name:'aranha',
     type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, yPosition: 0.1, targetY: 0.1,
     hurtboxWidth: 60, hurtboxHeight: 70, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, 
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, drop: []
   );
 
   @override
@@ -495,7 +513,7 @@ class MimicEnemy extends Enemy {
   MimicEnemy() : super(name:'mimico',
     type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 5,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
-    hitboxWidth: 0, hitboxHeight: 0, isMelee: false, 
+    hitboxWidth: 0, hitboxHeight: 0, isMelee: false, drop: []
   );
 
   // MÁGICA 1: Só toma dano enquanto ataca!
@@ -548,7 +566,7 @@ class OrcEnemy extends Enemy {
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 60,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 60,drop: []
   ) {
     isMelee = true;
   }
@@ -612,7 +630,7 @@ class BatEnemy extends Enemy {
     color: Palette.roxo, 
     hp: 40, maxHp: 40, dropEssence: 10, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,drop: []
   ) {
     isMelee = true;
     yPosition = flightHeight; // Já nasce colado no teto
@@ -695,7 +713,7 @@ class BatEnemy extends Enemy {
 
 class OrcChefe extends Enemy {
   bool isSummoning = false;
-  double summonCooldown = 12.0;
+  double summonCooldown = 5.0;
 
   OrcChefe() : super(
     name: 'orc chefe',isBoss: true,
@@ -704,7 +722,7 @@ class OrcChefe extends Enemy {
     hp: 250, maxHp: 250, dropEssence: 100, 
     width: 192, height: 192, speed: 0.45,
     hurtboxWidth: 100, hurtboxHeight: 120, hurtboxOffsetY: 0,
-    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 60,
+    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 60,drop: []
   ) {
     isMelee = true;
     damage = 5; // Dano base do ataque normal
@@ -719,6 +737,10 @@ class OrcChefe extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+
+    if (isSummoning || currentPhase == CombatPhase.summon) {
+      return; 
+    }
     // 1. Lê a mente do jogador (Igual ao Orc comum)
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -758,7 +780,7 @@ class OrcChefe extends Enemy {
       // 1. PRIORIDADE: Invocar o lacaio
       if (summonCooldown <= 0) {
         isSummoning = true;
-        currentPhase = CombatPhase.windup;
+        currentPhase = CombatPhase.summon;
         animTimer = 1.5; // Fica 1.5s tocando o berrante / fazendo a pose
         summonCooldown = 15.0 + Random().nextDouble() * 5.0; // Próximo goblin só daqui a ~17s
         return;
@@ -783,51 +805,37 @@ class OrcChefe extends Enemy {
 
   @override
   void _updatePhase(double dt) {
-    // MÁGICA 2: Interceptamos a troca de fases para tratar a invocação em paz
+
     if (isSummoning) {
-      if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      if (currentPhase == CombatPhase.summon) {
         animTimer -= dt;
         if (animTimer <= 0) {
-          if (currentPhase == CombatPhase.windup) {
-            currentPhase = CombatPhase.active;
-            animTimer = 0.5; // Tempo da animação com o goblin aparecendo
-            _spawnGoblin();
-          } else if (currentPhase == CombatPhase.active) {
-            currentPhase = CombatPhase.recovery;
-            animTimer = 0.5;
-          } else {
-            currentPhase = CombatPhase.idle;
-            isSummoning = false;
-          }
+          _spawnGoblin();
+          currentPhase = CombatPhase.idle;
+          isSummoning = false;
         }
       }
-      return; // Interrompe para NÃO rodar a lógica original de _updatePhase
+      return;
     }
 
-    // Se for ataque normal/pesado, deixa a classe pai assumir
     super._updatePhase(dt);
   }
 
   void _spawnGoblin() {
     var goblin = GoblinEnemy();
     
-    // Nasce na fileira de trás para não se encavalar em cima do Chefe
     goblin.isFrontRow = false; 
     
-    // Nasce ao lado do Chefe (esquerda ou direita)
     goblin.strafePosition = strafePosition + (Random().nextBool() ? 0.3 : -0.3);
     goblin.strafePosition = goblin.strafePosition.clamp(-1.0, 1.0);
 
-    // Registra o coitado no motor do seu jogo
     gameRef.combatOverlay.enemies.add(goblin);
     parent?.add(goblin);
     
-    // Se quiser um som épico: FlameAudio.play('sfx/horn.wav');
   }
 
   @override
   void render(Canvas canvas) {
-    // DESENHA AVISOS VISUAIS ATRÁS DO SPRITE (Auras)
     if (currentPhase == CombatPhase.windup) {
       Paint? auraPaint;
       
@@ -849,5 +857,36 @@ class OrcChefe extends Enemy {
     }
 
     super.render(canvas); // Desenha a sombra e o sprite normalmente
+  }
+}
+
+class EnemyShadowsRenderer extends Component with HasGameRef<DungeonCrawlerGame> {
+  EnemyShadowsRenderer() : super(priority: -5); // Prioridade -5 garante que roda ANTES de qualquer inimigo!
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    // Percorre a lista de inimigos ativos na batalha
+    for (var enemy in gameRef.combatOverlay.enemies) {
+      if (!enemy.isAlive) continue;
+
+      // Salva o estado do canvas para não bagunçar o resto do jogo
+      canvas.save();
+      
+      // O Flame move o Canvas para o canto Top-Left de cada componente ao renderizar.
+      // Como o Anchor do seu Enemy é Center, calculamos a quina superior esquerda dele:
+      double topLeftX = enemy.position.x - (enemy.size.x / 2);
+      double topLeftY = enemy.position.y - (enemy.size.y / 2);
+      
+      // Desloca o Canvas global para a posição simulada do inimigo
+      canvas.translate(topLeftX, topLeftY);
+
+      // Manda o inimigo desenhar APENAS a sombra dele ali
+      enemy.renderShadow(canvas);
+
+      // Restaura o Canvas para a posição original antes de ir para o próximo monstro
+      canvas.restore();
+    }
   }
 }

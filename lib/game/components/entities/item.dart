@@ -1,8 +1,11 @@
 import 'dart:math';
 import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
+import 'package:dungeon_crawler/game/components/entities/bounce_projectile.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:flame/components.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
@@ -137,6 +140,38 @@ class ItemDatabase {
         } 
       }
     }
+  });
+
+  
+  static Item get slimeEye => Item("Olho de Slime", ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Palette.verdeCla, onUse: (item, game) async {
+    // 1. Trava de segurança para não gastar fora do combate
+    if (game.currentState != GameState.combat) {
+      game.showMessage("Guarde isso para usar durante as batalhas!");
+      item.quantity++;
+      return;
+    }
+
+    //FlameAudio.play('sfx/throw.wav');
+
+    // 2. Define o ponto de partida (Centro inferior da tela de combate)
+    Vector2 launchPos = Vector2(game.size.x / 2, game.size.y * 0.70);
+
+    // 3. Calcula um vetor diagonal inicial aleatório jogado para cima
+    double randomAngleOffsetX = (Random().nextDouble() * 0.4) - 0.2; 
+    double projectileSpeed = 550.0; // Velocidade ágil em pixels por segundo
+    Vector2 initialVelocity = Vector2(randomAngleOffsetX, -1.0).normalized() * projectileSpeed;
+
+    // 4. Calcula o dano mágico baseado na sabedoria (wis)
+    double calculatedDamage = item.power + game.playerCombatStats.str.toDouble();
+
+    final ui.Image img = await game.images.load(item.imagePath);
+    // 5. Instancia e joga o projétil caótico direto na árvore do combate
+    game.combatOverlay.add(SlimeEyeProjectile(
+      startPosition: launchPos, 
+      velocity: initialVelocity,
+      damage: calculatedDamage,
+      img: img,
+    ));
   });
 
   static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.laranja, onUse: (item, game) {

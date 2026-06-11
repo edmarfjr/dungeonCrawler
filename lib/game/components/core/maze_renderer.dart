@@ -22,6 +22,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image bossImage;
   final ui.Image shrineImage;
 
+  double _bumpTimer = 0.0;
+  double _maxBumpTime = 0.18; // Duração do tranco (180 milissegundos é o Sweet Spot)
+  bool _bumpForward = true;
+
   MazeRenderer({
     required this.map,
     required this.player,
@@ -37,9 +41,48 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.openChestImage,
   });
 
+  void triggerWallBump({required bool forward}) {
+    _bumpTimer = _maxBumpTime;
+    _bumpForward = forward;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (_bumpTimer > 0) {
+      _bumpTimer -= dt;
+    }
+  }
+
   @override
   void render(Canvas canvas) {
     super.render(canvas);
+
+    canvas.save();
+
+    // 2. APLICA O TRANCO DE IMPACTO NA CÂMERA
+    if (_bumpTimer > 0) {
+      // Transforma o tempo em um progresso de 0.0 a 1.0
+      double progress = 1.0 - (_bumpTimer / _maxBumpTime);
+      
+      // O Seno faz o valor subir suavemente e voltar (0 -> 1 -> 0)
+      double intensity = sin(progress * pi);
+
+      if (_bumpForward) {
+        // Impacto andando para frente: Câmera avança 5% na parede e desce 14 pixels pelo baque
+        double scalePunch = 1.0 + (intensity * 0.05); 
+        double yJolt = intensity * 14.0;
+
+        // Faz o Zoom acontecer a partir do centro da tela, em vez do canto superior esquerdo
+        canvas.translate(gameRef.size.x / 2, gameRef.size.y / 2);
+        canvas.scale(scalePunch);
+        canvas.translate(-gameRef.size.x / 2, (-gameRef.size.y / 2) + yJolt);
+      } else {
+        // Impacto andando de costas: Câmera dá um solavanco rápido para cima
+        double yJolt = -intensity * 10.0;
+        canvas.translate(0, yJolt);
+      }
+    }
 
     // Fundo preto (teto e o vazio distante)
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black );
@@ -64,14 +107,14 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         TileType tile = map.getTile(mapX, mapY);
 
         // Sempre desenha o chão
-        _drawFloorTile(canvas, cx, cz, floorImage, Palette.preto);
-        _drawCeiling(canvas, cx, cz,floorImage, Palette.preto);
+        _drawFloorTile(canvas, cx, cz, wallImage, Palette.cinzaEsc);
+        _drawCeiling(canvas, cx, cz,wallImage, Palette.cinzaEsc);
 
         // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
         if (tile == TileType.wall) {
-          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinzaEsc); 
-          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinzaEsc); 
-          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinzaEsc);
+          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
+          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
+          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinzaMed);
         }
 
         // --- 2. LÓGICA DA PORTA ---
@@ -89,7 +132,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         // --- 3. LÓGICA DA CHAVE ---
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
           // A chave vai do chão (0.5) até uma altura menor (0.1)
-          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
+          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.laranja);
         }
 
         if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
@@ -97,7 +140,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         }
 
         if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, bossImage, 0.5, 0.1, Palette.vermelho);
+          _drawBillboardItem(canvas, cx, cz, bossImage, 0.3, 0.0, Palette.vermelhoCla);
         }
 
         if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
@@ -110,7 +153,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
-          _drawFloorTile(canvas, cx, cz, floorImage, Palette.preto);
+          _drawFloorTile(canvas, cx, cz, wallImage, Palette.cinzaEsc);
 
           // Calcula a largura de 1 frame (divide a spritesheet por 4)
           double frameWidth = spikeImage.width / 4;
@@ -148,11 +191,13 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Se o inimigo estiver na coordenada que o laço está varrendo agora...
           if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
             // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
-            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.5, 0.0,Palette.vermelho);
+            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.3, 0.0,Palette.vermelhoCla);
           }
         }
       }
     }
+
+    canvas.restore();
   }
 
   Offset _project(double x, double y, double z) {
@@ -298,7 +343,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         double finalZ = topZ + (botZ - topZ) * ty;
 
        // Escuridão bruta baseada na profundidade daquele pedacinho
-        double rawDarkness = (finalZ / 4.5).clamp(0.0, 0.5);
+        double rawDarkness = (finalZ / 4.5).clamp(0.0, 1.0);
         
         // Aplica a mesma quebra para criar faixas duras de sombra na parede
         double darkness = (rawDarkness * 4).round() / 4.0;

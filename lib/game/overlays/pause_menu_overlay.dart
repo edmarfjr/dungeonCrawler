@@ -18,11 +18,11 @@ class PauseMenuOverlay extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("JOGO PAUSADO", style: TextStyle(color: Palette.branco, fontSize: 28, fontWeight: FontWeight.bold)),
+            const Text("JOGO PAUSADO", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 28, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            Text("Andar Atual: ${game.player.floorLevel}", style: const TextStyle(color: Palette.amarelo, fontSize: 18)),
+            Text("Andar Atual: ${game.player.floorLevel}", style: const TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 18)),
             const SizedBox(height: 10),
-            Text("Essências: ${game.playerCombatStats.essence}", style: const TextStyle(color: Palette.azul, fontSize: 18)),
+            Text("Essências: ${game.playerCombatStats.essence}", style: const TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: 18)),
             const SizedBox(height: 10),
             Container(
               width: screenSize.width * 0.50,  
@@ -54,7 +54,7 @@ class PauseMenuOverlay extends StatelessWidget {
                 ),
               ),
               onPressed: () => game.togglePause(),
-              child: const Text("CONTINUAR", style: TextStyle(fontSize: 18, color: Palette.branco)),
+              child: const Text("CONTINUAR", style: TextStyle(fontFamily: 'pixelFont', fontSize: 18, color: Palette.branco)),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
@@ -66,12 +66,12 @@ class PauseMenuOverlay extends StatelessWidget {
                 ),
               ),
               onPressed: () => game.quitToMainMenu(),
-              child: const Text("VOLTAR AO MENU PRINCIPAL", style: TextStyle(fontSize: 18, color: Palette.branco)),
+              child: const Text("VOLTAR AO MENU PRINCIPAL", style: TextStyle(fontFamily: 'pixelFont', fontSize: 18, color: Palette.branco)),
             ),  
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => {game.showHitboxes = !game.showHitboxes},
-              child: const Text("debug", style: TextStyle(color: Palette.vermelho, fontSize: 16)),
+              child: const Text("debug", style: TextStyle(fontFamily: 'pixelFont', color: Palette.vermelho, fontSize: 16)),
             )
           ],
         ),
@@ -101,6 +101,7 @@ class _MapPainter extends CustomPainter {
     final paintWall = Paint()..color = Palette.branco;
     final paintFloor = Paint()..color = Palette.cinzaMed;
     final paintDoor = Paint()..color = Palette.vermelhoEsc;
+    final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
     final paintSpike = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
     final paintShrine = Paint()..color = Palette.roxo;
@@ -125,6 +126,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.chest) canvas.drawRect(tileRect, paintChest);
         else if (tile == TileType.shrine) canvas.drawRect(tileRect, paintShrine);
         else if (tile == TileType.spike) canvas.drawRect(tileRect, paintSpike);
+        else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
 
         // Desenha a borda do bloco apenas nos blocos visíveis
         //canvas.drawRect(tileRect, paintGrid);

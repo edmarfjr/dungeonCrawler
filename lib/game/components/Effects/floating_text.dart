@@ -12,7 +12,6 @@ class FloatingText extends PositionComponent {
 
   FloatingText(this.text, double startX, double startY, this.color, {this.maxLifeTime = 1.2, this.speedY = 60.0})
       : lifeTime = maxLifeTime,
-        // Dizemos ao Flame onde o texto nasce e que o seu ponto central é no meio
         super(position: Vector2(startX, startY), anchor: Anchor.center);
 
   @override
@@ -37,7 +36,7 @@ class FloatingText extends PositionComponent {
         color: color.withOpacity(opacity),
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        fontFamily: 'Courier',
+        fontFamily: 'pixelFont', 
         shadows: [
           Shadow(color: Palette.preto.withOpacity(opacity), blurRadius: 2, offset: const Offset(2, 2))
         ]

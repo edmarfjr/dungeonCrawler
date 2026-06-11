@@ -117,7 +117,7 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                           ),
                           const SizedBox(height: 5),
-                          const Text("PAUSE", style: TextStyle(color: Palette.cinzaEsc, fontSize: 10, fontWeight: FontWeight.bold)),
+                          const Text("PAUSE", style: TextStyle(fontFamily: 'pixelFont', color: Palette.cinzaEsc, fontSize: 10, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -212,7 +212,7 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: const [BoxShadow(color: Palette.cinzaEsc, blurRadius: 4, offset: Offset(2, 2))],
         ),
         child: Center(
-          child: Text(label, style: const TextStyle(color: Palette.branco, fontWeight: FontWeight.bold, fontSize: 20)),
+          child: Text(label, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontWeight: FontWeight.bold, fontSize: 20)),
         ),
       ),
     );

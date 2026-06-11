@@ -32,7 +32,7 @@ class ArcProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame
     double scale = gameRef.size.x * 0.35;
     double cx = (gameRef.size.x / 2) + (strafeX * scale);
     position = Vector2(cx, gameRef.size.y * yPos);
-    size = Vector2(120, 120); // Tamanho visual da imagem
+    size = Vector2(144, 144); // Tamanho visual da imagem
 
     // 2. COLISÃO AUTÓNOMA COM O JOGADOR
     if (isFalling) {
