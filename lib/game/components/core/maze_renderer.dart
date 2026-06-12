@@ -107,8 +107,8 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         TileType tile = map.getTile(mapX, mapY);
 
         // Sempre desenha o chão
-        _drawFloorTile(canvas, cx, cz, wallImage, Palette.cinzaEsc);
-        _drawCeiling(canvas, cx, cz,wallImage, Palette.cinzaEsc);
+        _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
+        _drawCeiling(canvas, cx, cz,floorImage, Palette.cinzaEsc);
 
         // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
         if (tile == TileType.wall) {
@@ -153,7 +153,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
-          _drawFloorTile(canvas, cx, cz, wallImage, Palette.cinzaEsc);
+          _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
 
           // Calcula a largura de 1 frame (divide a spritesheet por 4)
           double frameWidth = spikeImage.width / 4;

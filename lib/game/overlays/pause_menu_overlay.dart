@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
@@ -12,30 +11,41 @@ class PauseMenuOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    
     return Container(
       color: Palette.preto.withOpacity(0.8),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("JOGO PAUSADO", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 28, fontWeight: FontWeight.bold)),
+            const Text(
+              "JOGO PAUSADO", 
+              style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 28, fontWeight: FontWeight.bold, decoration: TextDecoration.none)
+            ),
             const SizedBox(height: 10),
-            Text("Andar Atual: ${game.player.floorLevel}", style: const TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 18)),
+            Text(
+              "Andar Atual: ${game.player.floorLevel}", 
+              style: const TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 18, decoration: TextDecoration.none)
+            ),
             const SizedBox(height: 10),
-            Text("Essências: ${game.playerCombatStats.essence}", style: const TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: 18)),
+            Text(
+              "Essências: ${game.playerCombatStats.essence.toInt()}", 
+              style: const TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: 18, decoration: TextDecoration.none)
+            ),
             const SizedBox(height: 10),
+            
+            // --- O MAPA ---
             Container(
               width: screenSize.width * 0.50,  
               height: screenSize.height * 0.25,
               decoration: BoxDecoration(
-                color: Colors.black, // Fundo do mapa
-                border: Border.all(color: Palette.cinza, width: 3), // Borda estilo Gameboy
+                color: Colors.black,
+                border: Border.all(color: Palette.cinza, width: 3), 
                 borderRadius: BorderRadius.circular(8),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(5),
                 child: CustomPaint(
-                  // Passamos as informações do labirinto atual para o pintor
                   painter: _MapPainter(
                     map: game.dungeon,
                     playerX: game.player.x,
@@ -44,37 +54,82 @@ class PauseMenuOverlay extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Palette.preto, 
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero, 
-                ),
-              ),
-              onPressed: () => game.togglePause(),
-              child: const Text("CONTINUAR", style: TextStyle(fontFamily: 'pixelFont', fontSize: 18, color: Palette.branco)),
+            const SizedBox(height: 20),
+
+            ValueListenableBuilder<int>(
+              valueListenable: game.pauseMenuCursor,
+              builder: (context, cursorIndex, child) {
+                return Column(
+                  children: [
+                    _buildMenuOption(
+                      title: "CONTINUAR",
+                      index: 0,
+                      currentIndex: cursorIndex,
+                      color: Palette.branco,
+                    ),
+                    const SizedBox(height: 15),
+                    
+                    _buildMenuOption(
+                      title: "VOLTAR AO MENU PRINCIPAL",
+                      index: 1,
+                      currentIndex: cursorIndex,
+                      color: Palette.branco,
+                    ),
+                    const SizedBox(height: 15),
+                    
+                    _buildMenuOption(
+                      title: "DEBUG (Hitboxes)",
+                      index: 2,
+                      currentIndex: cursorIndex,
+                      color: Palette.vermelho,
+                    ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Palette.preto, 
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero, 
-                ),
-              ),
-              onPressed: () => game.quitToMainMenu(),
-              child: const Text("VOLTAR AO MENU PRINCIPAL", style: TextStyle(fontFamily: 'pixelFont', fontSize: 18, color: Palette.branco)),
-            ),  
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () => {game.showHitboxes = !game.showHitboxes},
-              child: const Text("debug", style: TextStyle(fontFamily: 'pixelFont', color: Palette.vermelho, fontSize: 16)),
-            )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMenuOption({
+    required String title, 
+    required int index, 
+    required int currentIndex,
+    required Color color,
+  }) {
+    bool isSelected = (index == currentIndex);
+
+    return GestureDetector(
+      onTap: () {
+        game.pauseMenuCursor.value = index;
+        game.startInput(GameInput.buttonA);
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            isSelected ? "> " : "  ",
+            style: TextStyle(
+              fontFamily: 'pixelFont',
+              fontSize: 18,
+              color: isSelected ? Palette.amarelo : Colors.transparent,
+              fontWeight: FontWeight.bold,
+              decoration: TextDecoration.none,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'pixelFont',
+              fontSize: 18,
+              color: isSelected ? Palette.amarelo : color,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -105,7 +160,6 @@ class _MapPainter extends CustomPainter {
     final paintChest = Paint()..color = Palette.amarelo;
     final paintSpike = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
     final paintShrine = Paint()..color = Palette.roxo;
-    //final paintGrid = Paint()..color = Colors.white12..style = PaintingStyle.stroke;
 
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
@@ -117,7 +171,6 @@ class _MapPainter extends CustomPainter {
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
-        //Rect tileRectMenor = Rect.fromLTWH(offsetX + x * tileSize/2, offsetY + y * tileSize/2, tileSize/2, tileSize/2);
 
         TileType tile = map.grid[y][x];
         if (tile == TileType.wall) canvas.drawRect(tileRect, paintWall);
@@ -127,20 +180,12 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.shrine) canvas.drawRect(tileRect, paintShrine);
         else if (tile == TileType.spike) canvas.drawRect(tileRect, paintSpike);
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
-
-        // Desenha a borda do bloco apenas nos blocos visíveis
-        //canvas.drawRect(tileRect, paintGrid);
       }
     }
 
     // Desenha o Jogador
     Rect tileRect = Rect.fromLTWH(offsetX + playerX * tileSize, offsetY + playerY * tileSize, tileSize, tileSize);
     final playerPaint = Paint()..color = Palette.azul;
-    //canvas.drawCircle(
-    //  Offset(offsetX + playerX * tileSize + tileSize / 2, offsetY + playerY * tileSize + tileSize / 2),
-    //  tileSize / 2.5, 
-    //  playerPaint,
-    //);
 
     canvas.drawRect(tileRect, playerPaint);
   }

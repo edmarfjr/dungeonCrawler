@@ -108,6 +108,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
       switch (entry.key){
         case EnemyType.orc:
+        case EnemyType.bug:
           totalColumns = 6;
           break;
         case EnemyType.boss1:
@@ -122,12 +123,12 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       final sheet = SpriteSheet.fromColumnsAndRows(image: entry.value, columns: totalColumns, rows: 1);
       
       SpriteAnimation? defendAnim;
-      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1) {
+      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug) {
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
       SpriteAnimation? summonAnim;
-      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1) {
+      if (entry.key == EnemyType.boss1) {
         summonAnim = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: true);
       }
 
@@ -321,7 +322,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       _drawPlayer(canvas); // A arma do jogador volta a tapar os inimigos!
       
       if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
-      _drawVictoryMessage(canvas);
+      //_drawVictoryMessage(canvas);
     }
     
     // 4. A interface (HP, Mana, Textos) fica sempre por cima de absolutamente tudo
@@ -336,14 +337,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
 
   void _drawEffects(Canvas canvas) {
-    if (playerStats.healVfxTimer > 0) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.greenAccent.withOpacity(playerStats.healVfxTimer.clamp(0.0, 0.5)));
-    }
-    if (playerStats.explosionVfxTimer > 0) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.deepOrange.withOpacity(playerStats.explosionVfxTimer.clamp(0.0, 0.5)));
-    }
-    if (playerStats.manaVfxTimer > 0) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.blueAccent.withOpacity(playerStats.manaVfxTimer.clamp(0.0, 0.5)));
+    if (playerStats.VfxTimer > 0) {
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = playerStats.VfxColor.withOpacity(playerStats.VfxTimer.clamp(0.0, 0.5)));
     }
   }
 
@@ -584,7 +579,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawVictoryMessage(Canvas canvas) {
-    if (!gameRef.showVictoryMessage) return;
 
     double boxWidth = 320;
     double boxHeight = 120;

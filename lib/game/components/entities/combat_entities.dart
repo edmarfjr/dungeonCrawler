@@ -66,9 +66,8 @@ class PlayerCombatStats {
   Item? equippedShield;
 
   //List<PlayerProjectile> activeProjectiles = [];
-  double healVfxTimer = 0.0;
-  double explosionVfxTimer = 0.0;
-  double manaVfxTimer = 0.0;
+  double VfxTimer = 0.0;
+  Color VfxColor = Palette.vermelho;
 
   List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
@@ -133,9 +132,8 @@ class PlayerCombatStats {
         moveSpeed = moveSpeedIni;
       }
     }
-    if (healVfxTimer > 0) healVfxTimer -= dt;
-    if (explosionVfxTimer > 0) explosionVfxTimer -= dt;
-    if (manaVfxTimer > 0) manaVfxTimer -= dt;
+    if (VfxTimer > 0) VfxTimer -= dt;
+    
     if (hitFlashTimer > 0) {
       hitFlashTimer -= dt;
       if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) {

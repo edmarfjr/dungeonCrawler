@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/core/palette.dart';
+import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/bounce_projectile.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
@@ -22,10 +23,11 @@ class Item {
   int quantity;
 
   final bool hasReach;
+  final bool hasStun;
 
   final void Function(Item item, DungeonCrawlerGame game)? onUse;
 
-  Item(this.name, this.type, this.imagePath, this.power, {this.quantity = 1, this.onUse, this.cor = Palette.branco, this.manaCost = 0, this.hasReach = false});
+  Item(this.name, this.type, this.imagePath, this.power, {this.quantity = 1, this.onUse, this.cor = Palette.branco, this.manaCost = 0, this.hasReach = false, this.hasStun = false});
 }
 
 class ItemDatabase {
@@ -65,6 +67,15 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.2;
   });
 
+  static Item get clava => Item("Clava", ItemType.weapon, 'itens/club.png', 20, cor: Colors.white, hasStun: true, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.2;
+    game.playerCombatStats.staminaCost = 5.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 1.2;
+  });
+
   static Item get tanga => Item("Tanga", ItemType.armor, 'itens/tanga.png', 0, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = 5.0;
   });
@@ -90,7 +101,17 @@ class ItemDatabase {
 
   static Item get healthPotion => Item("Poção Vermelha", ItemType.consumable, 'itens/potion.png', cor: Palette.vermelho, 40, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
-    game.playerCombatStats.healVfxTimer = 0.5;
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.vermelho;
+    //if (game.currentState == GameState.exploration) {
+    game.showMessage("Você recuperou ${item.power} de HP!");
+    //}
+  });
+
+  static Item get meat => Item("Carne", ItemType.consumable, 'itens/meat.png', cor: Colors.white, 10, quantity: 1, onUse: (item, game) {
+    game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.vermelho;
     //if (game.currentState == GameState.exploration) {
     game.showMessage("Você recuperou ${item.power} de HP!");
     //}
@@ -98,7 +119,8 @@ class ItemDatabase {
 
   static Item get manaPotion => Item("Poção Azul", ItemType.consumable, 'itens/potion.png', cor: Palette.azul, 100, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.mana = min(game.playerCombatStats.wis*3, game.playerCombatStats.mana + item.power);
-    game.playerCombatStats.manaVfxTimer = 0.5;
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.azul;
     //if (game.currentState == GameState.exploration) {
     game.showMessage("Você recuperou ${item.power} de Mana!");
     //}
@@ -123,22 +145,65 @@ class ItemDatabase {
   static Item get bomb => Item("Bomba", ItemType.consumable, 'itens/bomb.png', cor: Colors.white, 30, quantity: 1, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde isso para usar durante as batalhas!");
-      item.quantity++; // Devolve o item
+      item.quantity++;
       return;
     }
     FlameAudio.play('sfx/fire.wav');
-    game.playerCombatStats.explosionVfxTimer = 0.5;
-    // Dano em área para todos os inimigos vivos no Overlay de Combate
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.laranja;
     for (var enemy in game.combatOverlay.enemies) {
       if (enemy.isAlive) { 
         enemy.hp -= item.power; 
-        enemy.applyHitStun(0.3); 
+        enemy.applyHitStun(0.4); 
         if (enemy.hp <= 0) { 
           enemy.hp = 0; 
           enemy.isDying = true; 
           game.encounterEssence += enemy.dropEssence; 
+          game.encounterDrop.addAll(enemy.drop);
         } 
       }
+    }
+  });
+
+  static Item get web => Item("Teia de aranha", ItemType.consumable, 'itens/web.png', cor: Colors.white, 0, quantity: 1, onUse: (item, game) {
+    if (game.currentState != GameState.combat) {
+      game.showMessage("Guarde isso para usar durante as batalhas!");
+      item.quantity++;
+      return;
+    }
+    //FlameAudio.play('sfx/fire.wav');
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.branco;
+    for (var enemy in game.combatOverlay.enemies) {
+      if (enemy.isAlive) { 
+        enemy.applyHitStun(0.8); 
+      }
+    }
+  });
+
+  static Item get faca => Item("Faca de arremeço", ItemType.consumable, 'itens/faca.png', cor: Colors.white, 3, quantity: 1, onUse: (item, game) {
+    if (game.currentState != GameState.combat) {
+      game.showMessage("Guarde isso para usar durante as batalhas!");
+      item.quantity++;
+      return;
+    }
+    FlameAudio.play('sfx/hit.wav');
+   // game.playerCombatStats.explosionVfxTimer = 0.5;
+    Enemy enemy = game.combatOverlay.enemies[Random().nextInt(game.combatOverlay.enemies.length)];
+    if (!enemy.isAlive) {
+      while(!enemy.isAlive){
+        enemy = game.combatOverlay.enemies[Random().nextInt(game.combatOverlay.enemies.length)];
+      }
+    }
+    else { 
+      enemy.hp -= item.power + game.playerCombatStats.str.toDouble(); 
+      enemy.applyHitStun(0.4); 
+      if (enemy.hp <= 0) { 
+        enemy.hp = 0; 
+        enemy.isDying = true; 
+        game.encounterEssence += enemy.dropEssence; 
+        game.encounterDrop.addAll(enemy.drop);
+      } 
     }
   });
 
