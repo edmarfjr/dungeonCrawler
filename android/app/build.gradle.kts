@@ -1,7 +1,10 @@
-val keystoreProperties = java.util.Properties()
+import java.util.Properties
+import java.io.FileInputStream
+
+val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 plugins {
@@ -36,10 +39,16 @@ android {
     }
 
     signingConfigs {
+        // Mantenha o debug que já existe aí
         create("release") {
             keyAlias = keystoreProperties.getProperty("keyAlias")
             keyPassword = keystoreProperties.getProperty("keyPassword")
-            storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+            
+            val storeFilePath = keystoreProperties.getProperty("storeFile")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+            }
+            
             storePassword = keystoreProperties.getProperty("storePassword")
         }
     }
