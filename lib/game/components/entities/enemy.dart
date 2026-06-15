@@ -137,6 +137,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // ----------------------------------------------------------------------
 
     if (isDying) {
+      currentPhase = CombatPhase.hit;
       deathTimer -= dt;
       if (deathTimer <= 0) {
         if(isBoss){
@@ -336,30 +337,36 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   }
 
   Rect getHurtbox(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y * (yPosition + visualYOffset);
     return Rect.fromCenter(
-      center: Offset(cx + hurtboxOffsetX * visualScale, cy + hurtboxOffsetY * visualScale), 
-      width: hurtboxWidth * visualScale, height: hurtboxHeight * visualScale
+      center: Offset(
+        position.x + (hurtboxOffsetX * visualScale), 
+        position.y + (hurtboxOffsetY * visualScale)
+      ), 
+      width: hurtboxWidth * visualScale, 
+      height: hurtboxHeight * visualScale
     );
   }
 
   Rect getHitbox(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y * (yPosition + visualYOffset);
     return Rect.fromCenter(
-      center: Offset(cx + hitboxOffsetX * visualScale, cy + hitboxOffsetY * visualScale), 
-      width: hitboxWidth * visualScale, height: hitboxHeight * visualScale
+      center: Offset(
+        position.x + (hitboxOffsetX * visualScale), 
+        position.y + (hitboxOffsetY * visualScale)
+      ), 
+      width: hitboxWidth * visualScale, 
+      height: hitboxHeight * visualScale
     );
   }
 
   Rect getHitboxImageSize(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y * yPosition;
-    return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: 120, height: 120);
+    return Rect.fromCenter(
+      center: Offset(
+        position.x + (hitboxOffsetX * visualScale), 
+        position.y + (hitboxOffsetY * visualScale)
+      ), 
+      width: 120 * visualScale, 
+      height: 120 * visualScale
+    );
   }
 }
 
@@ -395,7 +402,7 @@ class GoblinEnemy extends Enemy {
   GoblinEnemy() : super(name:'goblin',
     type: EnemyType.goblin, color: Palette.verde, hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.6, damage: 5,
     hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 10, maxAttackCooldown: 1.0,drop: [ItemDatabase.faca]
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: [ItemDatabase.faca]
   );
 
   @override 
@@ -466,24 +473,24 @@ class SpiderEnemy extends Enemy {
   double landTmr = 0.0;
 
   SpiderEnemy() : super(name:'aranha',
-    type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, yPosition: 0.1, targetY: 0.1,
+    type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, yPosition: 0.2, targetY: 0.2,
     hurtboxWidth: 60, hurtboxHeight: 70, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, drop: [ItemDatabase.web]
   );
 
   @override
-  bool get canChangeRow => (yPosition - targetY).abs() < 0.01 && yPosition < 0.4;
+  bool get canChangeRow => (yPosition - targetY).abs() < 0.01 && yPosition <= 0.2;
 
   @override void onHitStun() {
     isDropping = false; 
     hasAttacked = false; 
-    targetY = 0.1; 
+    targetY = 0.2; 
   }
   
   @override void updateBehavior(double dt, PlayerCombatStats player) {
     if(isFrontRow){
       // 1. GATILHO PARA DESCER
-      if (!isDropping && yPosition <= 0.15 && (player.strafePosition - strafePosition).abs() < 0.2) {
+      if (!isDropping && yPosition <= 0.25 && (player.strafePosition - strafePosition).abs() < 0.2) {
         isDropping = true; 
         hasAttacked = false; 
         targetY = 0.75; 
@@ -493,7 +500,7 @@ class SpiderEnemy extends Enemy {
       // Se a aranha desceu, já completou o ataque e voltou para o modo Idle, ela sobe para o teto.
       if (isDropping && hasAttacked && currentPhase == CombatPhase.idle) {
         isDropping = false; 
-        targetY = 0.1; // Volta pro teto
+        targetY = 0.2; // Volta pro teto
 
       }
     }
@@ -504,12 +511,11 @@ class SpiderEnemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
 
-    // A Aranha ignora a distância X! Se ela estiver descendo, não atacou ainda, e tocou no chão, ela explode num ataque instantâneo!
     if (isDropping && !hasAttacked && yPosition >= 0.69 && currentPhase == CombatPhase.idle && isFrontRow) {
       currentPhase = CombatPhase.windup;
       animTimer = 1.0; 
-      hasAttacked = true; // Marca que o bote foi dado
-      attackCooldown = maxAttackCooldown; // Reseta o cooldown para o próximo mergulho
+      hasAttacked = true; 
+      attackCooldown = maxAttackCooldown; 
     }
   }
 }
@@ -833,6 +839,12 @@ class OrcChefe extends Enemy {
     attackCooldown -= dt;
     summonCooldown -= dt;
 
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    bool isCloseY = true;
+
     if (currentPhase == CombatPhase.idle && isFrontRow) {
       
       // 1. PRIORIDADE: Invocar o lacaio
@@ -845,7 +857,7 @@ class OrcChefe extends Enemy {
       }
 
       // 2. ALTERNÂNCIA DE ATAQUES
-      if (attackCooldown <= 0) {
+      if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
         isSummoning = false;
         isHeavyAttack = !isHeavyAttack; // Alterna entre normal e pesado!
 
@@ -1040,13 +1052,12 @@ class BugEnemy extends Enemy {
 }
 
 class LarvaEnemy extends Enemy {
-  bool isFleeing = false;
   LarvaEnemy() : super(name: 'larva',
     type: EnemyType.larva, 
     color: Palette.cinza,
-    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [],
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -10 ,drop: [],
     maxAttackCooldown: 0
   ) {
     isMelee = true;
@@ -1067,11 +1078,98 @@ class LarvaEnemy extends Enemy {
 
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
     attackCooldown -= dt;
-    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
-      currentPhase = CombatPhase.windup; 
-      animTimer = 0.8; 
-      attackCooldown = maxAttackCooldown;
+
+    if (distancePixels <= reachPixels&& attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      if(isFrontRow){
+        currentPhase = CombatPhase.windup;
+        animTimer = 0.5; 
+        attackCooldown = maxAttackCooldown;
+      }
     }
+  }
+}
+
+class OvoEnemy extends Enemy {
+  OvoEnemy() : super(name: 'ovo',
+    type: EnemyType.ovo, 
+    color: Palette.cinza,
+    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [],
+    maxAttackCooldown: 5, isMelee: false
+  );
+
+  late bool _fixedRow;
+
+  @override
+  void update(double dt) {
+    isFrontRow = _fixedRow; 
+    super.update(dt);
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    _fixedRow = isFrontRow; // Grava onde o ovo nasceu
+  }
+
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    
+  }
+
+   void _spawnLarva() {
+    var larva = LarvaEnemy();
+    
+    larva.isFrontRow = isFrontRow; 
+    
+    larva.strafePosition = strafePosition;
+    larva.strafePosition = larva.strafePosition.clamp(-1.0, 1.0);
+
+    gameRef.combatOverlay.enemies.add(larva);
+    parent?.add(larva);
+    
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    if (attackCooldown <= 0 ) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.5; 
+      attackCooldown = 999;
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) {
+          currentPhase = CombatPhase.active;
+          animTimer = 0.5; 
+          _spawnLarva();
+        } else if (currentPhase == CombatPhase.active) {
+          currentPhase = CombatPhase.recovery;
+          animTimer = 0.5;
+        } else if (currentPhase == CombatPhase.recovery) {
+          hp = 0;
+          isDying = true; 
+          currentPhase = CombatPhase.idle; 
+        }
+      }
+      return; 
+    }
+    
+    super._updatePhase(dt); 
   }
 }

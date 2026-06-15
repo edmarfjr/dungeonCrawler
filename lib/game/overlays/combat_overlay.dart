@@ -355,7 +355,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     for (var enemy in enemies) {
       if (!enemy.isAlive) continue;
       
-      if (enemy.currentPhase == CombatPhase.active && enemy.getHitbox(size).width > 0) {
+      if (enemy.currentPhase == CombatPhase.active && enemy.getHitbox(size).width > 0 && enemy.isMelee) {
         final slashImg = enemySlashImages[enemy.type] ?? enemySlashImages[EnemyType.slime]!;
         final slashPaint = Paint();
         canvas.drawImageRect(
@@ -494,7 +494,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     _drawHorizontalBar(canvas, 10, 40, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
       Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
-      double boxX = size.x/2 - 20;
+      double boxX = size.x - 44;
       double boxY = 5;
 
       //inventario
@@ -523,11 +523,11 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       TextPainter(
         text: TextSpan(text: amountText, style: TextStyle(fontFamily: 'pixelFont', color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(size.x/2 - 20, 20));
+      )..layout()..paint(canvas, Offset(boxX, 20));
       TextPainter(
         text: const TextSpan(text: 'Uso[B]', style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 10)),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(size.x/2 - 10, 45));
+      )..layout()..paint(canvas, Offset(boxX + 10, 45));
       if(playerStats.reflex){
         TextPainter(
           text: const TextSpan(text: 'REFLEX', style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 10)),

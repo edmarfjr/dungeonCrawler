@@ -112,9 +112,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
         if (tile == TileType.wall) {
-          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
-          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinzaMed); 
-          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinzaMed);
+          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinza); 
+          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinza); 
+          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinza);
         }
 
         // --- 2. LÓGICA DA PORTA ---

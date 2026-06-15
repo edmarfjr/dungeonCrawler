@@ -222,6 +222,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.orc: await images.load('actors/orc.png'),
       EnemyType.bat: await images.load('actors/bat.png'),
       EnemyType.bug: await images.load('actors/bug.png'),
+      EnemyType.larva: await images.load('actors/larva.png'),
+      EnemyType.ovo: await images.load('actors/ovo.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -237,6 +239,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.spider: await images.load('effects/bite.png'), 
       EnemyType.mimic: await images.load('effects/coin.png'),
       EnemyType.bat: await images.load('effects/bite.png'), 
+      EnemyType.bug: await images.load('effects/golpe.png'), 
+      EnemyType.larva: await images.load('effects/bite.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -829,10 +833,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       () => SpiderEnemy(),
     ];
     
-    if(player.floorLevel > 1){
-      iniPool.add(() => OrcEnemy());
+    if(player.floorLevel == 2){
       iniPool.add(() => BatEnemy());
     }
+    if(player.floorLevel == 3){
+      iniPool.add(() => OrcEnemy());
+    }
+
+    if(player.floorLevel >= 4){
+      iniPool = [
+        () => OvoEnemy(),
+        () => LarvaEnemy(),
+        () => BugEnemy(),
+      ];
+    }
+
+
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
       Enemy newEnemy = iniPool[enemyType]();
