@@ -29,22 +29,38 @@ class MainMenuOverlay extends StatelessWidget {
                   )
                 ),
                 const SizedBox(height: 60),
-
-                // OPÇÃO 0: NOVO JOGO
-                _buildMenuOption(
-                  title: "INICIAR NOVO JOGO",
-                  index: 0,
-                  currentIndex: cursorIndex,
-                ),
-                
-                const SizedBox(height: 20),
-
-                // OPÇÃO 1: MANUAL
-                _buildMenuOption(
-                  title: "MANUAL DE INSTRUÇÕES",
-                  index: 1,
-                  currentIndex: cursorIndex,
-                ),
+                if (game.hasSavedGame) ...[
+                  _buildMenuOption(
+                    title: "CONTINUAR JOGO",
+                    index: 0,
+                    currentIndex: cursorIndex,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMenuOption(
+                    title: "INICIAR NOVO JOGO",
+                    index: 1,
+                    currentIndex: cursorIndex,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMenuOption(
+                    title: "MANUAL DE INSTRUÇÕES",
+                    index: 2,
+                    currentIndex: cursorIndex,
+                  ),
+                ] else ...[
+                  // Modo sem save (Original)
+                  _buildMenuOption(
+                    title: "INICIAR NOVO JOGO",
+                    index: 0,
+                    currentIndex: cursorIndex,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMenuOption(
+                    title: "MANUAL DE INSTRUÇÕES",
+                    index: 1,
+                    currentIndex: cursorIndex,
+                  ),
+                ],
               ],
             );
           },

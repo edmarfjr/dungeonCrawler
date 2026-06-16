@@ -160,6 +160,7 @@ class _MapPainter extends CustomPainter {
     final paintChest = Paint()..color = Palette.amarelo;
     final paintSpike = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
     final paintShrine = Paint()..color = Palette.roxo;
+    final paintCrate = Paint()..color = Palette.marrom;
 
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
@@ -180,6 +181,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.shrine) canvas.drawRect(tileRect, paintShrine);
         else if (tile == TileType.spike) canvas.drawRect(tileRect, paintSpike);
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
+        else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
       }
     }
 

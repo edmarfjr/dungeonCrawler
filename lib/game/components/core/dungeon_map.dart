@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/game.dart';
 
-enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -174,10 +174,28 @@ class DungeonMap {
     
 
     int numChests = random.nextInt(3) + 1; 
-    for (int i = 0; i < numChests; i++) { if (floorTiles.isNotEmpty) { Point<int> chestPos = floorTiles.removeAt(0); grid[chestPos.y][chestPos.x] = TileType.chest; } }
+    for (int i = 0; i < numChests; i++) {
+      if (floorTiles.isNotEmpty) { 
+        Point<int> chestPos = floorTiles.removeAt(0); 
+        grid[chestPos.y][chestPos.x] = TileType.chest; 
+      } 
+    }
+
+    int numCrates = random.nextInt(6) + 2; 
+    for (int i = 0; i < numCrates; i++) {
+      if (floorTiles.isNotEmpty) { 
+        Point<int> chestPos = floorTiles.removeAt(0); 
+        grid[chestPos.y][chestPos.x] = TileType.crate; 
+      } 
+    }
 
     int numSpikes = random.nextInt((width/6).toInt() + 1) + (width/6).toInt() - 1; 
-    for (int i = 0; i < numSpikes; i++) { if (floorTiles.isNotEmpty) { Point<int> spikePos = floorTiles.removeAt(0); grid[spikePos.y][spikePos.x] = TileType.spike; } }
+    for (int i = 0; i < numSpikes; i++) { 
+      if (floorTiles.isNotEmpty) { 
+        Point<int> spikePos = floorTiles.removeAt(0); 
+        grid[spikePos.y][spikePos.x] = TileType.spike; 
+      } 
+    }
 
     if (floorTiles.isNotEmpty) {
       Point<int> shrinePos = floorTiles.removeAt(0); // Pega um bloco livre aleatório

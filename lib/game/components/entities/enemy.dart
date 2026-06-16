@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:dungeon_crawler/game/components/Effects/healing_cloud_effect.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
@@ -9,7 +10,7 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, larva, ovo }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, larva, ovo, fungo, boss2, garra }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -17,7 +18,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   final double width, height, maxAttackCooldown;
   double hitFlashTimer = 0.0;
   Color flashColor = Palette.branco;
-  double deathTimer = 1;
+  double deathTimer = 0.5;
 
   final double hurtboxWidth, hurtboxHeight, hurtboxOffsetX, hurtboxOffsetY;
   final double hitboxWidth, hitboxHeight, hitboxOffsetX, hitboxOffsetY;
@@ -27,6 +28,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   double strafePosition = 0.0, animTimer = 0.0;
   bool isAlive = true, attackHit = false, isDying = false;
   CombatPhase currentPhase = CombatPhase.idle;
+  CombatPhase dieAnim;
+
   bool get isVulnerable => true;
   bool isMelee;
 
@@ -43,6 +46,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   double maxJumpTime = 0.7;  
   double maxJumpHeight = 0.1;
   double jumpOffset = 0.0;
+  double flightOffset = 0.0;
 
   bool isBoss;
 
@@ -61,6 +65,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     this.speed = 0.4, this.maxAttackCooldown = 2.0, this.damage = 3,
     this.isMelee = true,
     this.isBoss = false,
+    this.dieAnim = CombatPhase.hit,
     required this.drop,
   }) : attackCooldown = maxAttackCooldown, 
        super(anchor: Anchor.center
@@ -130,13 +135,14 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     double distanceToFeet = (hurtboxOffsetY * visualScale) + ((hurtboxHeight / 2) * visualScale);
     
     // NOVO: O 'cy' agora empurra o personagem para cima para o pé cravar no chão, e soma o pulo!
-    double cy = baseFloorY - distanceToFeet + (gameRef.size.y * jumpOffset); 
+    double cy = baseFloorY - distanceToFeet + (gameRef.size.y * jumpOffset) + (gameRef.size.y * flightOffset);
     
     position = Vector2(cx, cy);
     size = Vector2(width * visualScale, height * visualScale);
     // ----------------------------------------------------------------------
 
     if (isDying) {
+      hitFlashTimer = 0;
       currentPhase = CombatPhase.hit;
       deathTimer -= dt;
       if (deathTimer <= 0) {
@@ -164,7 +170,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
     
     if (!isAttacking) {
-      if ((yPosition - targetY).abs() > 0.01) yPosition += (targetY > yPosition ? 1 : -1) * 0.4 * dt; 
+      if ((yPosition - targetY).abs() > 0.01) yPosition += (targetY > yPosition ? 1 : -1) * speed * dt; 
       updateBehavior(dt, gameRef.playerCombatStats);
       checkAttackDecision(dt, gameRef.playerCombatStats, gameRef.size);
 
@@ -275,10 +281,10 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     
     // 2. LOGICA DO CHÃO (Mantemos a sua estrutura original intacta)
     double groundYPos = (type == EnemyType.spider || type == EnemyType.bat) ? 0.75 : yPosition; 
-    double floorGlobalY = gameRef.size.y * (groundYPos + visualYOffset);
+    //double floorGlobalY = gameRef.size.y * (groundYPos + visualYOffset);
     
     // 3. DISTÂNCIA DO CENTRO ATÉ O CHÃO
-    double distanceToFloor = -(gameRef.size.y * jumpOffset);
+    double distanceToFloor = -(gameRef.size.y * jumpOffset) - (gameRef.size.y * flightOffset);
     
     // 4. O PULO DO GATO: Encontrar a base dos "pés" dentro do espaço local do Canvas
     // Pegamos o centro local (size.y / 2), somamos o deslocamento Y e adicionamos metade da altura da hurtbox.
@@ -471,6 +477,7 @@ class SpiderEnemy extends Enemy {
   bool isDropping = false;
   bool hasAttacked = false;
   double landTmr = 0.0;
+  double speedIni = 0.4;
 
   SpiderEnemy() : super(name:'aranha',
     type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, yPosition: 0.2, targetY: 0.2,
@@ -492,6 +499,7 @@ class SpiderEnemy extends Enemy {
       // 1. GATILHO PARA DESCER
       if (!isDropping && yPosition <= 0.25 && (player.strafePosition - strafePosition).abs() < 0.2) {
         isDropping = true; 
+        speed = speedIni * 2;
         hasAttacked = false; 
         targetY = 0.75; 
       }
@@ -499,6 +507,7 @@ class SpiderEnemy extends Enemy {
       // 2. GATILHO PARA SUBIR (SÓ DEPOIS QUE ATACAR)
       // Se a aranha desceu, já completou o ataque e voltou para o modo Idle, ela sobe para o teto.
       if (isDropping && hasAttacked && currentPhase == CombatPhase.idle) {
+        speed = speedIni;
         isDropping = false; 
         targetY = 0.2; // Volta pro teto
 
@@ -513,7 +522,7 @@ class SpiderEnemy extends Enemy {
 
     if (isDropping && !hasAttacked && yPosition >= 0.69 && currentPhase == CombatPhase.idle && isFrontRow) {
       currentPhase = CombatPhase.windup;
-      animTimer = 1.0; 
+      animTimer = 0.5; 
       hasAttacked = true; 
       attackCooldown = maxAttackCooldown; 
     }
@@ -665,8 +674,8 @@ class OrcEnemy extends Enemy {
 class BatEnemy extends Enemy {
   double currentDir = 1.0;
   
-  final double flightHeight = 0.15; 
-  final double attackHeight = 0.65;   
+  final double flightHeight = 0.2; 
+  final double attackHeight = 0.75;   
   double targetStrafe = 0;
 
   BatEnemy() : super(
@@ -1055,9 +1064,9 @@ class LarvaEnemy extends Enemy {
   LarvaEnemy() : super(name: 'larva',
     type: EnemyType.larva, 
     color: Palette.cinza,
-    hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 40, maxHp: 40, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -10 ,drop: [],
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -20 ,drop: [],
     maxAttackCooldown: 0
   ) {
     isMelee = true;
@@ -1101,7 +1110,7 @@ class OvoEnemy extends Enemy {
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [],
-    maxAttackCooldown: 5, isMelee: false
+    maxAttackCooldown: 5, isMelee: false, dieAnim: CombatPhase.recovery,
   );
 
   late bool _fixedRow;
@@ -1171,5 +1180,280 @@ class OvoEnemy extends Enemy {
     }
     
     super._updatePhase(dt); 
+  }
+}
+
+class FungoEnemy extends Enemy {
+  FungoEnemy() : super(
+    name: 'fungo',
+    type: EnemyType.fungo,
+    color: Palette.roxo,
+    hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.5,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: -10,
+    hitboxWidth: 0, hitboxHeight: 0,
+    drop: [],
+    maxAttackCooldown: 4.0,isMelee: false,
+  );
+
+  double floatTimer = 0.0;
+  bool isHealingAttack = false;
+  double startDirection = Random().nextBool() ? 1.0 : -1.0;
+
+  @override
+  void update(double dt) {
+    if (gameRef.currentState == GameState.paused) return;
+    if (!isAlive) return;
+
+    floatTimer += dt;
+
+    flightOffset = -0.25 + (sin(floatTimer * speed) * 0.25);
+
+
+    bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
+    if (!isAttacking && !isDying && hitFlashTimer <= 0) {
+      strafePosition += startDirection * cos(floatTimer * speed) * speed * dt;
+      strafePosition = strafePosition.clamp(-1.0, 1.0);
+    }
+
+    super.update(dt);
+  }
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    // Fungos atacam tanto da linha de trás quanto da frente!
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.8; // Ele demora um pouco para "carregar" o ataque (dá tempo do jogador agir)
+      attackCooldown = maxAttackCooldown;
+      
+      // Joga a moeda: 40% de chance de Curar os aliados, 60% de chance de jogar Esporos
+      isHealingAttack = Random().nextDouble() < 0.40;
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) {
+          currentPhase = CombatPhase.active;
+          animTimer = 0.5; 
+          
+          if (isHealingAttack) {
+            _castHealingCloud();
+          } else {
+            _spawnSpores();
+          }
+        } 
+        else if (currentPhase == CombatPhase.active) {
+          currentPhase = CombatPhase.recovery;
+          animTimer = 0.5;
+        } 
+        else if (currentPhase == CombatPhase.recovery) {
+          currentPhase = CombatPhase.idle;
+        }
+      }
+      return; // Bloqueia a IA padrão enquanto ele conjura as magias
+    }
+    
+    super._updatePhase(dt); // Deixa a IA da classe pai processar morte, recuo, etc.
+  }
+
+  void _castHealingCloud() {
+    double currentY = yPosition + visualYOffset + flightOffset;
+    
+    // Invoca o efeito visual da fumaça na tela exata onde o fungo está agora
+    gameRef.combatOverlay.add(HealingCloudEffect(strafePosition, currentY, gameRef));
+
+    // Lógica de Área de Efeito (AoE - Area of Effect)
+    for (var enemy in gameRef.combatOverlay.enemies) {
+      if (enemy.isAlive) {
+        
+        // Mede a distância horizontal absoluta entre o Fungo e os outros inimigos
+        double distance = (enemy.strafePosition - strafePosition).abs();
+        
+        // Só cura se o aliado estiver na área de efeito (0.65 de distância é ~30% da tela)
+        if (distance <= 0.65) {
+          double healAmount = 25.0;
+          enemy.hp += healAmount;
+          if (enemy.hp > enemy.maxHp) enemy.hp = enemy.maxHp;
+          
+          gameRef.combatOverlay.addFloatingText(
+            "+${healAmount.toInt()}", 
+            enemy.getHurtbox(gameRef.size), 
+            Palette.verde
+          );
+        }
+      }
+    }
+  }
+
+  void _spawnSpores() {
+    double startY = yPosition + visualYOffset + flightOffset;
+
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY - 0.1, -0.2, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, -0.4, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.4, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY - 0.2, 0.0, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY - 0.1, 0.2, 0, this, grav:0.5, radius: 20));
+  }
+}
+
+class GarraRainhaEnemy extends Enemy {
+  final Enemy rainha; // Referência ao corpo principal
+  final double strafeOffset; // Distância fixa do centro da rainha
+  GarraRainhaEnemy(this.rainha, this.strafeOffset) : super(
+    name: 'garra',
+    type: EnemyType.garra, 
+    color: Palette.vermelho, // Uma cor intimidadora
+    hp: 120, maxHp: 120, dropEssence: 0, width: 100, height: 100, speed: 0.0,
+    hurtboxWidth: 70, hurtboxHeight: 90, hurtboxOffsetY: 0,
+    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 0, 
+    drop: [], isMelee: true, 
+    maxAttackCooldown: 3.5, // Ataca fisicamente
+  ) {
+    isMelee = true;
+  }
+
+  @override
+  bool get canChangeRow => false;
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    if (rainha.isAlive) {
+      strafePosition = rainha.strafePosition + strafeOffset;
+      isFrontRow = rainha.isFrontRow;
+    }
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    attackCooldown -= dt;
+
+    if (distancePixels <= reachPixels && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.6; 
+      attackCooldown = maxAttackCooldown;
+    }
+  }
+}
+
+class RainhaInsetoEnemy extends Enemy {
+  RainhaInsetoEnemy() : super(
+    name: 'rainha',
+    type: EnemyType.boss2,
+    color: Palette.roxo,
+    hp: 300, maxHp: 300, dropEssence: 100, width: 200, height: 200, speed: 0.3,
+    hurtboxWidth: 120, hurtboxHeight: 140, hurtboxOffsetY: -20,
+    hitboxWidth: 0, hitboxHeight: 0,
+    drop: [],
+    maxAttackCooldown: 4.5,
+    isBoss: true,
+    isMelee: false,
+  );
+
+  bool isSummoningEgg = false;
+
+  // A MÁGICA DA BLINDAGEM: Verifica se existem Garras Vivas no cenário!
+  bool get _clawsDefeated {
+    return !gameRef.combatOverlay.enemies.any((e) => e is GarraRainhaEnemy && e.isAlive);
+  }
+
+  // Sobrescreve a vulnerabilidade base do monstro
+  @override
+  bool get isVulnerable => _clawsDefeated;
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // Se as garras morrerem e ela estiver escondida, ela avança para a linha de frente furiosa!
+    if (_clawsDefeated && !isFrontRow) {
+      isFrontRow = true;
+    }
+
+    // Se move lentamente atrás do jogador para tentar mirar o veneno
+    if (strafePosition < player.strafePosition - 0.1) {
+      strafePosition += speed * dt;
+    } else if (strafePosition > player.strafePosition + 0.1) {
+      strafePosition -= speed * dt;
+    }
+    strafePosition = strafePosition.clamp(-1.0, 1.0);
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 1.0; // Animação longa avisando o jogador
+      attackCooldown = maxAttackCooldown;
+      
+      // Se as garras estiverem vivas, ela foca mais em botar ovos.
+      // Se estiver sozinha, ela foca mais em jogar veneno!
+      double eggChance = _clawsDefeated ? 0.30 : 0.60;
+      isSummoningEgg = Random().nextDouble() < eggChance;
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) {
+          currentPhase = CombatPhase.active;
+          animTimer = 0.5; 
+          
+          if (isSummoningEgg) {
+            _spawnEgg();
+          } else {
+            _shootPoison();
+          }
+        } 
+        else if (currentPhase == CombatPhase.active) {
+          currentPhase = CombatPhase.recovery;
+          animTimer = 0.8;
+        } 
+        else if (currentPhase == CombatPhase.recovery) {
+          currentPhase = CombatPhase.idle;
+        }
+      }
+      return; 
+    }
+    super._updatePhase(dt); 
+  }
+
+  void _spawnEgg() {
+    var ovo = OvoEnemy();
+    ovo.isFrontRow = false; // Bota o ovo na linha de trás por segurança
+    
+    // O ovo cai em um lado aleatório da rainha
+    ovo.strafePosition = strafePosition + (Random().nextBool() ? 0.4 : -0.4);
+    ovo.strafePosition = ovo.strafePosition.clamp(-1.0, 1.0);
+
+    gameRef.combatOverlay.enemies.add(ovo);
+    parent?.add(ovo);
+  }
+
+  void _shootPoison() {
+    double startY = yPosition + visualYOffset;
+    
+    // Atira um arco de veneno triplo (Reaproveitando seu ArcProjectile!)
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, -0.6, -1.5, this));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.0, -1.8, this));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.6, -1.5, this));
   }
 }

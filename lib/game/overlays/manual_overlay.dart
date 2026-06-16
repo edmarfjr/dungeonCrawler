@@ -104,8 +104,8 @@ class _ManualOverlayState extends State<ManualOverlay> {
                         "[▲▼] Controles ou Arrastar",
                         style: TextStyle(
                           fontFamily: 'pixelFont',
-                          color: Palette.cinzaMed,
-                          fontSize: 11,
+                          color: Palette.branco,
+                          fontSize: 13,
                         ),
                       ),
                       TextButton(
@@ -139,26 +139,25 @@ class _ManualOverlayState extends State<ManualOverlay> {
   }
 
   String _getManualContent() {
-    return "📜 PRÓLOGO: QUEDA NA ESCURIDÃO\n"
+    return " PRÓLOGO: QUEDA NA ESCURIDÃO\n"
         "Nenhum cavaleiro retornou com vida de Gnothrok.\n"
         "Explore o labirinto procedural, pegue a Chave\n"
         "da Masmorra e desça as escadarias ocultas!\n\n"
-        "🧭 MODO EXPLORAÇÃO (Navegação)\n"
+        " MODO EXPLORAÇÃO (Navegação)\n"
         "- Seta [▲]/[▼]: Anda para frente/trás.\n"
         "  *Segure o botão para andar continuamente.*\n"
         "- Seta [◄]/[►]: Gira a visão em 90 graus.\n"
         "- Botão [A]: Abre baús/portas e recolhe itens.\n"
         "- Botão [B]: Abre ou fecha a mochila.\n"
         "  *Bater na parede gera um tranco na tela!*\n\n"
-        "⚔️ MODO COMBATE (Batalhas)\n"
-        "- Seta [◄]/[►]: Deslocamento lateral (Strafe).\n"
-        "- Clique duplo [◄◄] / [►►]: um Dash invulnerável\n"
+        " MODO COMBATE (Batalhas)\n"
+        "- Seta [◄]/[►]: Deslocamento lateral\n"
+        "- Clique duplo [◄◄] / [►►]: Dash\n"
         "- Seta [▲]: Alterna a Magia/Item selecionado\n"
-        "- Seta [▼]: Levanta o escudo. Bloquear drena\n"
-        "  Stamina. Se ela zerar, a defesa quebra!\n"
+        "- Seta [▼]: Levanta o escudo.\n"
         "- Botão [A]: Ataca.\n"
         "- Botão [B]: Usa a Magia/Item selecionado.\n\n"
-        "🛡️ ATRIBUTOS & EVOLUÇÃO (Altares)\n"
+        " ATRIBUTOS & EVOLUÇÃO (Altares)\n"
         "Gaste Essências acumuladas nos Altares para\n"
         "adquirir 3 pontos de melhoria de status:\n"
         "1. FORÇA (STR): Dano físico e Regeneração de Stamina.\n"

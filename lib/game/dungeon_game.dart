@@ -14,6 +14,8 @@ import 'package:flame/input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame_audio/flame_audio.dart' hide PlayerState;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
 enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory, levelUp, manual }
@@ -29,6 +31,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   GameState currentState = GameState.mainMenu;
   GameState previousState = GameState.mainMenu;
 
+  bool hasSavedGame = false;
   late DungeonMap dungeon;
   late PlayerState player;
   late MazeRenderer renderer;
@@ -45,7 +48,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   late ui.Image keySprite;
   late ui.Image doorTexture;
+  late ui.Image doorTexture2;
   late ui.Image chestSprite;
+  late ui.Image crateSprite;
   late ui.Image openChestSprite;
   late ui.Image spikeSprite;
   late ui.Image roamerSprite;
@@ -157,7 +162,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.faca,
+      ItemDatabase.espadaCurta,
+      ItemDatabase.armaduraCouro,
+      ItemDatabase.escudoMadeira,
+
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -165,8 +173,146 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     selectedConsumableIndex = 0;
   }
 
+  Future<void> saveGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // 1. Salva o Mapa Procedural
+    List<List<int>> gridJson = dungeon.grid.map((row) => row.map((tile) => tile.index).toList()).toList();
+    List<List<bool>> exploredJson = dungeon.explored.map((row) => row.toList()).toList();
+    
+    // 2. Salva o Inventário
+    List<Map<String, dynamic>> invJson = playerCombatStats.inventory.map((item) => {
+      'name': item.name,
+      'quantity': item.quantity,
+    }).toList();
+
+    // 3. Empacota tudo num Grande JSON
+    Map<String, dynamic> saveData = {
+      'dungeon': {
+        'width': dungeon.width,
+        'height': dungeon.height,
+        'grid': gridJson,
+        'explored': exploredJson,
+        'spikeState': dungeon.spikeState,
+      },
+      'player': {
+        'x': player.x,
+        'y': player.y,
+        'facing': player.facing.index,
+        'floorLevel': player.floorLevel,
+        'hasKey': player.hasKey,
+      },
+      'stats': {
+        'str': playerCombatStats.str,
+        'con': playerCombatStats.con,
+        'wis': playerCombatStats.wis,
+        'hp': playerCombatStats.hp,
+        'essence': playerCombatStats.essence,
+        'inventory': invJson,
+        'equippedWeapon': playerCombatStats.equippedWeapon?.name,
+        'equippedArmor': playerCombatStats.equippedArmor?.name,
+        'equippedShield': playerCombatStats.equippedShield?.name,
+      }
+    };
+
+    await prefs.setString('save_game', jsonEncode(saveData));
+    hasSavedGame = true;
+    debugPrint("Jogo Salvo com Sucesso!");
+  }
+
+  Future<void> loadGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? saveDataStr = prefs.getString('save_game');
+    if (saveDataStr == null) return;
+
+    Map<String, dynamic> data = jsonDecode(saveDataStr);
+    
+    // 1. Reconstrói o Labirinto
+    var dData = data['dungeon'];
+    dungeon = DungeonMap(width: dData['width'], height: dData['height']);
+    dungeon.spikeState = dData['spikeState'] ?? 0;
+    
+    List<dynamic> gridDyn = dData['grid'];
+    List<dynamic> expDyn = dData['explored'];
+    for(int y = 0; y < dungeon.height; y++) {
+      for(int x = 0; x < dungeon.width; x++) {
+        dungeon.grid[y][x] = TileType.values[gridDyn[y][x]];
+        dungeon.explored[y][x] = expDyn[y][x];
+      }
+    }
+
+    // 2. Reconstrói o Jogador
+    var pData = data['player'];
+    player.x = pData['x'];
+    player.y = pData['y'];
+    player.facing = Direction.values[pData['facing']];
+    player.floorLevel = pData['floorLevel'];
+    player.hasKey = pData['hasKey'];
+
+    // 3. Reconstrói os Status
+    var sData = data['stats'];
+    playerCombatStats.str = sData['str'];
+    playerCombatStats.con = sData['con'];
+    playerCombatStats.wis = sData['wis'];
+    playerCombatStats.hp = sData['hp'];
+    playerCombatStats.essence = sData['essence'];
+    playerCombatStats.recalculateMaxHp();
+
+    // 4. Reconstrói o Inventário
+    playerCombatStats.inventory.clear();
+    List<dynamic> invDyn = sData['inventory'];
+    
+    // Lista mestra para buscar as instâncias reais dos itens pelo nome
+    List<Item> allGameItems = [
+      ItemDatabase.adaga, ItemDatabase.tanga, ItemDatabase.bloquel, ItemDatabase.faca,
+      ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion, ItemDatabase.bomb,
+      ItemDatabase.espadaCurta, ItemDatabase.armaduraFerro, ItemDatabase.espadaLonga, ItemDatabase.armaduraCouro, 
+      ItemDatabase.machado, ItemDatabase.firePillar, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, 
+      ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+    ]; // IMPORTANTE: Mantenha essa lista atualizada se criar itens novos!
+
+    for(var itemData in invDyn) {
+      try {
+        Item baseItem = allGameItems.firstWhere((i) => i.name == itemData['name']);
+        baseItem.quantity = itemData['quantity'];
+        playerCombatStats.inventory.add(baseItem);
+      } catch (e) {
+        debugPrint("Item não encontrado no database: ${itemData['name']}");
+      }
+    }
+
+    // 5. Re-equipa os itens visualmente
+    String? wName = sData['equippedWeapon'];
+    if(wName != null) {
+      playerCombatStats.equippedWeapon = playerCombatStats.inventory.firstWhere((i) => i.name == wName);
+      await changeWeaponSprite('actors/${playerCombatStats.equippedWeapon!.imagePath.split('/').last}');
+    }
+    
+    String? aName = sData['equippedArmor'];
+    if(aName != null) {
+      playerCombatStats.equippedArmor = playerCombatStats.inventory.firstWhere((i) => i.name == aName);
+      await changeArmorSprite('actors/${playerCombatStats.equippedArmor!.imagePath.split('/').last}');
+    }
+    
+    String? sName = sData['equippedShield'];
+    if(sName != null) {
+      playerCombatStats.equippedShield = playerCombatStats.inventory.firstWhere((i) => i.name == sName);
+      await changeShieldSprite('actors/${playerCombatStats.equippedShield!.imagePath.split('/').last}');
+    }
+
+    // Limpa a tela para exploração
+    combatOverlay.enemies.clear();
+    dungeon.roamingEnemies.clear(); 
+
+    renderer.map = dungeon;
+    renderer.player = player;
+  }
+
   @override
   Future<void> onLoad() async {
+    final prefs = await SharedPreferences.getInstance();
+    hasSavedGame = prefs.containsKey('save_game');
+
     await FlameAudio.audioCache.loadAll([
       'sfx/hit.wav',
       'sfx/block.wav',
@@ -205,13 +351,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall1.png');
     final ui.Image floorImg = await images.load('tilesets/floor1.png');
+    final ui.Image wallImg2 = await images.load('tilesets/wall2.png');
+    final ui.Image floorImg2 = await images.load('tilesets/floor2.png');
+
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
-    shrineSprite = await images.load('tilesets/trono.png');
+    shrineSprite = await images.load('tilesets/altar.png');
 
     keySprite = await images.load('itens/key.png');     
     doorTexture = await images.load('tilesets/trapdoor.png');
+    doorTexture2 = await images.load('tilesets/trapdoor2.png');
     chestSprite = await images.load('tilesets/bau.png');
+    crateSprite = await images.load('tilesets/crate.png');
     openChestSprite = await images.load('tilesets/bauAberto.png');
     spikeSprite = await images.load('tilesets/trap.png');
     enemySheets = {
@@ -221,9 +372,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.mimic: await images.load('actors/mimic.png'),
       EnemyType.orc: await images.load('actors/orc.png'),
       EnemyType.bat: await images.load('actors/bat.png'),
+      EnemyType.boss1: await images.load('actors/boss1.png'),
       EnemyType.bug: await images.load('actors/bug.png'),
       EnemyType.larva: await images.load('actors/larva.png'),
       EnemyType.ovo: await images.load('actors/ovo.png'),
+      EnemyType.fungo: await images.load('actors/fungo.png'),
+      EnemyType.garra: await images.load('actors/garra.png'),
+      EnemyType.boss2: await images.load('actors/boss2.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -236,11 +391,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.slime: await images.load('effects/golpe.png'), 
       EnemyType.goblin: await images.load('effects/golpe.png'),
       EnemyType.orc: await images.load('effects/golpe.png'),
+      EnemyType.boss1: await images.load('effects/golpe.png'),
       EnemyType.spider: await images.load('effects/bite.png'), 
       EnemyType.mimic: await images.load('effects/coin.png'),
       EnemyType.bat: await images.load('effects/bite.png'), 
       EnemyType.bug: await images.load('effects/golpe.png'), 
       EnemyType.larva: await images.load('effects/bite.png'), 
+      EnemyType.fungo: await images.load('effects/spore.png'), 
+      EnemyType.boss2: await images.load('effects/spore.png'), 
+      EnemyType.garra: await images.load('effects/golpe.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -249,9 +408,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     renderer = MazeRenderer(
       map: dungeon, 
       player: player, 
-      wallImage: wallImg, 
-      floorImage: floorImg,
+      wallImage: [wallImg,wallImg2], 
+      floorImage: [floorImg,floorImg2],
       doorImage: doorTexture, 
+      doorImage2: doorTexture2, 
       keyImage: keySprite, 
       chestImage: chestSprite,
       spikeImage: spikeSprite,
@@ -259,6 +419,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       bossImage: bossSprite,
       shrineImage: shrineSprite,
       openChestImage: openChestSprite,
+      crateImage: crateSprite,
     );
     renderer.size = size; 
     add(renderer);
@@ -286,7 +447,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     super.render(canvas); 
 
     if (activeMessage != null) {
-      double boxWidth = 340; double boxHeight = 100;
+      double boxWidth = size.x * 0.8; double boxHeight = 100;
       double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
       canvas.drawRect(rect, Paint()..color = Colors.black.withOpacity(0.95));
@@ -299,7 +460,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (currentState == GameState.exploration && isPassTurnPromptOpen) {
       double promptWidth = size.x * 0.8;
-      double promptHeight = 80;
+      double promptHeight = 100;
       double promptX = (size.x - promptWidth) / 2;
       double promptY = (size.y - promptHeight) / 2;
 
@@ -311,15 +472,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         text: "Passar o turno?",
         style: TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
       );
-      final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: promptWidth);
+      final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
       titlePainter.paint(canvas, Offset(promptX, promptY + 15));
+
 
       final optionsSpan = const TextSpan(
         text: "[A] Sim   [B] Não",
         style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'pixelFont')
       );
-      final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: promptWidth);
+      final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
       optionsPainter.paint(canvas, Offset(promptX, promptY + 45));
+
     }
 
     if (currentState == GameState.inventory) {
@@ -471,14 +634,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void openManual() {
     currentState = GameState.manual;
-    overlays.remove('MainMenu');  // Remove o menu inicial em Flutter
-    overlays.add('ManualMenu');   // Adiciona o novo overlay do manual!
+    overlays.remove('MainMenu');
+    overlays.add('ManualMenu');   
   }
 
   void closeManual() {
     currentState = GameState.mainMenu;
-    overlays.remove('ManualMenu'); // Esconde o manual
-    overlays.add('MainMenu');      // Devolve o menu inicial
+    overlays.remove('ManualMenu'); 
+    overlays.add('MainMenu');      
   }
 
   void resetGame() {
@@ -486,7 +649,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       enemy.removeFromParent(); 
     }
     combatOverlay.enemies.clear();
-    _messageQueue.clear(); // Limpa mensagens fantasmas
+    _messageQueue.clear(); 
 
     playerCombatStats.str = 5;
     playerCombatStats.con = 5;
@@ -499,6 +662,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     _initializeInventory();
     
     player.floorLevel = 1;
+    dungeon.level = 1;
     player.hasKey = false;
     player.noiseLevel = 0;
 
@@ -538,7 +702,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     overlays.add('MainMenu');
   }
 
-  void handlePlayerDeath() {
+  void handlePlayerDeath() async { 
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('save_game');
+    hasSavedGame = false;
+
     currentState = GameState.gameOver;
     overlays.add('GameOver');
   }
@@ -686,26 +854,21 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     combatOverlay.enemies.removeWhere((e) => !e.isAlive);
 
-    // REFACTOR: LÓGICA DE VITÓRIA INTEGRADA À FILA GENÉRICA
     if (combatOverlay.enemies.isEmpty && !_victoryProcessed && playerCombatStats.currentPhase != CombatPhase.exiting) {
       if (playerCombatStats.currentPhase == CombatPhase.idle) {
-        _victoryProcessed = true; // Impede que execute este bloco em loop repetidamente
+        _victoryProcessed = true;
         playerCombatStats.essence += encounterEssence; 
         playerCombatStats.isGuarding = false; 
 
-        // 1. Mensagem principal de vitória (Dinheiro/Essências)
-        showMessage("Vitória! Você purificou a área e obteve +${encounterEssence.toInt()} Essências!");
+        //showMessage("Vitória! Você purificou a área e obteve +${encounterEssence.toInt()} Essências!");
 
-        // 2. Roda a roleta de drops (cada item bem-sucedido adicionará sua própria mensagem à fila)
         for (var drop in encounterDrop){
           if(Random().nextInt(100) <= 10) {
             receiveItem(drop); 
           }
         }
-        
-        // 3. MÁGICA: Adicionamos uma mensagem de encerramento no fim da fila.
-        // Quando o jogador fechar esta última caixa de texto, o callback 'onDismiss' ativa a transição de saída!
-        showMessage("A batalha terminou. Retornando ao labirinto...", onDismiss: () {
+
+        showMessage("Vitória! Você obteve +${encounterEssence.toInt()} Essências!", onDismiss: () {
           _endEncounter();
         });
       }
@@ -729,11 +892,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.strafePosition = playerCombatStats.strafePosition.clamp(-1.0, 1.0);
       }
     } else if (activeMessage != null) {
-      playerCombatStats.currentPhase = CombatPhase.idle; // Fica parado lendo o texto da fila
+      playerCombatStats.currentPhase = CombatPhase.idle;
     }
   }
 
-  void _endEncounter() { playerCombatStats.currentPhase = CombatPhase.exiting; playerCombatStats.animTimer = 1; }
+  void _endEncounter() { 
+    playerCombatStats.currentPhase = CombatPhase.exiting; 
+    playerCombatStats.animTimer = 1; 
+  }
 
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -833,10 +999,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       () => SpiderEnemy(),
     ];
     
-    if(player.floorLevel == 2){
+    if(player.floorLevel >= 2){
       iniPool.add(() => BatEnemy());
     }
-    if(player.floorLevel == 3){
+
+    if(player.floorLevel >= 3){
       iniPool.add(() => OrcEnemy());
     }
 
@@ -844,10 +1011,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       iniPool = [
         () => OvoEnemy(),
         () => LarvaEnemy(),
-        () => BugEnemy(),
+        () => FungoEnemy(),
       ];
     }
 
+    if(player.floorLevel >= 5){
+      iniPool.add(() => BugEnemy());
+    }
 
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
@@ -881,6 +1051,21 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.orc: newEnemy = OrcEnemy(); break;
         case EnemyType.mimic: newEnemy = MimicEnemy(); break;
         case EnemyType.boss1: newEnemy = OrcChefe(); break;
+        case EnemyType.boss2:
+          var queen = RainhaInsetoEnemy()
+            ..strafePosition = 0.0
+            ..isFrontRow = false;
+          
+          var leftClaw = GarraRainhaEnemy(queen, -0.5)
+            ..isFrontRow = false;
+            
+          var rightClaw = GarraRainhaEnemy(queen, 0.5)
+            ..isFrontRow = false;
+
+          combatOverlay.startEncounter([queen, leftClaw, rightClaw]);
+          playerCombatStats.currentPhase = CombatPhase.entering; 
+          playerCombatStats.animTimer = 1;
+          return;
         default: newEnemy = SlimeEnemy(); break;
       }
     newEnemy.strafePosition = 0.0; 
@@ -923,20 +1108,39 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     if (currentState == GameState.mainMenu) {
-      if (input == GameInput.up || input == GameInput.down) {
+      // Se tiver jogo salvo, temos 3 botões. Se não, apenas 2.
+      int maxOptions = hasSavedGame ? 3 : 2; 
+
+      if (input == GameInput.up) {
         FlameAudio.play('sfx/hover.wav');
-        // Como só temos 2 opções (0 e 1), alternamos entre elas:
-        mainMenuCursor.value = (mainMenuCursor.value == 0) ? 1 : 0; 
+        mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions;
+      }
+      if (input == GameInput.down) {
+        FlameAudio.play('sfx/hover.wav');
+        mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions;
       }
       if (input == GameInput.buttonA) {
         FlameAudio.play('sfx/confirm.wav');
-        if (mainMenuCursor.value == 0) {
-          startGame();
+        
+        if (hasSavedGame) {
+          if (mainMenuCursor.value == 0) {
+             // NOVO: Carrega o Jogo Salvo!
+             loadGame().then((_) {
+               currentState = GameState.exploration;
+               overlays.remove('MainMenu');
+             });
+          } else if (mainMenuCursor.value == 1) {
+             startGame(); // Substitui o save (Novo Jogo)
+          } else if (mainMenuCursor.value == 2) {
+             openManual();
+          }
         } else {
-          openManual();
+          // Sem save game
+          if (mainMenuCursor.value == 0) startGame();
+          else if (mainMenuCursor.value == 1) openManual();
         }
       }
-      return; // Interrompe para não vazar comandos
+      return; 
     }
 
     if (currentState == GameState.levelUp) {
@@ -1097,6 +1301,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
         isItemActionMenuOpen = false; 
+        //_triggerSpecificEncounter(EnemyType.boss2);
       }
       return; 
     } 
@@ -1237,7 +1442,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _interact() {
     TileType playerTile = dungeon.getTile(player.x, player.y);
 
-    if (playerTile == TileType.floor) {
+    if (playerTile == TileType.floor || playerTile == TileType.entry || playerTile == TileType.openChest) {
       Point<int> currentPos = Point(player.x, player.y);
       if (!dungeon.droppedItems.containsKey(currentPos) || dungeon.droppedItems[currentPos]!.isEmpty) {
         isPassTurnPromptOpen = true; 
@@ -1260,7 +1465,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (playerTile == TileType.door) {
       if (player.hasKey) {
-        showMessage("A porta se abre. Descendo para o Andar ${player.floorLevel + 1}...", onDismiss: () {
+        showMessage("A porta se abre. Descendo para o Andar ${player.floorLevel + 1}...", onDismiss: () async {
           player.floorLevel++;
           player.hasKey = false;
           player.noiseLevel = 0;
@@ -1271,6 +1476,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           player.x = dungeon.playerSpawn.x;
           player.y = dungeon.playerSpawn.y;
           player.facing = Direction.north;
+          await saveGame();
         });
       } else {
         showMessage("A porta está trancada. Encontre a chave.");
@@ -1343,6 +1549,39 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             }
           });
         }
+      }
+    }
+    else if (playerTile == TileType.crate) {
+      int chance = Random().nextInt(100);
+      dungeon.grid[player.y][player.x] = TileType.floor; 
+      
+      if (chance < 70) { 
+        showMessage("Caixa vazia!"); 
+      } else {
+        List<Item> allConsumables = [
+            ItemDatabase.healthPotion,
+            ItemDatabase.manaPotion,
+            ItemDatabase.bomb,
+            ItemDatabase.staminaPotion,
+            ItemDatabase.reflexPotion,
+            ItemDatabase.meat,
+            ItemDatabase.faca,
+          ];
+
+        int totalConsumables = allConsumables.length;
+        int randomIndex = Random().nextInt(totalConsumables);
+        
+        Item droppedItem = allConsumables[randomIndex];
+        droppedItem.quantity = 1;
+
+        showMessage("Você encontrou um item: ${droppedItem.name}!", onDismiss: () {
+          var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
+          if (existingItems.isNotEmpty) {
+            existingItems.first.quantity += droppedItem.quantity; 
+          } else {
+            receiveItem(droppedItem);
+          }
+        });
       }
     }
   }

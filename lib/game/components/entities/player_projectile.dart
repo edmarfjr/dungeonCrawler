@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -14,10 +16,11 @@ class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
   double hitCooldown; 
   Map<Enemy, double> hitEnemies = {};
   double dieTmr;
+  ui.Image img;
 
   // O 'super(size, anchor)' avisa ao Flame o tamanho oficial deste objeto
   PlayerProjectile(this.strafeX, this.yPos, this.speed, this.power, this.color, 
-      {this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 999.0}) 
+      {this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 999.0, required this.img}) 
       : super(size: Vector2(width, height), anchor: Anchor.center);
 
   @override
@@ -71,13 +74,22 @@ class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
 
   @override
   void render(Canvas canvas) {
-    // No Flame, o render sempre começa do (0,0) do próprio objeto! Muito mais fácil.
+    /*
     final rect = Rect.fromLTWH(0, 0, size.x, size.y);
     
-    final glowPaint = Paint()..color = color.withOpacity(0.8)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+    final glowPaint = Paint()..color = color;
     final corePaint = Paint()..color = Colors.white..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
 
     canvas.drawRect(rect, glowPaint);
     canvas.drawRect(rect.deflate(10), corePaint);
+    */
+    Paint projPaint = Paint();//..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
+
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+      Rect.fromLTWH(-(img.width.toDouble()*3 - size.x/2), 0, img.width.toDouble()*6, img.height.toDouble()*6), 
+      projPaint
+    );
   }
 }

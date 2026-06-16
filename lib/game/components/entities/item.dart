@@ -219,7 +219,7 @@ class ItemDatabase {
     //FlameAudio.play('sfx/throw.wav');
 
     // 2. Define o ponto de partida (Centro inferior da tela de combate)
-    Vector2 launchPos = Vector2(game.size.x / 2, game.size.y * 0.70);
+    Vector2 launchPos = Vector2(game.playerCombatStats.strafePosition, game.size.y * 0.70);
 
     // 3. Calcula um vetor diagonal inicial aleatório jogado para cima
     double randomAngleOffsetX = (Random().nextDouble() * 0.4) - 0.2; 
@@ -239,38 +239,42 @@ class ItemDatabase {
     ));
   });
 
-  static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.laranja, onUse: (item, game) {
+  static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.laranja, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde a sua mana para as batalhas!");
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
       return;
     }
 
-    // Instancia o projétil exatamente na posição horizontal do jogador!
+    final ui.Image img = await game.images.load('effects/fire.png');
     FlameAudio.play('sfx/fire.wav');
     game.combatOverlay.add(PlayerProjectile(
        game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, item.cor, width: 80, height: 180
+       ,img : img
     ));
   });
 
-  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/scroll.png', 4, manaCost: 10, cor: Palette.cinzaCla, onUse: (item, game) {
+  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/scroll.png', 4, manaCost: 10, cor: Palette.cinzaCla, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde a sua mana para as batalhas!");
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
       return;
     }
+    final ui.Image img = await game.images.load('effects/piercing.png');
     FlameAudio.play('sfx/charge.wav');
     game.combatOverlay.add(PlayerProjectile(
       game.playerCombatStats.strafePosition, 0.0, 2.5, item.power*game.playerCombatStats.wis, item.cor, yDir: 1, isPiercing: true, width: 40, height: 180
+      ,img : img
     ));
   });
 
-  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 1, manaCost: 15, cor: Palette.verde, onUse: (item, game) {
+  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 1, manaCost: 15, cor: Palette.verde, onUse: (item, game) async {
     if (game.currentState != GameState.combat) { game.playerCombatStats.mana += item.manaCost; return; }
     FlameAudio.play('sfx/poison.wav');
+    final ui.Image img = await game.images.load('effects/poison.png');
     game.combatOverlay.add(PlayerProjectile(
        game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, item.cor, width: 80, height: 180
-      , isPiercing: true,hitCooldown: 0.5
+      , isPiercing: true,hitCooldown: 0.5,img : img
     ));
   });
 }

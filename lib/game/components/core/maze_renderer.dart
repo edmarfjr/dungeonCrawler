@@ -9,13 +9,15 @@ import 'dungeon_map.dart';
 import 'player_state.dart';
 
 class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
-  final DungeonMap map;
-  final PlayerState player;
-  final ui.Image wallImage;
-  final ui.Image floorImage;
+  DungeonMap map;
+  PlayerState player;
+  final List <ui.Image> wallImage;
+  final List <ui.Image> floorImage;
   final ui.Image doorImage;
+  final ui.Image doorImage2;
   final ui.Image keyImage;
   final ui.Image chestImage;
+  final ui.Image crateImage;
   final ui.Image openChestImage;
   final ui.Image spikeImage;
   final ui.Image roamerImage;
@@ -32,6 +34,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.wallImage,
     required this.floorImage,
     required this.doorImage, 
+    required this.doorImage2, 
     required this.keyImage,  
     required this.chestImage,
     required this.spikeImage,
@@ -39,6 +42,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.bossImage,
     required this.shrineImage,
     required this.openChestImage,
+    required this.crateImage,
   });
 
   void triggerWallBump({required bool forward}) {
@@ -106,26 +110,36 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         
         TileType tile = map.getTile(mapX, mapY);
 
+        int tileIdx = 0;
+        Color corChao = Colors.white;
+        Color corParede = Colors.white;
+
+        if (map.level >= 4){
+          tileIdx = 1;
+          corChao = Palette.bege;
+          corParede = Palette.amarelo;
+        }
+
         // Sempre desenha o chão
-        _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
-        _drawCeiling(canvas, cx, cz,floorImage, Palette.cinzaEsc);
+        _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+        _drawCeiling(canvas, cx, cz,floorImage[tileIdx], corChao);
 
         // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
         if (tile == TileType.wall) {
-          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage, Palette.cinza); 
-          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage, Palette.cinza); 
-          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage, Palette.cinza);
+          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
+          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
+          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage[tileIdx], corParede);
         }
 
         // --- 2. LÓGICA DA PORTA ---
         if (tile == TileType.door) {
           // A porta vai do chão (0.5) até quase o teto (-0.1)
-           _drawFloorTile(canvas, cx, cz, doorImage, Palette.marrom);
+           _drawFloorTile(canvas, cx, cz, doorImage, Colors.white);
         }
 
-        //if (tile == TileType.entry) {
-        //   _drawCeiling(canvas, cx, cz, doorImage, Palette.marrom);
-        //}
+        if (tile == TileType.entry) {
+           _drawCeiling(canvas, cx, cz, doorImage2, Colors.white);
+        }
 
         
 
@@ -137,6 +151,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
           _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
+        }
+
+        if (tile == TileType.crate && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Palette.marrom);
         }
 
         if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
@@ -153,7 +171,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
           // Sempre desenha o chão normal debaixo da armadilha
-          _drawFloorTile(canvas, cx, cz, floorImage, Palette.cinzaEsc);
+          _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
 
           // Calcula a largura de 1 frame (divide a spritesheet por 4)
           double frameWidth = spikeImage.width / 4;
