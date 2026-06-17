@@ -1,9 +1,11 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/Effects/healing_cloud_effect.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
+import 'package:dungeon_crawler/game/components/entities/poison_cloud.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
@@ -55,6 +57,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   bool isHeavyAttack = false;
 
   List<Item> drop ;
+
+  bool isFlipped = false;
 
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
@@ -338,7 +342,15 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     Color finalColor = gameRef.playerCombatStats.currentPhase == CombatPhase.entering ? Palette.preto : Color.fromARGB(flashC.alpha, r, g, b);
     
     final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
+
+    if (isFlipped) {
+      canvas.save();
+      canvas.translate(size.x, 0); 
+      canvas.scale(-1.0, 1.0); 
+    }
+
     activeTicker.getSprite().render(canvas, size: size, overridePaint: tintPaint);
+    canvas.restore();
     
   }
 
@@ -1270,18 +1282,14 @@ class FungoEnemy extends Enemy {
   void _castHealingCloud() {
     double currentY = yPosition + visualYOffset + flightOffset;
     
-    // Invoca o efeito visual da fumaça na tela exata onde o fungo está agora
     gameRef.combatOverlay.add(HealingCloudEffect(strafePosition, currentY, gameRef));
 
-    // Lógica de Área de Efeito (AoE - Area of Effect)
     for (var enemy in gameRef.combatOverlay.enemies) {
-      if (enemy.isAlive) {
+      if (enemy.isAlive && enemy != this) {
         
-        // Mede a distância horizontal absoluta entre o Fungo e os outros inimigos
         double distance = (enemy.strafePosition - strafePosition).abs();
         
-        // Só cura se o aliado estiver na área de efeito (0.65 de distância é ~30% da tela)
-        if (distance <= 0.65) {
+        if (distance <= 0.4) {
           double healAmount = 25.0;
           enemy.hp += healAmount;
           if (enemy.hp > enemy.maxHp) enemy.hp = enemy.maxHp;
@@ -1313,12 +1321,12 @@ class GarraRainhaEnemy extends Enemy {
   GarraRainhaEnemy(this.rainha, this.strafeOffset) : super(
     name: 'garra',
     type: EnemyType.garra, 
-    color: Palette.vermelho, // Uma cor intimidadora
-    hp: 120, maxHp: 120, dropEssence: 0, width: 100, height: 100, speed: 0.0,
-    hurtboxWidth: 70, hurtboxHeight: 90, hurtboxOffsetY: 0,
-    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 0, 
+    color: Palette.vermelho, 
+    hp: 120, maxHp: 120, dropEssence: 0, width: 192, height: 192, speed: 0.0,
+    hurtboxWidth: 50, hurtboxHeight: 170, hurtboxOffsetY: 0,
+    hitboxWidth: 30, hitboxHeight: 80, hitboxOffsetY: 40, 
     drop: [], isMelee: true, 
-    maxAttackCooldown: 3.5, // Ataca fisicamente
+    maxAttackCooldown: 3.5, 
   ) {
     isMelee = true;
   }
@@ -1355,8 +1363,8 @@ class RainhaInsetoEnemy extends Enemy {
     name: 'rainha',
     type: EnemyType.boss2,
     color: Palette.roxo,
-    hp: 300, maxHp: 300, dropEssence: 100, width: 200, height: 200, speed: 0.3,
-    hurtboxWidth: 120, hurtboxHeight: 140, hurtboxOffsetY: -20,
+    hp: 300, maxHp: 300, dropEssence: 100, width: 192, height: 192, speed: 0.3,
+    hurtboxWidth: 192, hurtboxHeight: 192, hurtboxOffsetY: 0,
     hitboxWidth: 0, hitboxHeight: 0,
     drop: [],
     maxAttackCooldown: 4.5,
@@ -1365,11 +1373,28 @@ class RainhaInsetoEnemy extends Enemy {
   );
 
   bool isSummoningEgg = false;
+  bool isPoisonCloud = false;
+
+  double summonCooldown = 20;
 
   // A MÁGICA DA BLINDAGEM: Verifica se existem Garras Vivas no cenário!
   bool get _clawsDefeated {
     return !gameRef.combatOverlay.enemies.any((e) => e is GarraRainhaEnemy && e.isAlive);
   }
+
+  bool get _garrasEstaoAtacando {
+    return gameRef.combatOverlay.enemies.any((e) {
+      if (e is GarraRainhaEnemy && e.isAlive) {
+        return e.currentPhase == CombatPhase.windup || 
+               e.currentPhase == CombatPhase.active || 
+               e.currentPhase == CombatPhase.recovery;
+      }
+      return false;
+    });
+  }
+
+  @override
+  bool get canChangeRow => !_garrasEstaoAtacando;
 
   // Sobrescreve a vulnerabilidade base do monstro
   @override
@@ -1383,17 +1408,32 @@ class RainhaInsetoEnemy extends Enemy {
     }
 
     // Se move lentamente atrás do jogador para tentar mirar o veneno
-    if (strafePosition < player.strafePosition - 0.1) {
-      strafePosition += speed * dt;
-    } else if (strafePosition > player.strafePosition + 0.1) {
-      strafePosition -= speed * dt;
+    if(!_garrasEstaoAtacando){
+      if (strafePosition < player.strafePosition - 0.1) {
+        strafePosition += speed * dt;
+      } else if (strafePosition > player.strafePosition + 0.1) {
+        strafePosition -= speed * dt;
+      }
+      strafePosition = strafePosition.clamp(-1.0, 1.0);
     }
-    strafePosition = strafePosition.clamp(-1.0, 1.0);
+    
   }
 
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
+    summonCooldown -= dt;
+
+    if (summonCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 1.0; // Animação longa avisando o jogador
+      summonCooldown = 20;
+      isSummoningEgg = true;
+      // Se as garras estiverem vivas, ela foca mais em botar ovos.
+      // Se estiver sozinha, ela foca mais em jogar veneno!
+      //double eggChance = _clawsDefeated ? 0.30 : 0.60;
+      //isSummoningEgg = Random().nextDouble() < eggChance;
+    }
 
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
       currentPhase = CombatPhase.windup;
@@ -1402,8 +1442,8 @@ class RainhaInsetoEnemy extends Enemy {
       
       // Se as garras estiverem vivas, ela foca mais em botar ovos.
       // Se estiver sozinha, ela foca mais em jogar veneno!
-      double eggChance = _clawsDefeated ? 0.30 : 0.60;
-      isSummoningEgg = Random().nextDouble() < eggChance;
+      //double eggChance = _clawsDefeated ? 0.30 : 0.60;
+      isPoisonCloud = Random().nextDouble() < 0.9;
     }
   }
 
@@ -1420,7 +1460,12 @@ class RainhaInsetoEnemy extends Enemy {
           if (isSummoningEgg) {
             _spawnEgg();
           } else {
-            _shootPoison();
+            if(isPoisonCloud){
+              _shootPoisonCloud();
+            }else{
+              _shootPoison();
+            }
+            
           }
         } 
         else if (currentPhase == CombatPhase.active) {
@@ -1449,11 +1494,13 @@ class RainhaInsetoEnemy extends Enemy {
   }
 
   void _shootPoison() {
-    double startY = yPosition + visualYOffset;
+    double startY = yPosition + visualYOffset - 0.2;
     
-    // Atira um arco de veneno triplo (Reaproveitando seu ArcProjectile!)
-    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, -0.6, -1.5, this));
-    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.0, -1.8, this));
-    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.6, -1.5, this));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.0, -0.5, this, isHoming: true));
+  }
+  Future<void> _shootPoisonCloud() async {
+    double startY = yPosition + visualYOffset - 0.05;
+    final ui.Image img = await game.images.load('effects/poison.png');
+    gameRef.combatOverlay.add(PoisonCloud(strafePosition, startY, 0.0,0, this, img:img));
   }
 }

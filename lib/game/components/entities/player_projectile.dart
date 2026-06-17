@@ -5,7 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 
-class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
+class PlayerProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> {
   double strafeX;
   double yPos; 
   double speed;
@@ -18,15 +18,32 @@ class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
   double dieTmr;
   ui.Image img;
 
+  bool isFlip;
+  double _flipTimer = 0.0; 
+  final double _flipInterval = 0.15;
+
   // O 'super(size, anchor)' avisa ao Flame o tamanho oficial deste objeto
   PlayerProjectile(this.strafeX, this.yPos, this.speed, this.power, this.color, 
-      {this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 999.0, required this.img}) 
-      : super(size: Vector2(width, height), anchor: Anchor.center);
+      {this.isFlip = false, this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 999.0, required this.img}) 
+      : super(size: Vector2(144, 144), anchor: Anchor.center
+      ){
+        sprite = Sprite(img);
+        paint = Paint()..colorFilter = ColorFilter.mode(color, BlendMode.modulate);
+      }
 
   @override
   void update(double dt) {
     if(gameRef.currentState == GameState.paused)return;
     super.update(dt);
+
+    if(isFlip){
+      _flipTimer += dt; 
+
+      if (_flipTimer >= _flipInterval) {
+        _flipTimer -= _flipInterval; 
+        flipHorizontally(); 
+      }
+    }
     
     // 1. Lógica de Vida e Movimento
     dieTmr -= dt;
@@ -49,7 +66,7 @@ class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
     }
 
     // 4. COLISÃO AUTO-GERENCIADA (Ele mesmo checa se bateu no inimigo!)
-    final myHitbox = size.toRect().shift(position.toOffset() - Offset(size.x/2, size.y/2));
+    final myHitbox = size.toRect().shift(position.toOffset() - Offset(width/2, height/2));
     
     for (var enemy in gameRef.combatOverlay.enemies) {
       bool isImmune = hitEnemies.containsKey(enemy) && hitEnemies[enemy]! > 0;
@@ -65,31 +82,11 @@ class PlayerProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
         if (isPiercing) {
           hitEnemies[enemy] = hitCooldown;
         } else {
-          removeFromParent(); // Se destrói no impacto
-          break; 
+          //removeFromParent(); 
+          //break; 
         }
       }
     }
   }
 
-  @override
-  void render(Canvas canvas) {
-    /*
-    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
-    
-    final glowPaint = Paint()..color = color;
-    final corePaint = Paint()..color = Colors.white..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-
-    canvas.drawRect(rect, glowPaint);
-    canvas.drawRect(rect.deflate(10), corePaint);
-    */
-    Paint projPaint = Paint();//..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
-
-    canvas.drawImageRect(
-      img,
-      Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
-      Rect.fromLTWH(-(img.width.toDouble()*3 - size.x/2), 0, img.width.toDouble()*6, img.height.toDouble()*6), 
-      projPaint
-    );
-  }
 }

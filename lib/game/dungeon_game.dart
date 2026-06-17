@@ -162,9 +162,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.espadaCurta,
-      ItemDatabase.armaduraCouro,
-      ItemDatabase.escudoMadeira,
+      ItemDatabase.firePillar,
+      ItemDatabase.toxicCloud,
 
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
@@ -782,7 +781,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       if (playerTile == TileType.boss){
         dungeon.grid[player.y][player.x] = TileType.floor; 
-        _triggerSpecificEncounter(EnemyType.boss1);
+        switch(dungeon.level){
+          case 3:
+            _triggerSpecificEncounter(EnemyType.boss1);
+            break;
+          case 6:
+            _triggerSpecificEncounter(EnemyType.boss2);
+            break;
+        }
+        
       }
 
       while (dungeon.roamingEnemies.length < 3) {
@@ -1050,17 +1057,31 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.spider: newEnemy = SpiderEnemy(); break;
         case EnemyType.orc: newEnemy = OrcEnemy(); break;
         case EnemyType.mimic: newEnemy = MimicEnemy(); break;
+        case EnemyType.bug: newEnemy = BugEnemy(); break;
+        case EnemyType.larva: newEnemy = LarvaEnemy(); break;
+        case EnemyType.ovo: newEnemy = OvoEnemy(); break;
+        case EnemyType.fungo: newEnemy = FungoEnemy(); break;
         case EnemyType.boss1: newEnemy = OrcChefe(); break;
         case EnemyType.boss2:
+
+        /*  var bug1 = BugEnemy()
+              ..strafePosition = 0.4
+              ..isFrontRow = true;
+
+          var bug2 = BugEnemy()
+              ..strafePosition = -0.4
+              ..isFrontRow = true;
+        */
           var queen = RainhaInsetoEnemy()
             ..strafePosition = 0.0
             ..isFrontRow = false;
           
-          var leftClaw = GarraRainhaEnemy(queen, -0.5)
+          var leftClaw = GarraRainhaEnemy(queen, -0.24)
             ..isFrontRow = false;
             
-          var rightClaw = GarraRainhaEnemy(queen, 0.5)
-            ..isFrontRow = false;
+          var rightClaw = GarraRainhaEnemy(queen, 0.24)
+            ..isFrontRow = false
+            ..isFlipped = true;
 
           combatOverlay.startEncounter([queen, leftClaw, rightClaw]);
           playerCombatStats.currentPhase = CombatPhase.entering; 
@@ -1139,6 +1160,28 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           if (mainMenuCursor.value == 0) startGame();
           else if (mainMenuCursor.value == 1) openManual();
         }
+      }
+      return; 
+    }
+
+    if (currentState == GameState.gameOver) {
+      // Se tiver jogo salvo, temos 3 botões. Se não, apenas 2.
+      int maxOptions = 2; 
+
+      if (input == GameInput.up) {
+        FlameAudio.play('sfx/hover.wav');
+        mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions;
+      }
+      if (input == GameInput.down) {
+        FlameAudio.play('sfx/hover.wav');
+        mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions;
+      }
+      if (input == GameInput.buttonA) {
+        FlameAudio.play('sfx/confirm.wav');
+
+        if (mainMenuCursor.value == 0) startGame();
+        else if (mainMenuCursor.value == 1) quitToMainMenu();
+        
       }
       return; 
     }

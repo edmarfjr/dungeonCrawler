@@ -50,7 +50,7 @@ class _GameScreenState extends State<GameScreen> {
           children: [
             // Tela do Jogo (2/3 da tela)
             Expanded(
-              flex: 2,
+              flex: 3,
               child: ClipRect(
                 child: GameWidget(
                   game: _game,
@@ -112,7 +112,7 @@ class _GameScreenState extends State<GameScreen> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           GestureDetector(
-                            onTapDown: (_) => _game.startInput(GameInput.pause),
+                            onTapDown: (_) => {_game.startInput(GameInput.pause), HapticFeedback.mediumImpact() },
                             child: Container(
                               width: 50, height: 20,
                               decoration: BoxDecoration(color: Palette.cinzaEsc, borderRadius: BorderRadius.circular(15)),
