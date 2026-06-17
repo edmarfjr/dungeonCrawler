@@ -370,8 +370,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawBottomBarBackground(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, size.y - 76, size.x, 75), Paint()..color = Colors.black);
-    canvas.drawRect(Rect.fromLTWH(0, size.y - 76, size.x, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    canvas.drawRect(Rect.fromLTWH(1, size.y - 76, size.x-2, 75), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(1, size.y - 76, size.x-2, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
   }
 
   void _drawDebugBoxes(Canvas canvas) {
@@ -486,16 +486,16 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawPlayerUI(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, 60), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, 60), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 60), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 60), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
     //double barWidth = (size.x - 40) / 3;
     _drawHorizontalBar(canvas, 10, 10, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
     _drawHorizontalBar(canvas, 10, 25, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
     _drawHorizontalBar(canvas, 10, 40, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
       Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
-      double boxX = size.x - 44;
-      double boxY = 5;
+      double boxX = size.x - 41;
+      double boxY = 1;
 
       //inventario
       // Desenha a caixa de fundo
@@ -516,23 +516,23 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       } catch (e) {
         // Se a imagem não for encontrada, não quebra o jogo
       }
-      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 40, 40), Paint()..color = Palette.cinzaCla..style = PaintingStyle.stroke);
+      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 40, 40), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
       String amountText = sel.type == ItemType.spell ? '${sel.manaCost} MP' : '${sel.quantity}x';
       
       TextPainter(
         text: TextSpan(text: amountText, style: TextStyle(fontFamily: 'pixelFont', color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(boxX, 20));
-      TextPainter(
-        text: const TextSpan(text: 'Uso[B]', style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 10)),
-        textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(boxX + 10, 45));
+      )..layout()..paint(canvas, Offset(boxX, 45));
+      //TextPainter(
+      //  text: const TextSpan(text: 'Uso[B]', style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 10)),
+      //  textDirection: TextDirection.ltr,
+      //)..layout()..paint(canvas, Offset(boxX, 45));
       if(playerStats.reflex){
         TextPainter(
           text: const TextSpan(text: 'REFLEX', style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 10)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x-'REFLEX'.length*10, 45));
+        )..layout()..paint(canvas, Offset(size.x-44-'REFLEX'.length*10, 20));
       }
 
     }
@@ -558,24 +558,62 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawEnemyUI(Canvas canvas) {
+    // 1. Configurações de espaçamento da grade
+    double margin = 15.0; // Margem das laterais da tela
+    double gap = 10.0;    // Espaço em branco entre a Coluna 1 e a Coluna 2
+    
+    // 2. Calcula a largura que cada barra terá (Metade da tela - margens e espaçamento)
+    double barWidth = (size.x - (margin * 2) - gap) / 2;
+
+    int displayIndex = 0; // Índice visual para não deixar buracos quando um inimigo morrer
+
     for (int i = 0; i < enemies.length; i++) {
       if (!enemies[i].isAlive) continue;
-      _drawHorizontalBar(canvas, 15, size.y - 75 + 2 + i*18, size.x - 30 , 16, Palette.vermelho, enemies[i].hp / enemies[i].maxHp);
-      TextPainter(
-        text: TextSpan(text: enemies[i].name.toUpperCase(), style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold )),
+
+      // Impede de desenhar mais do que 8 barras para não vazar da caixa preta
+      if (displayIndex >= 8) break; 
+
+      // 3. Matemática da Grade (Grid)
+      int col = displayIndex % 2;  // Retorna 0 (Esquerda) ou 1 (Direita)
+      int row = displayIndex ~/ 2; // Retorna a linha: 0, 1, 2 ou 3
+
+      // Calcula as posições X e Y baseadas na coluna e linha
+      double startX = margin + (col * (barWidth + gap));
+      double startY = size.y - 75 + 2 + (row * 18);
+
+      // Desenha a barra com o novo tamanho e posição
+      _drawHorizontalBar(
+        canvas, 
+        startX, 
+        startY, 
+        barWidth, 
+        16, 
+        Palette.vermelho, 
+        enemies[i].hp / enemies[i].maxHp
+      );
+
+      // 4. Desenha o Texto
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: enemies[i].name.toUpperCase(), 
+          style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold)
+        ),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(size.x/2 - enemies[i].name.length*7, size.y - 75 + 2 + i*18));
-      //TextPainter(
-      //  text: TextSpan(text: "${enemies[i].hp} / ${enemies[i].maxHp}", style: TextStyle(color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold )),
-      //  textDirection: TextDirection.ltr,
-      //)..layout()..paint(canvas, Offset(size.x/2, size.y - 75 + 2 + i*18));
+      )..layout();
+
+      // Melhoria: Usando o 'textPainter.width' o texto fica perfeitamente centralizado na barra!
+      double textX = startX + (barWidth / 2) - (textPainter.width / 2);
+      
+      textPainter.paint(canvas, Offset(textX, startY));
+
+      displayIndex++;
     }
   }
 
   void _drawHorizontalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
     canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(x, y, w * r.clamp(0.0, 1.0), h), Paint()..color = c);
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
   }
 
   void _drawVictoryMessage(Canvas canvas) {

@@ -25,16 +25,16 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     double mapHeight = viewDiameter * tileSize;
     
     // Posiciona o minimapa no canto superior direito da tela
-    double startX = gameRef.size.x - mapWidth - 0.0;
+    double startX = gameRef.size.x - mapWidth ;
     double startY = 0.0; 
 
     // Guardar o estado do canvas para aplicar o recorte seguro (Clip)
     canvas.save();
 
     // 1. Fundo do Minimapa (Borda preta translúcida fixa)
-    final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth, mapHeight);
+    final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth-1, mapHeight);
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
-    canvas.drawRect(backgroundRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    canvas.drawRect(backgroundRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
     // Máscara de Recorte: Garante que NADA desenhado saia para fora do quadrado do minimapa
     canvas.clipRect(Rect.fromLTWH(startX, startY, mapWidth, mapHeight));

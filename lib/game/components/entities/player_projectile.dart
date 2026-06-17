@@ -24,7 +24,7 @@ class PlayerProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGam
 
   // O 'super(size, anchor)' avisa ao Flame o tamanho oficial deste objeto
   PlayerProjectile(this.strafeX, this.yPos, this.speed, this.power, this.color, 
-      {this.isFlip = false, this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 999.0, required this.img}) 
+      {this.isFlip = false, this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 0.5, required this.img}) 
       : super(size: Vector2(144, 144), anchor: Anchor.center
       ){
         sprite = Sprite(img);
@@ -71,7 +71,7 @@ class PlayerProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGam
     for (var enemy in gameRef.combatOverlay.enemies) {
       bool isImmune = hitEnemies.containsKey(enemy) && hitEnemies[enemy]! > 0;
       
-      if (!isImmune && !enemy.isDying && enemy.isVulnerable && myHitbox.overlaps(enemy.getHurtbox(gameRef.size))) {
+      if (!isImmune && !enemy.isDying && enemy.isFrontRow && enemy.isVulnerable && myHitbox.overlaps(enemy.getHurtbox(gameRef.size))) {
         enemy.hp -= power;
         enemy.applyHitStun(0.3);
         
@@ -82,8 +82,8 @@ class PlayerProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGam
         if (isPiercing) {
           hitEnemies[enemy] = hitCooldown;
         } else {
-          //removeFromParent(); 
-          //break; 
+          removeFromParent(); 
+          break; 
         }
       }
     }

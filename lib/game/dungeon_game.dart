@@ -162,8 +162,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.firePillar,
-      ItemDatabase.toxicCloud,
+     // ItemDatabase.reflexPotion,
+     // ItemDatabase.toxicCloud,
 
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
@@ -347,6 +347,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/web.png',
       'itens/meat.png',
       'itens/faca.png',
+      'itens/fire.png',
+      'itens/poison.png',
+      'itens/piercing.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall1.png');
     final ui.Image floorImg = await images.load('tilesets/floor1.png');
@@ -1064,14 +1067,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.boss1: newEnemy = OrcChefe(); break;
         case EnemyType.boss2:
 
-        /*  var bug1 = BugEnemy()
+          var bug1 = BugEnemy()
               ..strafePosition = 0.4
               ..isFrontRow = true;
 
           var bug2 = BugEnemy()
               ..strafePosition = -0.4
               ..isFrontRow = true;
-        */
+        
           var queen = RainhaInsetoEnemy()
             ..strafePosition = 0.0
             ..isFrontRow = false;
@@ -1083,7 +1086,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ..isFrontRow = false
             ..isFlipped = true;
 
-          combatOverlay.startEncounter([queen, leftClaw, rightClaw]);
+          combatOverlay.startEncounter([bug1, bug2, queen, leftClaw, rightClaw]);
           playerCombatStats.currentPhase = CombatPhase.entering; 
           playerCombatStats.animTimer = 1;
           return;
@@ -1515,6 +1518,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           dungeon.width += 5; 
           dungeon.height += 5;
           dungeon.level ++;
+          dungeon.droppedItems.clear();
           dungeon.generateProceduralMap(); 
           player.x = dungeon.playerSpawn.x;
           player.y = dungeon.playerSpawn.y;

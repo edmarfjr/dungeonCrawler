@@ -9,7 +9,7 @@ class GameOverOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Palette.preto,
+      color: Palette.vermelho.withOpacity(0.9),
       child: Center(
         child: ValueListenableBuilder<int>(
           valueListenable: game.mainMenuCursor,
@@ -18,7 +18,7 @@ class GameOverOverlay extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  "DUNGEON CRAWLER", 
+                  "VOCÊ MORREU", 
                   style: TextStyle(
                     fontFamily: 'pixelFont', 
                     color: Palette.branco, 

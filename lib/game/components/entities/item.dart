@@ -229,7 +229,7 @@ class ItemDatabase {
     // 4. Calcula o dano mágico baseado na sabedoria (wis)
     double calculatedDamage = item.power + game.playerCombatStats.str.toDouble();
 
-    final ui.Image img = await game.images.load(item.imagePath);
+    final ui.Image img = await game.images.load('effects/slime_eye.png');
     // 5. Instancia e joga o projétil caótico direto na árvore do combate
     game.combatOverlay.add(SlimeEyeProjectile(
       startPosition: launchPos, 
@@ -239,7 +239,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/scroll.png', 5, manaCost: 15, cor: Palette.laranja, onUse: (item, game) async {
+  static Item get firePillar => Item("Pilar de Fogo", ItemType.spell, 'itens/fire.png', 5, manaCost: 15, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde a sua mana para as batalhas!");
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
@@ -254,7 +254,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/scroll.png', 4, manaCost: 10, cor: Palette.cinzaCla, onUse: (item, game) async {
+  static Item get piercingShot => Item("Tiro Perfurante", ItemType.spell, 'itens/piercing.png', 4, manaCost: 10, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde a sua mana para as batalhas!");
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
@@ -268,12 +268,12 @@ class ItemDatabase {
     ));
   });
 
-  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/scroll.png', 1, manaCost: 15, cor: Palette.verde, onUse: (item, game) async {
+  static Item get toxicCloud => Item("Nuvem Tóxica", ItemType.spell, 'itens/poison.png', 1, manaCost: 15, cor: Palette.verde, onUse: (item, game) async {
     if (game.currentState != GameState.combat) { game.playerCombatStats.mana += item.manaCost; return; }
     FlameAudio.play('sfx/poison.wav');
     final ui.Image img = await game.images.load('effects/poison.png');
     game.combatOverlay.add(PlayerProjectile(
-       game.playerCombatStats.strafePosition, 1.0, 1.5, item.power*game.playerCombatStats.wis, Palette.verde, width: 80, height: 180
+       game.playerCombatStats.strafePosition, 0.7, 0, item.power*game.playerCombatStats.wis, Palette.verde, width: 80, height: 180
       , isPiercing: true,hitCooldown: 0.5,img : img, isFlip: true
     ));
   });
