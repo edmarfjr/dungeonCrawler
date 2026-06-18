@@ -24,7 +24,7 @@ class PauseMenuOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              "Andar Atual: ${game.player.floorLevel}", 
+              "Andar Atual: ${game.dungeon.level}", 
               style: const TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 18, decoration: TextDecoration.none)
             ),
             const SizedBox(height: 10),

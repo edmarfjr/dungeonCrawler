@@ -67,10 +67,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double dashDirection = 0.0;
 
   // REFACTOR: Substituído showVictoryMessage por um controle de fluxo de fim de turno
-  bool _victoryProcessed = false;
+  bool _victoryProcessed = true;
   double encounterEssence = 0;
 
   List<Item> encounterDrop = [];
+  bool isMimic = false;
 
   // REFACTOR: O sistema agora usa uma lista interna agindo como fila (Queue)
   final List<GameMessage> _messageQueue = []; 
@@ -198,7 +199,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         'x': player.x,
         'y': player.y,
         'facing': player.facing.index,
-        'floorLevel': player.floorLevel,
+        'floorLevel': dungeon.level,
         'hasKey': player.hasKey,
       },
       'stats': {
@@ -245,7 +246,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     player.x = pData['x'];
     player.y = pData['y'];
     player.facing = Direction.values[pData['facing']];
-    player.floorLevel = pData['floorLevel'];
+    dungeon.level = pData['floorLevel'];
     player.hasKey = pData['hasKey'];
 
     // 3. Reconstrói os Status
@@ -263,11 +264,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     // Lista mestra para buscar as instâncias reais dos itens pelo nome
     List<Item> allGameItems = [
-      ItemDatabase.adaga, ItemDatabase.tanga, ItemDatabase.bloquel, ItemDatabase.faca,
-      ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion, ItemDatabase.bomb,
-      ItemDatabase.espadaCurta, ItemDatabase.armaduraFerro, ItemDatabase.espadaLonga, ItemDatabase.armaduraCouro, 
-      ItemDatabase.machado, ItemDatabase.firePillar, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, 
-      ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+      //armas
+      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado, ItemDatabase.clava,
+      //armaduras
+      ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, 
+      //escudos
+      ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, 
+      //pocoes
+      ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
+      //itens
+      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
+      //magias
+      ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
     ]; // IMPORTANTE: Mantenha essa lista atualizada se criar itens novos!
 
     for(var itemData in invDyn) {
@@ -663,10 +671,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     _initializeInventory();
     
-    player.floorLevel = 1;
+    //player.floorLevel = 4;
     dungeon.level = 1;
     player.hasKey = false;
-    player.noiseLevel = 0;
 
     dungeon.width = mapSize;
     dungeon.height = mapSize;
@@ -871,9 +878,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.isGuarding = false; 
 
         //showMessage("Vitória! Você purificou a área e obteve +${encounterEssence.toInt()} Essências!");
-
+        int dropChance = isMimic? 100 : 10;
         for (var drop in encounterDrop){
-          if(Random().nextInt(100) <= 10) {
+          if(Random().nextInt(100) <= dropChance) {
             receiveItem(drop); 
           }
         }
@@ -966,6 +973,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double defense = playerCombatStats.equippedArmor?.power ?? 0; 
     double dmg = max(1, enemy.damage - defense);
     bool unblockable = enemy.isHeavyAttack;
+    
+    if(dashTimer>0)return;
+
     if (playerCombatStats.isGuarding && !unblockable) {
       FlameAudio.play('sfx/block.wav');
       if (playerCombatStats.stamina >= 0) {
@@ -999,7 +1009,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     FlameAudio.play('sfx/encounter.wav');
     encounterEssence = 0;         
     encounterDrop.clear();
-    _victoryProcessed = false; // REFACTOR
+    _victoryProcessed = false; 
+    isMimic = false;
     currentState = GameState.combat;
     int numEnemies = Random().nextInt(4) + 1; 
     List<Enemy> spawnedEnemies = [];
@@ -1009,15 +1020,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       () => SpiderEnemy(),
     ];
     
-    if(player.floorLevel >= 2){
+    if(dungeon.level >= 2){
       iniPool.add(() => BatEnemy());
     }
 
-    if(player.floorLevel >= 3){
+    if(dungeon.level >= 3){
       iniPool.add(() => OrcEnemy());
     }
 
-    if(player.floorLevel >= 4){
+    if(dungeon.level >= 4){
       iniPool = [
         () => OvoEnemy(),
         () => LarvaEnemy(),
@@ -1025,7 +1036,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ];
     }
 
-    if(player.floorLevel >= 5){
+    if(dungeon.level >= 5){
       iniPool.add(() => BugEnemy());
     }
 
@@ -1052,6 +1063,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     encounterEssence = 0; 
     encounterDrop.clear();
     _victoryProcessed = false;
+    isMimic = false;
     currentState = GameState.combat;
     Enemy newEnemy;
     switch (type) {
@@ -1059,7 +1071,34 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.goblin: newEnemy = GoblinEnemy(); break;
         case EnemyType.spider: newEnemy = SpiderEnemy(); break;
         case EnemyType.orc: newEnemy = OrcEnemy(); break;
-        case EnemyType.mimic: newEnemy = MimicEnemy(); break;
+        case EnemyType.mimic: 
+          isMimic = true;
+          List<Item> allEquipments = [
+            ItemDatabase.espadaCurta,
+            ItemDatabase.armaduraFerro,
+            ItemDatabase.espadaLonga,
+            ItemDatabase.armaduraCouro,
+            ItemDatabase.machado,
+            ItemDatabase.firePillar,
+            ItemDatabase.escudoMadeira,
+            ItemDatabase.escudoFerro,
+            ItemDatabase.piercingShot,
+            ItemDatabase.toxicCloud,
+          ];
+
+          List<Item> unownedEquipments = allEquipments.where((equip) {
+            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
+          }).toList();    
+          
+          var mimic = MimicEnemy()
+              ..strafePosition = 0
+              ..isFrontRow = true
+              ..drop.add(unownedEquipments[Random().nextInt(unownedEquipments.length)]);
+          combatOverlay.startEncounter([mimic]);
+          playerCombatStats.currentPhase = CombatPhase.entering; 
+          playerCombatStats.animTimer = 1;
+          return;
+
         case EnemyType.bug: newEnemy = BugEnemy(); break;
         case EnemyType.larva: newEnemy = LarvaEnemy(); break;
         case EnemyType.ovo: newEnemy = OvoEnemy(); break;
@@ -1347,7 +1386,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
         isItemActionMenuOpen = false; 
-        //_triggerSpecificEncounter(EnemyType.boss2);
+        //_triggerSpecificEncounter(EnemyType.mimic);
       }
       return; 
     } 
@@ -1511,10 +1550,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (playerTile == TileType.door) {
       if (player.hasKey) {
-        showMessage("A porta se abre. Descendo para o Andar ${player.floorLevel + 1}...", onDismiss: () async {
-          player.floorLevel++;
+        showMessage("A porta se abre. Descendo para o Andar ${dungeon.level + 1}...", onDismiss: () async {
+          //player.floorLevel++;
           player.hasKey = false;
-          player.noiseLevel = 0;
           dungeon.width += 5; 
           dungeon.height += 5;
           dungeon.level ++;

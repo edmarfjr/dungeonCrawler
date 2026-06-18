@@ -147,7 +147,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
     if (isDying) {
       hitFlashTimer = 0;
-      currentPhase = CombatPhase.hit;
+      currentPhase = CombatPhase.die;
       deathTimer -= dt;
       if (deathTimer <= 0) {
         if(isBoss){
@@ -550,7 +550,26 @@ class MimicEnemy extends Enemy {
     type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 5,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 0, hitboxHeight: 0, isMelee: false, drop: []
-  );
+  );/*{
+    List<Item> allEquipments = [
+          ItemDatabase.espadaCurta,
+          ItemDatabase.armaduraFerro,
+          ItemDatabase.espadaLonga,
+          ItemDatabase.armaduraCouro,
+          ItemDatabase.machado,
+          ItemDatabase.firePillar,
+          ItemDatabase.escudoMadeira,
+          ItemDatabase.escudoFerro,
+          ItemDatabase.piercingShot,
+          ItemDatabase.toxicCloud,
+        ];
+
+    List<Item> unownedEquipments = allEquipments.where((equip) {
+          return !game.playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
+        }).toList();    
+
+    drop.add(unownedEquipments[Random().nextInt(unownedEquipments.length)]);
+  } */
 
   // MÁGICA 1: Só toma dano enquanto ataca!
   @override

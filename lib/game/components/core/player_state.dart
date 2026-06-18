@@ -9,7 +9,7 @@ class PlayerState {
   Direction facing;
   
   bool hasKey = false;
-  int floorLevel = 1;
+  //int floorLevel = 1;
   
   // --- NOVA VARIÁVEL ---
   int noiseLevel = 0; 
