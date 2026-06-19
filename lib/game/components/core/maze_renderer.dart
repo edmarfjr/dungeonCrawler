@@ -116,8 +116,8 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (map.level >= 4){
           tileIdx = 1;
-          corChao = Palette.bege;
-          corParede = Palette.amarelo;
+        //  corChao = Palette.bege;
+        //  corParede = Palette.amarelo;
         }
 
         // Sempre desenha o chão

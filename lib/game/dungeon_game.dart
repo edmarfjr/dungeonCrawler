@@ -359,8 +359,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/poison.png',
       'itens/piercing.png',
     ]);
-    final ui.Image wallImg = await images.load('tilesets/wall1.png');
-    final ui.Image floorImg = await images.load('tilesets/floor1.png');
+    final ui.Image wallImg = await images.load('tilesets/wall.png');
+    final ui.Image floorImg = await images.load('tilesets/floor.png');
     final ui.Image wallImg2 = await images.load('tilesets/wall2.png');
     final ui.Image floorImg2 = await images.load('tilesets/floor2.png');
 
@@ -384,9 +384,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.bat: await images.load('actors/bat.png'),
       EnemyType.boss1: await images.load('actors/boss1.png'),
       EnemyType.bug: await images.load('actors/bug.png'),
-      EnemyType.larva: await images.load('actors/larva.png'),
+      EnemyType.worm: await images.load('actors/larva.png'),
       EnemyType.ovo: await images.load('actors/ovo.png'),
       EnemyType.fungo: await images.load('actors/fungo.png'),
+      EnemyType.fungo2: await images.load('actors/fungo2.png'),
       EnemyType.garra: await images.load('actors/garra.png'),
       EnemyType.boss2: await images.load('actors/boss2.png'),
     };
@@ -406,8 +407,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.mimic: await images.load('effects/coin.png'),
       EnemyType.bat: await images.load('effects/bite.png'), 
       EnemyType.bug: await images.load('effects/golpe.png'), 
-      EnemyType.larva: await images.load('effects/bite.png'), 
+      EnemyType.worm: await images.load('effects/bite.png'), 
       EnemyType.fungo: await images.load('effects/spore.png'), 
+      EnemyType.fungo2: await images.load('effects/spore.png'), 
       EnemyType.boss2: await images.load('effects/spore.png'), 
       EnemyType.garra: await images.load('effects/golpe.png'), 
     };
@@ -671,7 +673,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     _initializeInventory();
     
-    //player.floorLevel = 4;
     dungeon.level = 1;
     player.hasKey = false;
 
@@ -1031,8 +1032,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(dungeon.level >= 4){
       iniPool = [
         () => OvoEnemy(),
-        () => LarvaEnemy(),
+        () => WormEnemy(),
         () => FungoEnemy(),
+        () => FungoEnemy(),      
       ];
     }
 
@@ -1100,9 +1102,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           return;
 
         case EnemyType.bug: newEnemy = BugEnemy(); break;
-        case EnemyType.larva: newEnemy = LarvaEnemy(); break;
+        case EnemyType.worm: newEnemy = WormEnemy(); break;
         case EnemyType.ovo: newEnemy = OvoEnemy(); break;
         case EnemyType.fungo: newEnemy = FungoEnemy(); break;
+        case EnemyType.fungo2: newEnemy = Fungo2Enemy(); break;
         case EnemyType.boss1: newEnemy = OrcChefe(); break;
         case EnemyType.boss2:
 
@@ -1309,10 +1312,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else {
         if (input == GameInput.up) {
           FlameAudio.play('sfx/hover.wav');
-          inventoryCursor = max(0, inventoryCursor - 1);
+          //inventoryCursor = max(0, inventoryCursor - 1);
+          inventoryCursor -= 1;
+          if(inventoryCursor<0) inventoryCursor = playerCombatStats.inventory.length - 1;
         } else if (input == GameInput.down) {
           FlameAudio.play('sfx/hover.wav');
-          inventoryCursor = min(playerCombatStats.inventory.length - 1, inventoryCursor + 1);
+          //inventoryCursor = min(playerCombatStats.inventory.length - 1, inventoryCursor + 1);
+          inventoryCursor += 1;
+          if(inventoryCursor>playerCombatStats.inventory.length - 1) inventoryCursor = 0;
         } else if (input == GameInput.buttonA && playerCombatStats.inventory.isNotEmpty) {
           FlameAudio.play('sfx/confirm.wav');
           isItemActionMenuOpen = true;
@@ -1386,7 +1393,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
         isItemActionMenuOpen = false; 
-        //_triggerSpecificEncounter(EnemyType.mimic);
+        //_triggerSpecificEncounter(EnemyType.fungo2);
+        //triggerEncounter();
       }
       return; 
     } 

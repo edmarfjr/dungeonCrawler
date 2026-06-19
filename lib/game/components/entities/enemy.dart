@@ -12,7 +12,7 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, larva, ovo, fungo, boss2, garra }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, boss2, garra }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -52,6 +52,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
   bool isBoss;
 
+  bool naoInterrompe = false;
+
   String name;
   
   bool isHeavyAttack = false;
@@ -71,17 +73,20 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     this.isBoss = false,
     this.dieAnim = CombatPhase.hit,
     required this.drop,
-  }) : attackCooldown = maxAttackCooldown, 
+  }) : attackCooldown = Random().nextDouble() * maxAttackCooldown, 
        super(anchor: Anchor.center
       ); // Anchor Center ajuda muito no Flame!
 
   void applyHitStun(double duration) {
     flashColor = Palette.vermelho;
     hitFlashTimer = duration;
-    currentPhase = CombatPhase.hit;
-    attackHit = false; 
-    attackCooldown = maxAttackCooldown / 2; 
-    onHitStun(); 
+    if(!naoInterrompe){
+      currentPhase = CombatPhase.hit;
+      attackHit = false; 
+      attackCooldown = maxAttackCooldown / 2; 
+      onHitStun(); 
+    }
+    
   }
 
   void applyHitGuard(double duration) {
@@ -474,7 +479,7 @@ class GoblinEnemy extends Enemy {
       strafePosition += dir * speed * dt;
     } else {
       // Vai para a direção DO jogador (com zona morta para não tremer)
-      if (distanceToPlayer > 0.02) {
+      if (distanceToPlayer > 0.01) {
         double dir = (player.strafePosition - strafePosition).sign;
         strafePosition += dir * speed * dt;
       }
@@ -668,7 +673,7 @@ class OrcEnemy extends Enemy {
         strafePosition += dir * speed * dt;
       } else {
         // Vai para a direção DO jogador (com zona morta para não tremer)
-        if (distanceToPlayer > 0.02) {
+        if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
@@ -705,7 +710,7 @@ class OrcEnemy extends Enemy {
 class BatEnemy extends Enemy {
   double currentDir = 1.0;
   
-  final double flightHeight = 0.2; 
+  final double flightHeight = 0.3; 
   final double attackHeight = 0.75;   
   double targetStrafe = 0;
 
@@ -720,6 +725,17 @@ class BatEnemy extends Enemy {
     yPosition = flightHeight; // Já nasce colado no teto
     targetY = flightHeight;
   }
+
+  bool get _EstaAtacando {
+    return 
+      currentPhase == CombatPhase.windup || 
+      currentPhase == CombatPhase.active || 
+      currentPhase == CombatPhase.recovery;
+    
+  }
+
+  @override
+  bool get canChangeRow => !_EstaAtacando;
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
@@ -756,6 +772,7 @@ class BatEnemy extends Enemy {
     super.update(dt); // A classe pai resolve a cor, timers e sprites
 
     if (currentPhase == CombatPhase.windup) {
+      priority = 15;
       targetY = attackHeight;
 
       // 1. Descobre a diferença nos eixos X e Y
@@ -790,6 +807,7 @@ class BatEnemy extends Enemy {
         targetY = attackHeight; // Mantém no chão para você poder bater nele
       } else if (currentPhase == CombatPhase.idle) {
         targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
+        priority = isFrontRow ? 10 : 0;
       }
     }
   }
@@ -863,7 +881,7 @@ class OrcChefe extends Enemy {
         strafePosition += dir * speed * dt;
       } else {
         // Vai para a direção DO jogador (com zona morta para não tremer)
-        if (distanceToPlayer > 0.02) {
+        if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
@@ -901,10 +919,12 @@ class OrcChefe extends Enemy {
         isSummoning = false;
         isHeavyAttack = !isHeavyAttack; // Alterna entre normal e pesado!
 
+        naoInterrompe = isHeavyAttack;
+
         currentPhase = CombatPhase.windup;
         
         // O ataque pesado tem um aviso (windup) BEM MAIOR para dar tempo de o jogador esquivar
-        animTimer = isHeavyAttack ? 1.2 : 0.6; 
+        animTimer = isHeavyAttack ? 0.8 : 0.5; 
         attackCooldown = maxAttackCooldown;
         
         // O dano sobe violentamente no ataque pesado
@@ -1059,7 +1079,7 @@ class BugEnemy extends Enemy {
         strafePosition += dir * speed * dt;
       } else {
         // Vai para a direção DO jogador (com zona morta para não tremer)
-        if (distanceToPlayer > 0.02) {
+        if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
@@ -1091,9 +1111,9 @@ class BugEnemy extends Enemy {
   }
 }
 
-class LarvaEnemy extends Enemy {
-  LarvaEnemy() : super(name: 'larva',
-    type: EnemyType.larva, 
+class WormEnemy extends Enemy {
+  WormEnemy() : super(name: 'worm',
+    type: EnemyType.worm, 
     color: Palette.cinza,
     hp: 40, maxHp: 40, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
@@ -1106,7 +1126,7 @@ class LarvaEnemy extends Enemy {
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-    if (distanceToPlayer > 0.02) {
+    if (distanceToPlayer > 0.01) {
         double dir = (player.strafePosition - strafePosition).sign;
         strafePosition += dir * speed * dt;
     }
@@ -1164,16 +1184,17 @@ class OvoEnemy extends Enemy {
     
   }
 
-   void _spawnLarva() {
-    var larva = LarvaEnemy();
+   void _spawnworm() {
+    var worm = WormEnemy();
     
-    larva.isFrontRow = isFrontRow; 
+    worm.isFrontRow = isFrontRow; 
+    worm.priority = priority + 1;
     
-    larva.strafePosition = strafePosition;
-    larva.strafePosition = larva.strafePosition.clamp(-1.0, 1.0);
+    worm.strafePosition = strafePosition;
+    worm.strafePosition = worm.strafePosition.clamp(-1.0, 1.0);
 
-    gameRef.combatOverlay.enemies.add(larva);
-    parent?.add(larva);
+    gameRef.combatOverlay.enemies.add(worm);
+    parent?.add(worm);
     
   }
 
@@ -1196,11 +1217,11 @@ class OvoEnemy extends Enemy {
       if (animTimer <= 0) {
         if (currentPhase == CombatPhase.windup) {
           currentPhase = CombatPhase.active;
-          animTimer = 0.5; 
-          _spawnLarva();
+          animTimer = 0.2; 
+          _spawnworm();
         } else if (currentPhase == CombatPhase.active) {
           currentPhase = CombatPhase.recovery;
-          animTimer = 0.5;
+          animTimer = 0.1;
         } else if (currentPhase == CombatPhase.recovery) {
           hp = 0;
           isDying = true; 
@@ -1334,6 +1355,103 @@ class FungoEnemy extends Enemy {
   }
 }
 
+class Fungo2Enemy extends Enemy {
+  Fungo2Enemy() : super(
+    name: 'fungo',
+    type: EnemyType.fungo2,
+    color: Palette.roxo,
+    hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.5,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: -10,
+    hitboxWidth: 0, hitboxHeight: 0,
+    drop: [],
+    maxAttackCooldown: 4.0,isMelee: false,
+  );
+
+  double floatTimer = 0.0;
+  bool isHealingAttack = false;
+  double startDirection = Random().nextBool() ? 1.0 : -1.0;
+
+  @override
+  void update(double dt) {
+    if (gameRef.currentState == GameState.paused) return;
+    if (!isAlive) return;
+
+    floatTimer += dt;
+
+    flightOffset = -0.25 + (sin(floatTimer * speed) * 0.25);
+
+
+    bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
+    if (!isAttacking && !isDying && hitFlashTimer <= 0) {
+      strafePosition += startDirection * cos(floatTimer * speed) * speed * dt;
+      strafePosition = strafePosition.clamp(-1.0, 1.0);
+    }
+
+    super.update(dt);
+  }
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    // Fungos atacam tanto da linha de trás quanto da frente!
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.8; // Ele demora um pouco para "carregar" o ataque (dá tempo do jogador agir)
+      attackCooldown = maxAttackCooldown;
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) {
+          currentPhase = CombatPhase.active;
+          animTimer = 0.2; 
+          _spawnSpores();
+        } 
+        else if (currentPhase == CombatPhase.active) {
+          currentPhase = CombatPhase.recovery;
+          animTimer = 0.1;
+        } 
+        else if (currentPhase == CombatPhase.recovery) {
+          hp = 0;
+          isDying = true; 
+          currentPhase = CombatPhase.idle; 
+        }
+      }
+      return; // Bloqueia a IA padrão enquanto ele conjura as magias
+    }
+    
+    super._updatePhase(dt); // Deixa a IA da classe pai processar morte, recuo, etc.
+  }
+
+  @override void onHitStun() {
+    _spawnSpores();
+    hp = 0;
+    isDying = true; 
+    currentPhase = CombatPhase.idle; 
+  }
+
+
+  void _spawnSpores() {
+    double startY = yPosition + visualYOffset + flightOffset;
+
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY - 0.1, -0.2, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, -0.4, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY, 0.4, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY - 0.2, 0.0, 0, this, grav:0.5, radius: 20));
+    gameRef.combatOverlay.add(ArcProjectile(strafePosition, startY - 0.1, 0.2, 0, this, grav:0.5, radius: 20));
+  }
+}
+
 class GarraRainhaEnemy extends Enemy {
   final Enemy rainha; // Referência ao corpo principal
   final double strafeOffset; // Distância fixa do centro da rainha
@@ -1348,6 +1466,7 @@ class GarraRainhaEnemy extends Enemy {
     maxAttackCooldown: 3.5, 
   ) {
     isMelee = true;
+    naoInterrompe = true;
   }
 
   @override

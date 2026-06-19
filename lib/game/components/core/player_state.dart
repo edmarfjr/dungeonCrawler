@@ -10,9 +10,6 @@ class PlayerState {
   
   bool hasKey = false;
   //int floorLevel = 1;
-  
-  // --- NOVA VARIÁVEL ---
-  int noiseLevel = 0; 
 
   PlayerState({required this.x, required this.y, this.facing = Direction.north});
 
@@ -49,9 +46,6 @@ class PlayerState {
       x = nextX;
       y = nextY;
       
-      // Aumenta o ruído a cada passo. 
-      // Com +8, a chance chega a 100% no máximo em 13 passos.
-      noiseLevel += Random().nextInt(3) + 2; // Aumenta entre 1 e 3 a cada passo
       return true; // Passo dado com sucesso
     }
     
