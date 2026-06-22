@@ -52,7 +52,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late ui.Image chestSprite;
   late ui.Image crateSprite;
   late ui.Image openChestSprite;
-  late ui.Image spikeSprite;
+  late ui.Image trapImage;
+  late ui.Image trapImage2;
   late ui.Image roamerSprite;
   late ui.Image bossSprite;
   late ui.Image shrineSprite;
@@ -67,6 +68,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double dashDur = 0.1;
   double dashVel = 7.0;
   double dashDirection = 0.0;
+  double dashCusto = 15;
 
   // REFACTOR: Substituído showVictoryMessage por um controle de fluxo de fim de turno
   bool _victoryProcessed = true;
@@ -74,6 +76,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   List<Item> encounterDrop = [];
   bool isMimic = false;
+  bool isBoss = false;
 
   // REFACTOR: O sistema agora usa uma lista interna agindo como fila (Queue)
   final List<GameMessage> _messageQueue = []; 
@@ -267,7 +270,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     // Lista mestra para buscar as instâncias reais dos itens pelo nome
     List<Item> allGameItems = [
       //armas
-      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado, ItemDatabase.clava,
+      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado, ItemDatabase.clava, ItemDatabase.espadaOrc,
+      ItemDatabase.lanca,
       //armaduras
       ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, 
       //escudos
@@ -275,7 +279,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       //pocoes
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
       //itens
-      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
+      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye, ItemDatabase.bugOrgan, 
       //magias
       ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
     ]; // IMPORTANTE: Mantenha essa lista atualizada se criar itens novos!
@@ -342,9 +346,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/dagger.png',
       'itens/armor.png',
       'itens/potion.png',
+      'itens/potionVermelha.png',
+      'itens/potionVerde.png',
+      'itens/potionAzul.png',
+      'itens/potionAmarela.png',
       'itens/tanga.png',
       'itens/sword.png',
       'itens/longSword.png',
+      'itens/lanca.png',
       'itens/axe.png',
       'itens/bomb.png',
       'itens/leatherArmor.png',
@@ -360,11 +369,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/fire.png',
       'itens/poison.png',
       'itens/piercing.png',
+      'itens/organ.png',
+      'itens/orcSword.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
     final ui.Image wallImg2 = await images.load('tilesets/wall2.png');
     final ui.Image floorImg2 = await images.load('tilesets/floor2.png');
+    final ui.Image wallImg3 = await images.load('tilesets/wall1.png');
+    final ui.Image floorImg3 = await images.load('tilesets/floor1.png');
 
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
@@ -376,7 +389,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     chestSprite = await images.load('tilesets/bau.png');
     crateSprite = await images.load('tilesets/crate.png');
     openChestSprite = await images.load('tilesets/bauAberto.png');
-    spikeSprite = await images.load('tilesets/trap.png');
+    trapImage = await images.load('tilesets/trap.png');
+    trapImage2 = await images.load('tilesets/trap2.png');
     enemySheets = {
       EnemyType.slime: await images.load('actors/slime.png'),
       EnemyType.goblin: await images.load('actors/goblin.png'),
@@ -393,6 +407,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.infectado: await images.load('actors/infectado.png'),
       EnemyType.garra: await images.load('actors/garra.png'),
       EnemyType.boss2: await images.load('actors/boss2.png'),
+      EnemyType.esqueleto: await images.load('actors/esqueleto.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -414,8 +429,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.fungo: await images.load('effects/spore.png'), 
       EnemyType.fungo2: await images.load('effects/spore.png'), 
       EnemyType.boss2: await images.load('effects/spore.png'), 
-      EnemyType.garra: await images.load('effects/golpe.png'), 
       EnemyType.infectado: await images.load('effects/soco.png'), 
+      EnemyType.esqueleto: await images.load('effects/golpeLargo.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -424,13 +439,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     renderer = MazeRenderer(
       map: dungeon, 
       player: player, 
-      wallImage: [wallImg,wallImg2], 
-      floorImage: [floorImg,floorImg2],
+      wallImage: [wallImg,wallImg2,wallImg3], 
+      floorImage: [floorImg,floorImg2,floorImg3],
       doorImage: doorTexture, 
       doorImage2: doorTexture2, 
       keyImage: keySprite, 
       chestImage: chestSprite,
-      spikeImage: spikeSprite,
+      trapImage: [trapImage,trapImage2],
       roamerImage: roamerSprite,
       bossImage: bossSprite,
       shrineImage: shrineSprite,
@@ -884,7 +899,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.isGuarding = false; 
 
         //showMessage("Vitória! Você purificou a área e obteve +${encounterEssence.toInt()} Essências!");
-        int dropChance = isMimic? 100 : 10;
+        int dropChance = isMimic? 100 : isBoss? 50: 10;
         for (var drop in encounterDrop){
           if(Random().nextInt(100) <= dropChance) {
             receiveItem(drop); 
@@ -1017,6 +1032,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     encounterDrop.clear();
     _victoryProcessed = false; 
     isMimic = false;
+    isBoss = false;
     currentState = GameState.combat;
     int numEnemies = Random().nextInt(4) + 1; 
     List<Enemy> spawnedEnemies = [];
@@ -1051,6 +1067,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       iniPool.add(() => InfectadoEnemy());
     }
 
+    if(dungeon.level >= 7){
+      iniPool = [
+        () => EsqueletoEnemy(),
+        () => BatEnemy(),
+        () => FungoEnemy(),
+      ];
+    }
+
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
       Enemy newEnemy = iniPool[enemyType]();
@@ -1075,6 +1099,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     encounterDrop.clear();
     _victoryProcessed = false;
     isMimic = false;
+    isBoss = false;
     currentState = GameState.combat;
     Enemy newEnemy;
     switch (type) {
@@ -1088,6 +1113,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ItemDatabase.espadaCurta,
             ItemDatabase.armaduraFerro,
             ItemDatabase.espadaLonga,
+            ItemDatabase.lanca,
             ItemDatabase.armaduraCouro,
             ItemDatabase.machado,
             ItemDatabase.firePillar,
@@ -1116,8 +1142,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.fungo: newEnemy = FungoEnemy(); break;
         case EnemyType.fungo2: newEnemy = Fungo2Enemy(); break;
         case EnemyType.infectado: newEnemy = InfectadoEnemy(); break;
-        case EnemyType.boss1: newEnemy = OrcChefe(); break;
+        case EnemyType.esqueleto: newEnemy = EsqueletoEnemy(); break;
+        case EnemyType.boss1: isBoss = true; newEnemy = OrcChefe(); break;
         case EnemyType.boss2:
+
+          isBoss = true;
 
           var bug1 = BugEnemy()
               ..strafePosition = 0.4
@@ -1398,12 +1427,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
       
       if (input == GameInput.buttonB) { 
+        // /*
         FlameAudio.play('sfx/confirm.wav');
         currentState = GameState.inventory; 
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
         isItemActionMenuOpen = false; 
-        //_triggerSpecificEncounter(EnemyType.infectado);
+        // */
+        //_triggerSpecificEncounter(EnemyType.esqueleto);
         //triggerEncounter();
       }
       return; 
@@ -1420,7 +1451,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (input == GameInput.left) {
         leftPressed = true;
         if (leftTapTimer > 0) {
-          playerCombatStats.stamina -= 15;
+          playerCombatStats.stamina -= dashCusto;
           dashTimer = dashDur; 
           dashDirection = -1.0;
           leftTapTimer = 0.0; 
@@ -1431,7 +1462,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (input == GameInput.right) {
         rightPressed = true;
         if (rightTapTimer > 0) {
-          playerCombatStats.stamina -= 15;
+          playerCombatStats.stamina -= dashCusto;
           dashTimer = dashDur;
           dashDirection = 1.0;
           rightTapTimer = 0.0;
@@ -1531,6 +1562,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (playerCombatStats.hp <= 0) handlePlayerDeath();
     }
 
+    if (dungeon.getTile(player.x, player.y) == TileType.poison && dungeon.spikeState == 3) {
+      playerCombatStats.poisonTmr = 10; 
+      playerCombatStats.applyHitStun(0.3); 
+      showMessage("Você pisou em uma armadilha de veneno!");
+      if (playerCombatStats.hp <= 0) handlePlayerDeath();
+    }
+
+    if (playerCombatStats.poisonTmr > 0){
+      playerCombatStats.poisonTmr --;
+      if(playerCombatStats.hp > 1)playerCombatStats.hp -= 1;   
+      playerCombatStats.applyEffect(0.3,Palette.verde);
+    }
     dungeon.moveEnemies(Point(player.x, player.y));
 
     for (int i = 0; i < dungeon.roamingEnemies.length; i++) {
@@ -1545,7 +1588,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _interact() {
     TileType playerTile = dungeon.getTile(player.x, player.y);
 
-    if (playerTile == TileType.floor || playerTile == TileType.entry || playerTile == TileType.openChest) {
+    if (playerTile == TileType.floor || playerTile == TileType.entry || playerTile == TileType.openChest
+     || playerTile == TileType.spike || playerTile == TileType.poison) {
       Point<int> currentPos = Point(player.x, player.y);
       if (!dungeon.droppedItems.containsKey(currentPos) || dungeon.droppedItems[currentPos]!.isEmpty) {
         isPassTurnPromptOpen = true; 
@@ -1588,14 +1632,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     else if (playerTile == TileType.chest) {
       int chance = Random().nextInt(100);
       
-      if (chance < 25) { 
+      if (chance < 45) { 
         dungeon.grid[player.y][player.x] = TileType.floor; 
         showMessage("O baú era um MÍMICO!!", onDismiss: () { _triggerSpecificEncounter(EnemyType.mimic); }); 
       
-      } else if (chance < 60) { 
-        dungeon.grid[player.y][player.x] = TileType.openChest; 
-        int loot = Random().nextInt(30) + 10; 
-        showMessage("Você achou $loot Essências!", onDismiss: () { playerCombatStats.essence += loot; }); 
+      //} else if (chance < 60) { 
+     //   dungeon.grid[player.y][player.x] = TileType.openChest; 
+      //  int loot = Random().nextInt(30) + 10; 
+      //  showMessage("Você achou $loot Essências!", onDismiss: () { playerCombatStats.essence += loot; }); 
       
       } else {
         dungeon.grid[player.y][player.x] = TileType.openChest; 
@@ -1604,6 +1648,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           ItemDatabase.espadaCurta,
           ItemDatabase.armaduraFerro,
           ItemDatabase.espadaLonga,
+          ItemDatabase.lanca,
           ItemDatabase.armaduraCouro,
           ItemDatabase.machado,
           ItemDatabase.firePillar,
@@ -1617,7 +1662,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
         }).toList();
 
-        bool tryEquipment = chance >= 60 && chance < 75;
+        unownedEquipments.shuffle(); 
+        Item newEquipment = unownedEquipments.first;
+        newEquipment.quantity = 1; 
+
+        showMessage("Você encontrou um item: ${newEquipment.name}!", onDismiss: () {
+          receiveItem(newEquipment);
+        });
+
+        /*bool tryEquipment = chance >= 45 && chance < 75;
 
         if (tryEquipment && unownedEquipments.isNotEmpty) {
           unownedEquipments.shuffle(); 
@@ -1652,13 +1705,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             }
           });
         }
+        */
       }
     }
     else if (playerTile == TileType.crate) {
       int chance = Random().nextInt(100);
       dungeon.grid[player.y][player.x] = TileType.floor; 
       
-      if (chance < 70) { 
+      if (chance < 40) { 
         showMessage("Caixa vazia!"); 
       } else {
         List<Item> allConsumables = [
@@ -1669,6 +1723,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ItemDatabase.reflexPotion,
             ItemDatabase.meat,
             ItemDatabase.faca,
+            ItemDatabase.bugOrgan,
           ];
 
         int totalConsumables = allConsumables.length;

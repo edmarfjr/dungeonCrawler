@@ -19,7 +19,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image chestImage;
   final ui.Image crateImage;
   final ui.Image openChestImage;
-  final ui.Image spikeImage;
+  final List <ui.Image> trapImage;
   final ui.Image roamerImage;
   final ui.Image bossImage;
   final ui.Image shrineImage;
@@ -37,7 +37,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.doorImage2, 
     required this.keyImage,  
     required this.chestImage,
-    required this.spikeImage,
+    required this.trapImage,
     required this.roamerImage,
     required this.bossImage,
     required this.shrineImage,
@@ -116,8 +116,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
         if (map.level >= 4){
           tileIdx = 1;
-        //  corChao = Palette.bege;
-        //  corParede = Palette.amarelo;
+        }
+
+        if (map.level >= 7){
+          tileIdx = 2;
         }
 
         // Sempre desenha o chão
@@ -146,7 +148,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         // --- 3. LÓGICA DA CHAVE ---
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
           // A chave vai do chão (0.5) até uma altura menor (0.1)
-          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.laranja);
+          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
         }
 
         if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
@@ -174,13 +176,27 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
 
           // Calcula a largura de 1 frame (divide a spritesheet por 4)
-          double frameWidth = spikeImage.width / 4;
+          double frameWidth = trapImage[0].width / 4;
           
           // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
-          Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, spikeImage.height.toDouble());
+          Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, trapImage[0].height.toDouble());
 
           // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
-          _drawBillboardItem(canvas, cx, cz, spikeImage, 0.7, 0.1,Palette.cinza, srcRect: frameRect);
+          _drawBillboardItem(canvas, cx, cz, trapImage[0], 0.7, 0.1,Colors.white, srcRect: frameRect);
+        }
+
+        if (tile == TileType.poison && gameRef.currentState == GameState.exploration) {
+          // Sempre desenha o chão normal debaixo da armadilha
+          _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+
+          // Calcula a largura de 1 frame (divide a spritesheet por 4)
+          double frameWidth = trapImage[1].width / 4;
+          
+          // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
+          Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
+
+          // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
+          _drawBillboardItem(canvas, cx, cz, trapImage[1], 0.7, 0.1,Colors.white, srcRect: frameRect);
         }
 
         Point<int> currentMapPos = Point(mapX, mapY);

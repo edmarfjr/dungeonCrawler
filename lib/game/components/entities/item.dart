@@ -49,13 +49,31 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 15, cor: Colors.white, hasReach: true, onUse: (item, game) {
+  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 15, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
     game.playerCombatStats.staminaCost = 4.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 2;
+  });
+
+  static Item get lanca => Item("Lança", ItemType.weapon, 'itens/lanca.png', 12, cor: Colors.white, hasReach: true, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.staminaCost = 4.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 1.5;
+  });
+
+  static Item get espadaOrc => Item("Espada Orc", ItemType.weapon, 'itens/orcSword.png', 12, cor: Colors.white, hasStun: true, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.staminaCost = 4.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 1.5;
   });
 
   static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Colors.white, onUse: (item, game) {
@@ -78,13 +96,16 @@ class ItemDatabase {
 
   static Item get tanga => Item("Tanga", ItemType.armor, 'itens/tanga.png', 0, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = 5.0;
+    game.dashCusto = 7;
   });
 
   static Item get armaduraCouro => Item("Armadura de Couro", ItemType.armor, 'itens/leatherArmor.png', 2, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = 0.0;
+    game.dashCusto = 15;
   });
   static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 3, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = -10.0;
+    game.dashCusto = 15;
   });
 
   static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 3, cor: Colors.white, onUse: (item, game) {
@@ -99,7 +120,7 @@ class ItemDatabase {
     game.playerCombatStats.moveSpeedPenalty = 0.5;
   });
 
-  static Item get healthPotion => Item("Poção Vermelha", ItemType.consumable, 'itens/potion.png', cor: Palette.vermelho, 40, quantity: 1, onUse: (item, game) {
+  static Item get healthPotion => Item("Poção Vermelha", ItemType.consumable, 'itens/potionVermelha.png', cor: Colors.white, 40, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
     game.playerCombatStats.VfxTimer = 0.5;
     game.playerCombatStats.VfxColor = Palette.vermelho;
@@ -117,7 +138,7 @@ class ItemDatabase {
     //}
   });
 
-  static Item get manaPotion => Item("Poção Azul", ItemType.consumable, 'itens/potion.png', cor: Palette.azul, 100, quantity: 1, onUse: (item, game) {
+  static Item get manaPotion => Item("Poção Azul", ItemType.consumable, 'itens/potionAzul.png', cor: Colors.white, 100, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.mana = min(game.playerCombatStats.wis*3, game.playerCombatStats.mana + item.power);
     game.playerCombatStats.VfxTimer = 0.5;
     game.playerCombatStats.VfxColor = Palette.azul;
@@ -126,17 +147,33 @@ class ItemDatabase {
     //}
   });
 
-  static Item get staminaPotion => Item("Poção Verde", ItemType.consumable, 'itens/potion.png', cor: Palette.verde, 50, quantity: 1, onUse: (item, game) {
+  static Item get staminaPotion => Item("Poção Verde", ItemType.consumable, 'itens/potionVerde.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.cansado = false;
     game.playerCombatStats.stamina = game.playerCombatStats.con*3;
     game.playerCombatStats.staminaInfiniteTmr = 6;
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.verdeCla;
+    game.showMessage("Você recuperou todo seu fôlego!");
     //if (game.currentState == GameState.exploration) {
    // game.showMessage("Você recuperou ${item.power} de Stamina!");
     //}
   });
 
-  static Item get reflexPotion => Item("Poção Amarela", ItemType.consumable, 'itens/potion.png', cor: Palette.amarelo, 50, quantity: 1, onUse: (item, game) {
+  static Item get reflexPotion => Item("Poção Amarela", ItemType.consumable, 'itens/potionAmarela.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.reflex = true;
+    game.showMessage("Você se sente mais ágil!");
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.amarelo;
+    //if (game.currentState == GameState.exploration) {
+   // game.showMessage("Você recuperou ${item.power} de Stamina!");
+    //}
+  });
+
+  static Item get bugOrgan => Item("Orgão de inseto", ItemType.consumable, 'itens/organ.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
+    game.playerCombatStats.poisonTmr = 0;
+    game.playerCombatStats.VfxTimer = 0.5;
+    game.playerCombatStats.VfxColor = Palette.vermelhoCla;
+    game.showMessage("Você se sente melhor!");
     //if (game.currentState == GameState.exploration) {
    // game.showMessage("Você recuperou ${item.power} de Stamina!");
     //}
@@ -208,7 +245,7 @@ class ItemDatabase {
   });
 
   
-  static Item get slimeEye => Item("Olho de Slime", ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Palette.verdeCla, onUse: (item, game) async {
+  static Item get slimeEye => Item("Olho de Slime", ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde isso para usar durante as batalhas!");
       item.quantity++;

@@ -65,6 +65,9 @@ class PlayerCombatStats {
   Item? equippedArmor;
   Item? equippedShield;
 
+  bool poison = false;
+  int poisonTmr = 0;
+
   //List<PlayerProjectile> activeProjectiles = [];
   double VfxTimer = 0.0;
   Color VfxColor = Palette.vermelho;
@@ -112,11 +115,15 @@ class PlayerCombatStats {
   }
 
   void applyHitStun(double duration) {
-    flashColor = Palette.vermelho;
-    hitFlashTimer = duration;
+    applyEffect(duration, Palette.vermelho);
     currentPhase = CombatPhase.hit; // Interrompe qualquer ação atual
     comboCount = 0; // Quebra o combo
     attackHit = false; // Cancela ataques ativos
+  }
+
+  void applyEffect(double duration, Color cor){
+    VfxColor = cor;
+    VfxTimer = duration;
   }
 
   void updatePhase(double dt) {

@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/game.dart';
 
-enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -36,7 +36,7 @@ class DungeonMap {
 
   bool _isWalkable(int x, int y) {
     TileType t = getTile(x, y);
-    return t == TileType.floor || t == TileType.spike;
+    return t == TileType.floor || t == TileType.spike || t == TileType.poison;
   }
 
   void moveEnemies(Point<int> playerPos) {
@@ -189,11 +189,16 @@ class DungeonMap {
       } 
     }
 
+    TileType trap = TileType.spike;
+
+    if (level >= 4) trap = TileType.poison;
+    if (level >= 7 && random.nextBool()) trap = TileType.poison;
+
     int numSpikes = random.nextInt((width/6).toInt() + 1) + (width/6).toInt() - 1; 
     for (int i = 0; i < numSpikes; i++) { 
       if (floorTiles.isNotEmpty) { 
         Point<int> spikePos = floorTiles.removeAt(0); 
-        grid[spikePos.y][spikePos.x] = TileType.spike; 
+        grid[spikePos.y][spikePos.x] = trap; 
       } 
     }
 

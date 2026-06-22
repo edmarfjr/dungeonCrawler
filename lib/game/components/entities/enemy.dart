@@ -12,7 +12,7 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, garra }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, garra, esqueleto }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -78,6 +78,9 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
   bool isFlipped = false;
 
+  bool isPoison = false;
+  double poisonTmr = 0;
+
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
     required this.dropEssence, required this.width, required this.height,
@@ -120,6 +123,15 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
     if (!isAlive) return;
     if (gameRef.activeMessage != null) return;
+
+    if(isPoison){
+      if(poisonTmr>0){
+        poisonTmr -= dt;
+        hp -= 5;
+        poisonTmr = 2;
+        if (hp<=0)isDying = true;
+      }
+    }
 
     // --- Animação suave entre a linha de frente e de trás ---
     if (isFrontRow != _lastRow) {
@@ -416,10 +428,10 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     );
   }
 
-  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize) {
+  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize,{dist = 20}) {
     double scale = screenSize.x * 0.35;
     double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
+    double reachPixels = dist;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
 
     attackCooldown -= dt;
     bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
@@ -748,8 +760,6 @@ class OrcEnemy extends Enemy {
   }
 }
 
-
-
 class BatEnemy extends Enemy {
   double currentDir = 1.0;
   
@@ -858,7 +868,7 @@ class OrcChefe extends Enemy {
     hp: 250, maxHp: 250, dropEssence: 100, 
     width: 192, height: 192, speed: 0.45,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
-    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: []
+    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.espadaOrc]
   ) {
     isMelee = true;
     damage = 5; // Dano base do ataque normal
@@ -1046,7 +1056,7 @@ class BugEnemy extends Enemy {
     color: Palette.cinza,
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: []
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.bugOrgan]
   ) {
     isMelee = true;
   }
@@ -1120,7 +1130,7 @@ class WormEnemy extends Enemy {
     color: Palette.cinza,
     hp: 40, maxHp: 40, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -20 ,drop: [],
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -20 ,drop: [ItemDatabase.bugOrgan],
     maxAttackCooldown: 0
   ) {
     isMelee = true;
@@ -1151,7 +1161,7 @@ class OvoEnemy extends Enemy {
     color: Palette.cinza,
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [],
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.bugOrgan],
     maxAttackCooldown: 5, isMelee: false, dieAnim: CombatPhase.recovery,
   );
 
@@ -1754,6 +1764,76 @@ class RainhaInsetoEnemy extends Enemy {
     double startY = yPosition + visualYOffset - 0.05;
     final ui.Image img = await game.images.load('effects/poison.png');
     gameRef.combatOverlay.add(PoisonCloud(strafePosition, startY, 0.0,0, this, img:img));
+  }
+}
+
+class EsqueletoEnemy extends Enemy {
+  bool isFleeing = false;
+  EsqueletoEnemy() : super(name: 'esqueleto',
+    type: EnemyType.esqueleto, 
+    color: Palette.cinza, // Cor do escudo/armadura
+    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
+    hitboxWidth: 100, hitboxHeight: 100, hitboxOffsetY: 10,drop: [ItemDatabase.clava]
+  ) {
+    isMelee = true;
+  }
+
+  // --- REGRA DE OURO: Só recebe dano se NÃO estiver a guarder ---
+  @override
+  bool get isVulnerable => currentPhase != CombatPhase.guard;
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    // 2. Lê o próprio estado: Eu já comecei a atacar?
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery;
+
+    // --- INTELIGÊNCIA DE DEFESA ---
+    if (isPlayerAttacking && !isSelfAttacking) {
+      currentPhase = CombatPhase.guard;
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      currentPhase = CombatPhase.idle;
+    }
+
+    // --- MOVIMENTO NORMAL ---
+    if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
+      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+      if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+        isFleeing = true;
+      }
+
+      if (isFleeing && (strafePosition <= -0.98 || strafePosition >= 0.98)) {
+        isFleeing = false;
+      }
+
+      // --- LÓGICA DE MOVIMENTO ---
+      if (isFleeing) {
+        // Foge para a direção OPOSTA ao jogador
+        double dir = -(player.strafePosition - strafePosition).sign;
+        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        strafePosition += dir * speed * dt;
+      } else {
+        // Vai para a direção DO jogador (com zona morta para não tremer)
+        if (distanceToPlayer > 0.01) {
+          double dir = (player.strafePosition - strafePosition).sign;
+          strafePosition += dir * speed * dt;
+        }
+      }
+
+      // Garante que não vai sair da tela
+      strafePosition = strafePosition.clamp(-1.0, 1.0);
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    checkAttackPadrao(dt,player,screenSize,dist:40);
   }
 }
 

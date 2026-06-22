@@ -112,6 +112,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       switch (entry.key){
         case EnemyType.orc:
         case EnemyType.bug:
+        case EnemyType.esqueleto:
           totalColumns = 6;
           break;
         case EnemyType.boss1:
@@ -128,7 +129,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       final sheet = SpriteSheet.fromColumnsAndRows(image: entry.value, columns: totalColumns, rows: 2);
       
       SpriteAnimation? defendAnim;
-      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug || entry.key == EnemyType.infectado) {
+      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug 
+      || entry.key == EnemyType.infectado || entry.key == EnemyType.esqueleto) {
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
