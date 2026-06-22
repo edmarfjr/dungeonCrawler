@@ -15,6 +15,9 @@ class EnemyAnimationSet {
   final SpriteAnimation idleWalk, attackWindup, attackActive, attackRecovery, hit, die;
   final SpriteAnimation? defend;
   final SpriteAnimation? summon;
+  final SpriteAnimation? attackWindup2;
+  final SpriteAnimation? attackActive2;
+  final SpriteAnimation? attackRecovery2;
 
   EnemyAnimationSet({
     required this.idleWalk, 
@@ -25,6 +28,9 @@ class EnemyAnimationSet {
     required this.die,
     this.defend, 
     this.summon, 
+    this.attackWindup2, 
+    this.attackActive2, 
+    this.attackRecovery2, 
   });
 }
 
@@ -109,7 +115,10 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           totalColumns = 6;
           break;
         case EnemyType.boss1:
-          totalColumns = 7;
+          totalColumns = 9;
+          break;
+        case EnemyType.infectado:
+          totalColumns = 8;
           break;
         default:
           totalColumns = 5;
@@ -119,13 +128,27 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       final sheet = SpriteSheet.fromColumnsAndRows(image: entry.value, columns: totalColumns, rows: 2);
       
       SpriteAnimation? defendAnim;
-      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug) {
+      if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug || entry.key == EnemyType.infectado) {
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
       SpriteAnimation? summonAnim;
       if (entry.key == EnemyType.boss1) {
         summonAnim = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: true);
+      }
+
+      SpriteAnimation? windup2;
+      SpriteAnimation? active2;
+      SpriteAnimation? recovery2;
+      if (entry.key == EnemyType.infectado) {
+        windup2 = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: false);
+        active2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 0.15, loop: false);
+        recovery2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 1.0, loop: false);
+      }
+      if (entry.key == EnemyType.boss1) {
+        windup2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 1.0, loop: false);
+        active2 = sheet.createAnimation(row: 0, from: 8, to: 9, stepTime: 0.15, loop: false);
+        recovery2 = sheet.createAnimation(row: 0, from: 8, to: 9, stepTime: 1.0, loop: false);
       }
 
       enemyAnimationSets[entry.key] = EnemyAnimationSet(
@@ -137,6 +160,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         die: sheet.createAnimation(row: 1, from:  0, to: 1, stepTime: 0.3, loop: true),
         defend: defendAnim, 
         summon: summonAnim,
+        attackWindup2: windup2,
+        attackActive2: active2,
+        attackRecovery2: recovery2,
       );
     }
   }
@@ -232,6 +258,14 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     }
     else if (enemy.currentPhase == CombatPhase.summon) {
       targetAnim = animSet.summon ?? animSet.idleWalk; 
+    }
+    if (enemy.currentPhase == CombatPhase.windup2) {
+      targetAnim = animSet.attackWindup2 ?? animSet.idleWalk;
+    } else if (enemy.currentPhase == CombatPhase.active2){
+      targetAnim = animSet.attackActive2 ?? animSet.idleWalk;
+    } 
+    else if (enemy.currentPhase == CombatPhase.recovery2) {
+      targetAnim = animSet.attackRecovery2 ?? animSet.idleWalk;
     }
 
     if (!enemyTickers.containsKey(enemy) || enemyLastPhase[enemy] != enemy.currentPhase) {
@@ -344,7 +378,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     for (var enemy in enemies) {
       if (!enemy.isAlive) continue;
       
-      if (enemy.currentPhase == CombatPhase.active && enemy.getHitbox(size).width > 0 && enemy.isMelee) {
+      if ((enemy.currentPhase == CombatPhase.active || enemy.currentPhase == CombatPhase.active2)&& enemy.getHitbox(size).width > 0 && enemy.isMelee) {
         final slashImg = enemySlashImages[enemy.type] ?? enemySlashImages[EnemyType.slime]!;
         final slashPaint = Paint();
         canvas.drawImageRect(

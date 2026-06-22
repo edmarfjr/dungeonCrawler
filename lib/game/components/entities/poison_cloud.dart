@@ -32,7 +32,7 @@ class PoisonCloud extends SpriteComponent with HasGameRef<DungeonCrawlerGame> {
     
     sprite = Sprite(img);
     
-    paint = Paint()..colorFilter = ColorFilter.mode(Palette.roxo, BlendMode.modulate);
+    paint = Paint()..colorFilter = ColorFilter.mode(Palette.roxo.withAlpha(180), BlendMode.modulate);
   }
 
   @override

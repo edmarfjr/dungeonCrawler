@@ -151,15 +151,15 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     // 5. Indicador minúsculo de direção do jogador (Seta/Ponto de direção)
     double dx = 0, dy = 0;
     switch (player.facing) {
-      case Direction.north: dy = -tileSize * 0.5; break;
-      case Direction.east:  dx = tileSize * 0.5;  break;
-      case Direction.south: dy = tileSize * 0.5;  break;
-      case Direction.west:  dx = -tileSize * 0.5; break;
+      case Direction.north: dy = -tileSize * 0.35; break;
+      case Direction.east:  dx = tileSize * 0.35;  break;
+      case Direction.south: dy = tileSize * 0.35;  break;
+      case Direction.west:  dx = -tileSize * 0.35; break;
     }
     
     canvas.drawRect(
       Rect.fromLTWH(playerRenderX + (tileSize/4) + dx, playerRenderY + (tileSize/4) + dy, tileSize/2, tileSize/2),
-      Paint()..color = Palette.branco
+      Paint()..color = Palette.vermelhoCla
     );
 
     // Restaurar o canvas para o estado original (remover o Clip) para não afetar o resto da interface

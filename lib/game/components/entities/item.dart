@@ -209,28 +209,23 @@ class ItemDatabase {
 
   
   static Item get slimeEye => Item("Olho de Slime", ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Palette.verdeCla, onUse: (item, game) async {
-    // 1. Trava de segurança para não gastar fora do combate
     if (game.currentState != GameState.combat) {
       game.showMessage("Guarde isso para usar durante as batalhas!");
       item.quantity++;
       return;
     }
+    double scale = game.size.x * 0.35; 
+    double playerPixelX = (game.size.x / 2) + (game.playerCombatStats.strafePosition * scale);
+    
+    Vector2 launchPos = Vector2(playerPixelX, game.size.y * 0.70);
 
-    //FlameAudio.play('sfx/throw.wav');
-
-    // 2. Define o ponto de partida (Centro inferior da tela de combate)
-    Vector2 launchPos = Vector2(game.playerCombatStats.strafePosition, game.size.y * 0.70);
-
-    // 3. Calcula um vetor diagonal inicial aleatório jogado para cima
     double randomAngleOffsetX = (Random().nextDouble() * 0.4) - 0.2; 
-    double projectileSpeed = 550.0; // Velocidade ágil em pixels por segundo
+    double projectileSpeed = 550.0; 
     Vector2 initialVelocity = Vector2(randomAngleOffsetX, -1.0).normalized() * projectileSpeed;
 
-    // 4. Calcula o dano mágico baseado na sabedoria (wis)
     double calculatedDamage = item.power + game.playerCombatStats.str.toDouble();
 
     final ui.Image img = await game.images.load('effects/slime_eye.png');
-    // 5. Instancia e joga o projétil caótico direto na árvore do combate
     game.combatOverlay.add(SlimeEyeProjectile(
       startPosition: launchPos, 
       velocity: initialVelocity,
@@ -273,7 +268,7 @@ class ItemDatabase {
     FlameAudio.play('sfx/poison.wav');
     final ui.Image img = await game.images.load('effects/poison.png');
     game.combatOverlay.add(PlayerProjectile(
-       game.playerCombatStats.strafePosition, 0.7, 0, item.power*game.playerCombatStats.wis, Palette.verde, width: 80, height: 180
+       game.playerCombatStats.strafePosition, 0.7, 0, item.power*game.playerCombatStats.wis, Palette.verde.withAlpha(180), width: 80, height: 180
       , isPiercing: true,hitCooldown: 0.5,img : img, isFlip: true
     ));
   });

@@ -12,7 +12,7 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, boss2, garra }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, garra }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -36,7 +36,23 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   bool isMelee;
 
   bool isFrontRow = true;
-  bool get canChangeRow => true;
+
+  bool get _EstaAtacando {
+    return 
+      currentPhase == CombatPhase.windup || 
+      currentPhase == CombatPhase.active || 
+      currentPhase == CombatPhase.recovery ||
+      currentPhase == CombatPhase.windup2 || 
+      currentPhase == CombatPhase.active2 || 
+      currentPhase == CombatPhase.recovery2 ||
+      currentPhase == CombatPhase.summon
+      ;
+    
+  }
+
+  @override
+  bool get canChangeRow => !_EstaAtacando;
+
   double visualScale = 1.0; 
   double visualYOffset = 0.0;
   double visualDarkness = 0.0;
@@ -176,7 +192,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (game.playerCombatStats.currentPhase == CombatPhase.entering || game.playerCombatStats.reflex) return;
     _updatePhase(dt);
 
-    bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
+    bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
+    currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
     
     if (!isAttacking) {
       if ((yPosition - targetY).abs() > 0.01) yPosition += (targetY > yPosition ? 1 : -1) * speed * dt; 
@@ -238,7 +255,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       }
     }
 
-    if (currentPhase == CombatPhase.active && !attackHit && isMelee && isFrontRow) {
+    if ((currentPhase == CombatPhase.active || currentPhase == CombatPhase.active2) && !attackHit && isMelee && isFrontRow) {
       if (getHitbox(gameRef.size).overlaps(gameRef.playerCombatStats.getHurtbox(gameRef.size))) {
         attackHit = true;
         gameRef.applyEnemyDamage(this);
@@ -253,7 +270,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     double scale = screenSize.x * 0.35;
     double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
+    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
 
     attackCooldown -= dt;
     bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
@@ -278,40 +295,45 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   }
 
   void renderShadow(Canvas canvas) {
-    final shadowPaint = Paint()..color = Palette.preto..isAntiAlias = false;
+    final shadowPaint = Paint()..color = Colors.black..isAntiAlias = false;
       
-    // 1. DIMENSÕES BASEADAS NA HURTBOX REAL (Já aplicando a escala visual)
-    double actualHurtboxWidth = hurtboxWidth * visualScale;
-    double actualHurtboxHeight = hurtboxHeight * visualScale;
+    double scaleToUse = (visualScale > 0) ? visualScale : 1.0;
+    double actualHurtboxWidth = hurtboxWidth * scaleToUse;
+    double actualHurtboxHeight = hurtboxHeight * scaleToUse;
 
-    // A sombra agora se adapta ao corpo real do inimigo, não ao tamanho do componente (ex: 144x144)
     double shadowWidth = actualHurtboxWidth * 1;  
     double shadowHeight = shadowWidth * 0.4; 
     
-    // 2. LOGICA DO CHÃO (Mantemos a sua estrutura original intacta)
-    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat) ? 0.75 : yPosition; 
-    //double floorGlobalY = gameRef.size.y * (groundYPos + visualYOffset);
-    
-    // 3. DISTÂNCIA DO CENTRO ATÉ O CHÃO
-    double distanceToFloor = -(gameRef.size.y * jumpOffset) - (gameRef.size.y * flightOffset);
-    
-    // 4. O PULO DO GATO: Encontrar a base dos "pés" dentro do espaço local do Canvas
-    // Pegamos o centro local (size.y / 2), somamos o deslocamento Y e adicionamos metade da altura da hurtbox.
-    double localHurtboxBottomY = (size.y / 2) + (hurtboxOffsetY * visualScale) + (actualHurtboxHeight / 2);
-    
-    // A posição final da sombra será na base dos pés, empurrada para baixo caso o inimigo suba (pule/voe)
-    double shadowLocalY = localHurtboxBottomY + distanceToFloor;
+    // ========================================================================
+    // 1. O CHÃO VERDADEIRO DA MASMORRA
+    // Inimigos voadores ou de teto (spider, bat) ficam com o 'yPosition' no alto, 
+    // mas a sombra deles tem que ser cravada no 0.75 (chão)!
+    // Adicione o Fungo ou outros inimigos voadores nesta lista se precisarem.
+    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo) ? 0.75 : yPosition;
 
-    // Alinhamento horizontal: Centraliza a sombra exatamente abaixo do miolo do sprite (hurtbox)
-    double shadowLocalX = (size.x / 2) + (hurtboxOffsetX * visualScale);
+    // 2. CALCULA O VÃO ATÉ O CHÃO (Gap to Floor)
+    // Calcula a distância do centro do inimigo até o chão verdadeiro, somando 
+    // todas as variáveis que fazem o bicho flutuar ou pular.
+    // (Lembre-se: jumpOffset e flightOffset são negativos quando sobem, então 
+    // subtraí-los aqui empurra a sombra positivamente para baixo da tela!)
+    double gapToFloor = (groundYPos - yPosition - visualYOffset - jumpOffset - flightOffset) * gameRef.size.y;
+    // ========================================================================
 
-    // 5. ESCALA DE ALTITUDE (Garante que a sombra encolha se o inimigo se afastar do chão)
+    // 3. ENCONTRAR A BASE DOS PÉS NO CANVAS
+    double localHurtboxBottomY = (size.y / 2) + (hurtboxOffsetY * scaleToUse) + (actualHurtboxHeight / 2);
+    
+    // A sombra desce a partir dos pés e atravessa o ar até bater no chão verdadeiro
+    double shadowLocalY = localHurtboxBottomY + gapToFloor;
+    double shadowLocalX = (size.x / 2);
+
+    // 4. ESCALA DE ALTITUDE
+    // Quanto maior for o vão entre o monstro e o chão, menor a sombra fica!
     double altitudeScale = 1.0;
-    if (distanceToFloor > 0) {
-        altitudeScale = (1.0 - (distanceToFloor / gameRef.size.y) * 2).clamp(0.2, 1.0);
+    if (gapToFloor > 0) {
+        altitudeScale = (1.0 - (gapToFloor / gameRef.size.y) * 1.5).clamp(0.2, 1.0);
     }
 
-    // Desenha a elipse perfeitamente sincronizada com a posição do desenho real
+    // 5. DESENHA A SOMBRA
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(shadowLocalX, shadowLocalY), 
@@ -320,19 +342,17 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       ),
       shadowPaint,
     );
-
   }
+
   @override
   void render(Canvas canvas) {
     if (isDying && (deathTimer * 15).toInt() % 2 == 0) return;
-
     if (hitFlashTimer>0 && (hitFlashTimer * 15).toInt() % 2 == 0) return;
     
     if (type == EnemyType.spider) {
       final webPaint = Paint()..color = Palette.branco..strokeWidth = 5.0..style = PaintingStyle.stroke..isAntiAlias = false;
       final webPaintBorder = Paint()..color = Palette.preto..strokeWidth = 15.0..isAntiAlias = false..style = PaintingStyle.stroke;  
       
-      // Desenha a teia para cima a partir do centro do componente
       double screenTopLocalY = -(position.y - size.y / 2);
       double posX = size.x / 2 + 4;
       canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
@@ -340,7 +360,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     }
 
     SpriteAnimationTicker activeTicker = gameRef.combatOverlay.getTickerForEnemy(this);
-    final Color flashC =  Colors.white;// hitFlashTimer > 0 ? flashColor : Colors.white;
+    final Color flashC =  Colors.white; 
     int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
@@ -348,15 +368,19 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     
     final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
 
+    // =================================================================
+    // CORREÇÃO CRÍTICA: O save() deve acontecer SEMPRE, independentemente do if!
+    canvas.save(); 
+
     if (isFlipped) {
-      canvas.save();
       canvas.translate(size.x, 0); 
       canvas.scale(-1.0, 1.0); 
     }
 
     activeTicker.getSprite().render(canvas, size: size, overridePaint: tintPaint);
-    canvas.restore();
     
+    canvas.restore(); // Agora ele vai restaurar com segurança SEMPRE!
+    // =================================================================
   }
 
   Rect getHurtbox(Vector2 screenSize) {
@@ -391,6 +415,55 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       height: 120 * visualScale
     );
   }
+
+  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    attackCooldown -= dt;
+    bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
+
+    // NOVO: Adicionado '&& isFrontRow' - Inimigos na linha de trás NUNCA atacam!
+    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.5; 
+      attackCooldown = maxAttackCooldown;
+    }
+  }
+
+}
+
+
+class EnemyShadowsRenderer extends Component with HasGameRef<DungeonCrawlerGame> {
+  EnemyShadowsRenderer() : super(priority: -5); // Prioridade -5 garante que roda ANTES de qualquer inimigo!
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    // Percorre a lista de inimigos ativos na batalha
+    for (var enemy in gameRef.combatOverlay.enemies) {
+      if (!enemy.isAlive) continue;
+
+      // Salva o estado do canvas para não bagunçar o resto do jogo
+      canvas.save();
+      
+      // O Flame move o Canvas para o canto Top-Left de cada componente ao renderizar.
+      // Como o Anchor do seu Enemy é Center, calculamos a quina superior esquerda dele:
+      double topLeftX = enemy.position.x - (enemy.size.x / 2);
+      double topLeftY = enemy.position.y - (enemy.size.y / 2);
+      
+      // Desloca o Canvas global para a posição simulada do inimigo
+      canvas.translate(topLeftX, topLeftY);
+
+      // Manda o inimigo desenhar APENAS a sombra dele ali
+      enemy.renderShadow(canvas);
+
+      // Restaura o Canvas para a posição original antes de ir para o próximo monstro
+      canvas.restore();
+    }
+  }
 }
 
 class SlimeEnemy extends Enemy {
@@ -399,7 +472,7 @@ class SlimeEnemy extends Enemy {
 
   SlimeEnemy() : super(name:'slime',
     type: EnemyType.slime, color: Palette.verdeCla, hp: 50, maxHp: 50, dropEssence: 10, width: 144, height: 144, speed: 0.4,
-    hurtboxWidth: 110, hurtboxHeight: 70, hurtboxOffsetY: 0,
+    hurtboxWidth: 130, hurtboxHeight: 70, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30,
     drop: [ItemDatabase.slimeEye]
   );
@@ -435,22 +508,7 @@ class GoblinEnemy extends Enemy {
 
   @override
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
-
-    attackCooldown -= dt;
-    bool isCloseY = true;
-
-    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
-      if(isFrontRow){
-        currentPhase = CombatPhase.windup;
-        animTimer = 0.5; 
-        attackCooldown = maxAttackCooldown;
-      }else{
-        isFleeing = true;
-      }
-    }
+    checkAttackPadrao(dt,player,screenSize);
   }
   
   @override 
@@ -686,22 +744,7 @@ class OrcEnemy extends Enemy {
 
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
-
-    attackCooldown -= dt;
-    bool isCloseY = true;
-
-    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
-      if(isFrontRow){
-        currentPhase = CombatPhase.windup;
-        animTimer = 0.5; 
-        attackCooldown = maxAttackCooldown;
-      }else{
-        isFleeing = true;
-      }
-    }
+    checkAttackPadrao(dt,player,screenSize);
   }
 }
 
@@ -726,16 +769,6 @@ class BatEnemy extends Enemy {
     targetY = flightHeight;
   }
 
-  bool get _EstaAtacando {
-    return 
-      currentPhase == CombatPhase.windup || 
-      currentPhase == CombatPhase.active || 
-      currentPhase == CombatPhase.recovery;
-    
-  }
-
-  @override
-  bool get canChangeRow => !_EstaAtacando;
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
@@ -824,7 +857,7 @@ class OrcChefe extends Enemy {
     color: Palette.vermelhoEsc, 
     hp: 250, maxHp: 250, dropEssence: 100, 
     width: 192, height: 192, speed: 0.45,
-    hurtboxWidth: 100, hurtboxHeight: 120, hurtboxOffsetY: 0,
+    hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: []
   ) {
     isMelee = true;
@@ -850,7 +883,10 @@ class OrcChefe extends Enemy {
     // 2. Verifica se o próprio chefe está ocupado atacando ou invocando
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
-                           currentPhase == CombatPhase.recovery;
+                           currentPhase == CombatPhase.recovery ||
+                           currentPhase == CombatPhase.windup2 || 
+                           currentPhase == CombatPhase.active2 || 
+                           currentPhase == CombatPhase.recovery2;
 
     // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
     if (isPlayerAttacking && !isSelfAttacking) {
@@ -899,7 +935,7 @@ class OrcChefe extends Enemy {
 
     double scale = screenSize.x * 0.35;
     double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
+    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
 
     bool isCloseY = true;
 
@@ -921,7 +957,12 @@ class OrcChefe extends Enemy {
 
         naoInterrompe = isHeavyAttack;
 
-        currentPhase = CombatPhase.windup;
+        if(isHeavyAttack){
+          currentPhase = CombatPhase.windup2;
+        }else{
+          currentPhase = CombatPhase.windup;
+        }
+        
         
         // O ataque pesado tem um aviso (windup) BEM MAIOR para dar tempo de o jogador esquivar
         animTimer = isHeavyAttack ? 0.8 : 0.5; 
@@ -946,6 +987,14 @@ class OrcChefe extends Enemy {
         }
       }
       return;
+    }
+    if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
+      animTimer -= dt;
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        else if (currentPhase == CombatPhase.active2) { currentPhase = CombatPhase.recovery2; animTimer = 1.0; } 
+        else { currentPhase = CombatPhase.idle; }
+      }
     }
 
     super._updatePhase(dt);
@@ -987,37 +1036,6 @@ class OrcChefe extends Enemy {
     }
 
     super.render(canvas); // Desenha a sombra e o sprite normalmente
-  }
-}
-
-class EnemyShadowsRenderer extends Component with HasGameRef<DungeonCrawlerGame> {
-  EnemyShadowsRenderer() : super(priority: -5); // Prioridade -5 garante que roda ANTES de qualquer inimigo!
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-
-    // Percorre a lista de inimigos ativos na batalha
-    for (var enemy in gameRef.combatOverlay.enemies) {
-      if (!enemy.isAlive) continue;
-
-      // Salva o estado do canvas para não bagunçar o resto do jogo
-      canvas.save();
-      
-      // O Flame move o Canvas para o canto Top-Left de cada componente ao renderizar.
-      // Como o Anchor do seu Enemy é Center, calculamos a quina superior esquerda dele:
-      double topLeftX = enemy.position.x - (enemy.size.x / 2);
-      double topLeftY = enemy.position.y - (enemy.size.y / 2);
-      
-      // Desloca o Canvas global para a posição simulada do inimigo
-      canvas.translate(topLeftX, topLeftY);
-
-      // Manda o inimigo desenhar APENAS a sombra dele ali
-      enemy.renderShadow(canvas);
-
-      // Restaura o Canvas para a posição original antes de ir para o próximo monstro
-      canvas.restore();
-    }
   }
 }
 
@@ -1092,22 +1110,7 @@ class BugEnemy extends Enemy {
 
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
-
-    attackCooldown -= dt;
-    bool isCloseY = true;
-
-    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
-      if(isFrontRow){
-        currentPhase = CombatPhase.windup;
-        animTimer = 0.5; 
-        attackCooldown = maxAttackCooldown;
-      }else{
-        isFleeing = true;
-      }
-    }
+    checkAttackPadrao(dt,player,screenSize);
   }
 }
 
@@ -1138,19 +1141,7 @@ class WormEnemy extends Enemy {
 
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
-
-    attackCooldown -= dt;
-
-    if (distancePixels <= reachPixels&& attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
-      if(isFrontRow){
-        currentPhase = CombatPhase.windup;
-        animTimer = 0.5; 
-        attackCooldown = maxAttackCooldown;
-      }
-    }
+    checkAttackPadrao(dt,player,screenSize);
   }
 }
 
@@ -1452,6 +1443,139 @@ class Fungo2Enemy extends Enemy {
   }
 }
 
+class InfectadoEnemy extends Enemy {
+  bool isFleeing = false;
+  bool isPoison = false;
+
+  InfectadoEnemy() : super(name: 'infectado',
+    type: EnemyType.infectado, 
+    color: Palette.cinza, // Cor do escudo/armadura
+    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: []
+  ) {
+    isMelee = true;
+  }
+
+  // --- REGRA DE OURO: Só recebe dano se NÃO estiver a guarder ---
+  @override
+  bool get isVulnerable => currentPhase != CombatPhase.guard;
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    // 2. Lê o próprio estado: Eu já comecei a atacar?
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery ||
+                           currentPhase == CombatPhase.windup2 || 
+                           currentPhase == CombatPhase.active2 || 
+                           currentPhase == CombatPhase.recovery2;
+
+    // --- INTELIGÊNCIA DE DEFESA ---
+    if (isPlayerAttacking && !isSelfAttacking) {
+      currentPhase = CombatPhase.guard;
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      currentPhase = CombatPhase.idle;
+    }
+
+    // --- MOVIMENTO NORMAL ---
+    if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
+      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+      if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+        isFleeing = true;
+      }
+
+      if (isFleeing && (strafePosition <= -0.98 || strafePosition >= 0.98)) {
+        isFleeing = false;
+      }
+
+      // --- LÓGICA DE MOVIMENTO ---
+      if (isFleeing) {
+        // Foge para a direção OPOSTA ao jogador
+        double dir = -(player.strafePosition - strafePosition).sign;
+        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        strafePosition += dir * speed * dt;
+      } else {
+        // Vai para a direção DO jogador (com zona morta para não tremer)
+        if (distanceToPlayer > 0.01) {
+          double dir = (player.strafePosition - strafePosition).sign;
+          strafePosition += dir * speed * dt;
+        }
+      }
+
+      // Garante que não vai sair da tela
+      strafePosition = strafePosition.clamp(-1.0, 1.0);
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    bool isCloseY = true;
+
+    if (currentPhase == CombatPhase.idle && isFrontRow) {
+      
+
+      // 2. ALTERNÂNCIA DE ATAQUES
+      if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
+        isPoison = !isPoison;
+        isMelee = !isPoison;
+
+        if (isPoison){
+          currentPhase = CombatPhase.windup2;
+        }else{
+          currentPhase = CombatPhase.windup;
+        }
+
+        animTimer = 0.5; 
+        attackCooldown = maxAttackCooldown;
+        
+      }
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup2) {
+          currentPhase = CombatPhase.active2;
+          animTimer = 0.5; 
+          _shootPoisonCloud();
+        } 
+        else if (currentPhase == CombatPhase.active2) {
+          currentPhase = CombatPhase.recovery2;
+          animTimer = 0.5;
+        } 
+        else if (currentPhase == CombatPhase.recovery2) {
+          currentPhase = CombatPhase.idle;
+        }
+      }
+      return; // Bloqueia a IA padrão enquanto ele conjura as magias
+    }
+    
+    super._updatePhase(dt); // Deixa a IA da classe pai processar morte, recuo, etc.
+  }
+
+  Future<void> _shootPoisonCloud() async {
+    double startY = yPosition + visualYOffset - 0.05;
+    final ui.Image img = await game.images.load('effects/poison.png');
+    gameRef.combatOverlay.add(PoisonCloud(strafePosition, startY, 0.0,0, this, img:img));
+  }
+
+}
+
 class GarraRainhaEnemy extends Enemy {
   final Enemy rainha; // Referência ao corpo principal
   final double strafeOffset; // Distância fixa do centro da rainha
@@ -1482,17 +1606,7 @@ class GarraRainhaEnemy extends Enemy {
 
   @override
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
-    double reachPixels = (hitboxWidth / 2) + (player.hurtboxWidth / 2);
-
-    attackCooldown -= dt;
-
-    if (distancePixels <= reachPixels && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
-      currentPhase = CombatPhase.windup;
-      animTimer = 0.6; 
-      attackCooldown = maxAttackCooldown;
-    }
+    checkAttackPadrao(dt,player,screenSize);
   }
 }
 
@@ -1642,3 +1756,4 @@ class RainhaInsetoEnemy extends Enemy {
     gameRef.combatOverlay.add(PoisonCloud(strafePosition, startY, 0.0,0, this, img:img));
   }
 }
+

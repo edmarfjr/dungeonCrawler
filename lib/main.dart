@@ -50,7 +50,7 @@ class _GameScreenState extends State<GameScreen> {
           children: [
             // Tela do Jogo (2/3 da tela)
             Expanded(
-              flex: 3,
+              flex: 4,
               child: ClipRect(
                 child: GameWidget(
                   game: _game,
@@ -69,7 +69,7 @@ class _GameScreenState extends State<GameScreen> {
             
             // Controles estilo Game Boy (1/3 da tela)
             Expanded(
-              flex: 1,
+              flex: 2,
               child: Container(
                 color: Palette.cinza,
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -91,8 +91,8 @@ class _GameScreenState extends State<GameScreen> {
                               onPointerCancel: (_) => _handleDPadEnd(),
                               child: Stack(
                                 children: [
-                                  Align(alignment: Alignment.center, child: Container(width: 63, height: 110, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
-                                  Align(alignment: Alignment.center, child: Container(width: 110, height: 63, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
+                                  Align(alignment: Alignment.center, child: Container(width: 63, height: 110, decoration: const BoxDecoration(color: Palette.preto, shape: BoxShape.rectangle))),
+                                  Align(alignment: Alignment.center, child: Container(width: 110, height: 63, decoration: const BoxDecoration(color: Palette.preto, shape: BoxShape.rectangle))),
                                   Align(alignment: Alignment.topCenter, child: _buildStaticArrow(Icons.arrow_upward)),
                                   Align(alignment: Alignment.bottomCenter, child: _buildStaticArrow(Icons.arrow_downward)),
                                   Align(alignment: Alignment.centerLeft, child: _buildStaticArrow(Icons.arrow_back)),
@@ -109,7 +109,7 @@ class _GameScreenState extends State<GameScreen> {
                     Expanded(
                       flex: 2,
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           GestureDetector(
                             onTapDown: (_) => {_game.startInput(GameInput.pause), HapticFeedback.mediumImpact() },
@@ -132,8 +132,8 @@ class _GameScreenState extends State<GameScreen> {
                         aspectRatio: 1,
                         child: Stack(
                           children: [
-                            Align(alignment: Alignment.topRight, child: _buildActionButton("A", GameInput.buttonA, Palette.cinzaEsc)),
-                            Align(alignment: Alignment.bottomLeft, child: _buildActionButton("B", GameInput.buttonB, Palette.cinzaEsc)),
+                            Align(alignment: Alignment.topRight, child: _buildActionButton("A", GameInput.buttonA, Palette.vermelhoCla)),
+                            Align(alignment: Alignment.bottomLeft, child: _buildActionButton("B", GameInput.buttonB, Palette.vermelhoCla)),
                           ],
                         ),
                       ),
@@ -192,7 +192,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildStaticArrow(IconData icon) {
     return Container(
       width: 80, height: 80,
-      decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
+      decoration: const BoxDecoration(color: Palette.preto, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
       child: Icon(icon, color: Palette.branco, size: 30),
     );
   }

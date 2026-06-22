@@ -64,6 +64,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double leftTapTimer = 0.0;  // Janela de tempo para o clique duplo (Esquerda)
   double rightTapTimer = 0.0; // Janela de tempo para o clique duplo (Direita)
   double dashTimer = 0.0;     // Duração do Dash na tela
+  double dashDur = 0.1;
+  double dashVel = 7.0;
   double dashDirection = 0.0;
 
   // REFACTOR: Substituído showVictoryMessage por um controle de fluxo de fim de turno
@@ -388,6 +390,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.ovo: await images.load('actors/ovo.png'),
       EnemyType.fungo: await images.load('actors/fungo.png'),
       EnemyType.fungo2: await images.load('actors/fungo2.png'),
+      EnemyType.infectado: await images.load('actors/infectado.png'),
       EnemyType.garra: await images.load('actors/garra.png'),
       EnemyType.boss2: await images.load('actors/boss2.png'),
     };
@@ -412,6 +415,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.fungo2: await images.load('effects/spore.png'), 
       EnemyType.boss2: await images.load('effects/spore.png'), 
       EnemyType.garra: await images.load('effects/golpe.png'), 
+      EnemyType.infectado: await images.load('effects/soco.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -448,6 +452,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerSlashImage: playerSlashSprite, 
       enemySlashImages: enemySlashSprites,
     );
+    combatOverlay.add(EnemyShadowsRenderer());
     combatOverlay.size = size; add(combatOverlay);
 
     minimap = MinimapRenderer();
@@ -852,7 +857,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               playerCombatStats.recoverMana();
               FlameAudio.play('sfx/hit.wav');
             }else{
-              enemy.applyHitGuard(0.1);
+              enemy.applyHitGuard(0.3);
               playerCombatStats.stamina = max(playerCombatStats.stamina - playerCombatStats.staminaCost,0);
               combatOverlay.addFloatingText("BLOCK!", enemy.getHurtbox(size), Palette.cinzaCla);
               FlameAudio.play('sfx/block.wav');
@@ -901,7 +906,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.isGuarding = false;
         if (dashTimer > 0) {
           dashTimer -= dt;
-          playerCombatStats.strafePosition += dashDirection * 6.0 * dt; 
+          playerCombatStats.strafePosition += dashDirection * dashVel * dt; 
         } else {
           if (leftPressed) { playerCombatStats.strafePosition -= (playerCombatStats.moveSpeed - playerCombatStats.moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
           else if (rightPressed) { playerCombatStats.strafePosition += (playerCombatStats.moveSpeed - playerCombatStats.moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
@@ -1042,6 +1047,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       iniPool.add(() => BugEnemy());
     }
 
+    if(dungeon.level >= 6){
+      iniPool.add(() => InfectadoEnemy());
+    }
+
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
       Enemy newEnemy = iniPool[enemyType]();
@@ -1106,6 +1115,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.ovo: newEnemy = OvoEnemy(); break;
         case EnemyType.fungo: newEnemy = FungoEnemy(); break;
         case EnemyType.fungo2: newEnemy = Fungo2Enemy(); break;
+        case EnemyType.infectado: newEnemy = InfectadoEnemy(); break;
         case EnemyType.boss1: newEnemy = OrcChefe(); break;
         case EnemyType.boss2:
 
@@ -1393,7 +1403,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
         isItemActionMenuOpen = false; 
-        //_triggerSpecificEncounter(EnemyType.fungo2);
+        //_triggerSpecificEncounter(EnemyType.infectado);
         //triggerEncounter();
       }
       return; 
@@ -1411,7 +1421,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         leftPressed = true;
         if (leftTapTimer > 0) {
           playerCombatStats.stamina -= 15;
-          dashTimer = 0.10; 
+          dashTimer = dashDur; 
           dashDirection = -1.0;
           leftTapTimer = 0.0; 
         } else {
@@ -1422,7 +1432,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         rightPressed = true;
         if (rightTapTimer > 0) {
           playerCombatStats.stamina -= 15;
-          dashTimer = 0.10;
+          dashTimer = dashDur;
           dashDirection = 1.0;
           rightTapTimer = 0.0;
         } else {
