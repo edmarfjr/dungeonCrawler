@@ -68,7 +68,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double dashDur = 0.1;
   double dashVel = 7.0;
   double dashDirection = 0.0;
-  double dashCusto = 15;
+  double dashCusto = 14;
+
+  double maxHp = 0;
+  double regenTmr = 2;
 
   // REFACTOR: Substituído showVictoryMessage por um controle de fluxo de fim de turno
   bool _victoryProcessed = true;
@@ -168,7 +171,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-     // ItemDatabase.reflexPotion,
+      ItemDatabase.armaduraBug
      // ItemDatabase.toxicCloud,
 
     ];
@@ -270,16 +273,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     // Lista mestra para buscar as instâncias reais dos itens pelo nome
     List<Item> allGameItems = [
       //armas
-      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado, ItemDatabase.clava, ItemDatabase.espadaOrc,
-      ItemDatabase.lanca,
+      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,
+      ItemDatabase.clava, ItemDatabase.espadaOrc, ItemDatabase.lanca,
       //armaduras
-      ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, 
+      ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug, 
       //escudos
-      ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, 
+      ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.braceleteFung, 
+      ItemDatabase.braceleteNaga, 
       //pocoes
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
       //itens
-      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye, ItemDatabase.bugOrgan, 
+      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
+      ItemDatabase.bugOrgan, 
       //magias
       ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
     ]; // IMPORTANTE: Mantenha essa lista atualizada se criar itens novos!
@@ -371,6 +376,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/piercing.png',
       'itens/organ.png',
       'itens/orcSword.png',
+      'itens/bracerNaga.png',
+      'itens/bracerFung.png',
+      'itens/armorBug.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
@@ -408,6 +416,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.garra: await images.load('actors/garra.png'),
       EnemyType.boss2: await images.load('actors/boss2.png'),
       EnemyType.esqueleto: await images.load('actors/esqueleto.png'),
+      EnemyType.jester: await images.load('actors/jester.png'),
+      EnemyType.naga: await images.load('actors/naga.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -431,6 +441,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.boss2: await images.load('effects/spore.png'), 
       EnemyType.infectado: await images.load('effects/soco.png'), 
       EnemyType.esqueleto: await images.load('effects/golpeLargo.png'), 
+      EnemyType.jester: await images.load('effects/bola.png'), 
+      EnemyType.naga: await images.load('effects/golpe.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -606,13 +618,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         );
       }
 
-      TextPainter(text: TextSpan(text: "${item.name}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+      TextPainter(text: TextSpan(text: "${item.name}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 12)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
     }
 
     if (isActionMenuOpen) {
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke);
-      TextPainter(text: const TextSpan(text: "A - Confirmar\nB - Cancelar", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
+      TextPainter(text: const TextSpan(text: "A - Confirmar\nB - Cancelar", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 12)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
     }
     if (isItemActionMenuOpen) {
       double menuWidth = 200;
@@ -845,11 +857,41 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       return; 
     }
 
+    if (currentState == GameState.combat && playerCombatStats.isCharging) {
+
+      bool hasHeavyAttackShield = playerCombatStats.equippedShield?.hasChargeAttack ?? false;  
+      bool hasHeavyAttackWeapon = playerCombatStats.equippedWeapon?.hasChargeAttack ?? false;  
+
+      if (hasHeavyAttackShield || hasHeavyAttackWeapon) {
+        playerCombatStats.chargeTimer += dt;
+        playerCombatStats.animTimer = 0.5; // Força a pose de Windup
+        
+        if (playerCombatStats.chargeTimer >= 1.0 && (playerCombatStats.chargeTimer - dt) < 1.0) {
+          playerCombatStats.applyEffect(0.1, Palette.vermelhoCla);
+        }
+        return; 
+      }
+    }
+
+    bool hasRegen = playerCombatStats.equippedArmor?.hasRegen ?? false; 
+
+    if(hasRegen){
+      regenTmr -= dt;
+      if(regenTmr<=0){
+        regenTmr = 2;
+        if(playerCombatStats.hp < maxHp){
+          playerCombatStats.hp += 2;
+        }
+      }
+    }
+
     // --- 1. ATUALIZA A IA E COLISÃO ---
     if (combatOverlay.enemies.isNotEmpty) {
       Rect pHitbox = playerCombatStats.getHitbox(size);
       bool weaponHasReach = playerCombatStats.equippedWeapon?.hasReach ?? false;
       bool weaponHasStun = playerCombatStats.equippedWeapon?.hasStun ?? false;
+      bool weaponHasPoison = playerCombatStats.equippedWeapon?.hasPoisonAttack ?? false;
+      bool shieldHasPoison = playerCombatStats.equippedShield?.hasPoisonAttack ?? false;
       
       if (playerCombatStats.currentPhase == CombatPhase.active && !playerCombatStats.attackHit) {
         playerCombatStats.attackHit = true;
@@ -858,7 +900,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(size))){
             double damage = playerCombatStats.str.toDouble();
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
-            if(enemy.isVulnerable){
+            if (playerCombatStats.isHeavyAttack) {
+              damage *= 2.0;
+            }
+            if(enemy.isVulnerable || playerCombatStats.isHeavyAttack){
               playerCombatStats.reflex = false;
               bool isCrit = Random().nextDouble() * 100 < playerCombatStats.critChance;
               double stun = 0.4;
@@ -869,6 +914,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               }
               enemy.hp -= damage;
               enemy.applyHitStun(stun);
+              if(weaponHasPoison || shieldHasPoison) enemy.isPoison = true;
               playerCombatStats.recoverMana();
               FlameAudio.play('sfx/hit.wav');
             }else{
@@ -916,15 +962,26 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     bool isFreeToMove = activeMessage == null && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk || playerCombatStats.currentPhase == CombatPhase.guard);
 
     if (isFreeToMove) {
-      if (downPressed && !playerCombatStats.cansado) { playerCombatStats.isGuarding = true; playerCombatStats.currentPhase = CombatPhase.guard; } 
-      else {
+      bool noShield = playerCombatStats.equippedShield?.noShield ?? false;
+      bool shieldWalkSlow = playerCombatStats.equippedShield?.walkSlow ?? false;
+      bool shieldWalkFast = playerCombatStats.equippedShield?.walkFast ?? false;
+
+      double moveSpeedPenalty = 0;
+
+      if(shieldWalkSlow) moveSpeedPenalty = -5;
+      if(shieldWalkFast) moveSpeedPenalty = 5;
+
+      if (downPressed && !playerCombatStats.cansado && !noShield) {
+        playerCombatStats.isGuarding = true; 
+        playerCombatStats.currentPhase = CombatPhase.guard; 
+      } else {
         playerCombatStats.isGuarding = false;
         if (dashTimer > 0) {
           dashTimer -= dt;
           playerCombatStats.strafePosition += dashDirection * dashVel * dt; 
         } else {
-          if (leftPressed) { playerCombatStats.strafePosition -= (playerCombatStats.moveSpeed - playerCombatStats.moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
-          else if (rightPressed) { playerCombatStats.strafePosition += (playerCombatStats.moveSpeed - playerCombatStats.moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+          if (leftPressed) { playerCombatStats.strafePosition -= (playerCombatStats.moveSpeed - moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+          else if (rightPressed) { playerCombatStats.strafePosition += (playerCombatStats.moveSpeed - moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
           else { playerCombatStats.currentPhase = CombatPhase.idle; }
         }
         playerCombatStats.strafePosition = playerCombatStats.strafePosition.clamp(-1.0, 1.0);
@@ -941,32 +998,70 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    // Mantém a leitura dos direcionais fluida (Isso já funciona perfeitamente)
     leftPressed = keysPressed.contains(LogicalKeyboardKey.arrowLeft);
     rightPressed = keysPressed.contains(LogicalKeyboardKey.arrowRight); 
     downPressed = keysPressed.contains(LogicalKeyboardKey.arrowDown);
     upPressed = keysPressed.contains(LogicalKeyboardKey.arrowUp);
     
-    if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape) togglePause();
-      
-      if (event.logicalKey == LogicalKeyboardKey.keyZ) startInput(GameInput.buttonA);
-      if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
+    // =========================================================================
+    // 1. TRATAMENTO DE SEGURAR E SOLTAR (Ataque Carregado)
+    // =========================================================================
+    
+    // Botão A (Tecla Z) - Ataque / Interação
+    if (event.logicalKey == LogicalKeyboardKey.keyZ) {
+      if (event is KeyDownEvent) {
+        startInput(GameInput.buttonA); // Inicia o Windup e a Carga
+      } else if (event is KeyUpEvent) {
+        stopInput(GameInput.buttonA);  // Executa o Ataque (Forte ou Fraco)
+      }
+    }
 
-      if (event.logicalKey == LogicalKeyboardKey.keyC){
+   /* // Botão B (Tecla X) - Inventário / Uso de Item
+    if (event.logicalKey == LogicalKeyboardKey.keyX) {
+      if (event is KeyDownEvent) {
+        startInput(GameInput.buttonB);
+      } else if (event is KeyUpEvent) {
+        stopInput(GameInput.buttonB); 
+      }
+    }
+  */
+    // =========================================================================
+    // 2. TRATAMENTO DE TOQUE SIMPLES (Só importa quando afunda a tecla)
+    // =========================================================================
+    if (event is KeyDownEvent) {
+      
+      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape) {
+        togglePause();
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.keyC) {
         showHitboxes = !showHitboxes;
       }
 
+      if (event.logicalKey == LogicalKeyboardKey.keyV) {
+        triggerEncounter();
+        //_triggerSpecificEncounter(EnemyType.slime);
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.keyX) {
+        startInput(GameInput.buttonB);
+      }
+
+      // Navegação de Menus e Nivelamento
       if (currentState == GameState.levelUp && activeMessage == null) {
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) startInput(GameInput.left);
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) startInput(GameInput.right);
-      } else if (currentState == GameState.inventory || currentState == GameState.combat
+      } 
+      else if (currentState == GameState.inventory || currentState == GameState.combat
        || currentState == GameState.manual || currentState == GameState.mainMenu || currentState == GameState.paused) {
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
       }
     }
+    
     return KeyEventResult.handled;
   }
 
@@ -1015,6 +1110,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.applyHitStun(0.3);
         combatOverlay.playerHitTicker.reset(); 
         combatOverlay.weaponHitTicker.reset();
+        
       }
     } else { 
       FlameAudio.play('sfx/hit.wav');
@@ -1022,12 +1118,28 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.applyHitStun(0.3); 
       combatOverlay.playerHitTicker.reset(); 
       combatOverlay.weaponHitTicker.reset();
+      //conterPoison
+        bool counterPoison = playerCombatStats.equippedArmor?.hasPoisonAttack ?? false;
+        if(counterPoison){
+          
+          for (var enemy in combatOverlay.enemies) {
+            if (enemy.isAlive) {
+              
+              double distance = (enemy.strafePosition - playerCombatStats.strafePosition).abs();
+              
+              if (distance <= 0.2) {
+                enemy.isPoison = true;
+              }
+            }
+          }
+        }
     }
     if (playerCombatStats.hp < 0) playerCombatStats.hp = 0;
   }
 
   void triggerEncounter() {
     FlameAudio.play('sfx/encounter.wav');
+    maxHp = playerCombatStats.hp;
     encounterEssence = 0;         
     encounterDrop.clear();
     _victoryProcessed = false; 
@@ -1072,7 +1184,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         () => EsqueletoEnemy(),
         () => BatEnemy(),
         () => FungoEnemy(),
+        () => JesterEnemy(),
       ];
+    }
+
+    if(dungeon.level >= 8){
+      iniPool.add(() => NagaEnemy());
     }
 
     for (int i = 0; i < numEnemies; i++) {
@@ -1096,6 +1213,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _triggerSpecificEncounter(EnemyType type) {
     encounterEssence = 0; 
+    maxHp = playerCombatStats.hp;
     encounterDrop.clear();
     _victoryProcessed = false;
     isMimic = false;
@@ -1171,6 +1289,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           playerCombatStats.currentPhase = CombatPhase.entering; 
           playerCombatStats.animTimer = 1;
           return;
+        
+        case EnemyType.jester: newEnemy = JesterEnemy(); break;  
+        case EnemyType.naga: newEnemy = NagaEnemy(); break;  
         default: newEnemy = SlimeEnemy(); break;
       }
     newEnemy.strafePosition = 0.0; 
@@ -1434,7 +1555,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         isActionMenuOpen = false; 
         isItemActionMenuOpen = false; 
         // */
-        //_triggerSpecificEncounter(EnemyType.esqueleto);
+        //_triggerSpecificEncounter(EnemyType.naga);
         //triggerEncounter();
       }
       return; 
@@ -1447,11 +1568,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         if (input == GameInput.buttonA) dismissMessage(); 
         return; 
       }
+
+      bool easyDashShield = playerCombatStats.equippedShield?.easyDash ?? false; 
+      bool easyDashArmor = playerCombatStats.equippedArmor?.easyDash ?? false; 
+      double dcusto = dashCusto;
+      if (easyDashShield || easyDashArmor) dcusto = dashCusto/2;
       
       if (input == GameInput.left) {
         leftPressed = true;
         if (leftTapTimer > 0) {
-          playerCombatStats.stamina -= dashCusto;
+          playerCombatStats.stamina -= dcusto;
           dashTimer = dashDur; 
           dashDirection = -1.0;
           leftTapTimer = 0.0; 
@@ -1472,7 +1598,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
       if (input == GameInput.down) downPressed = true;
       if (input == GameInput.buttonA) {
-        _performAttack(); // Filtramos activeMessage acima, processa o ataque nativo direto
+        //_performAttack(); 
+        if (playerCombatStats.currentPhase == CombatPhase.idle) {
+          playerCombatStats.currentPhase = CombatPhase.windup;
+          playerCombatStats.isCharging = true;
+          playerCombatStats.chargeTimer = 0.0;
+          playerCombatStats.isHeavyAttack = false;
+          playerCombatStats.animTimer = 0.5; // Reseta o temporizador visual da animação
+        }
       }
       
       if (input == GameInput.up && playerCombatStats.consumables.isNotEmpty) {
@@ -1491,6 +1624,29 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (input == GameInput.right) rightPressed = false;
     if (input == GameInput.down) downPressed = false;
     if (input == GameInput.up) upPressed = false;
+
+    if (currentState == GameState.combat && input == GameInput.buttonA) {
+      print('soltouA');
+      if (playerCombatStats.isCharging) {
+        playerCombatStats.isCharging = false;
+
+        double custoStaminaBase = playerCombatStats.staminaCost;
+
+        // Se segurou por 1.0 segundo ou mais, é um ataque pesado!
+        if (playerCombatStats.chargeTimer >= 1.0) {
+          playerCombatStats.isHeavyAttack = true;
+          playerCombatStats.stamina = max(playerCombatStats.stamina - (custoStaminaBase * 1.5), 0.0);
+        } else {
+          playerCombatStats.isHeavyAttack = false;
+          playerCombatStats.stamina = max(playerCombatStats.stamina - custoStaminaBase, 0.0);
+        }
+
+        // Transiciona para a fase ativa de dano
+        playerCombatStats.currentPhase = CombatPhase.active;
+        playerCombatStats.animTimer = 0.15; // Tempo que o hit box fica ativo na tela
+        playerCombatStats.attackHit = false;
+      }
+    }
   }
 
   void onTouchStart(GameInput input) {

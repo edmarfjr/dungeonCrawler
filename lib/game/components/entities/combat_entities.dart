@@ -68,6 +68,10 @@ class PlayerCombatStats {
   bool poison = false;
   int poisonTmr = 0;
 
+  bool isCharging = false;
+  double chargeTimer = 0.0;
+  bool isHeavyAttack = false;
+
   //List<PlayerProjectile> activeProjectiles = [];
   double VfxTimer = 0.0;
   Color VfxColor = Palette.vermelho;
@@ -139,8 +143,15 @@ class PlayerCombatStats {
         moveSpeed = moveSpeedIni;
       }
     }
-    if (VfxTimer > 0) VfxTimer -= dt;
+    if (VfxTimer > 0){
+      VfxTimer -= dt;
+      if (VfxTimer <= 0 && currentPhase == CombatPhase.hit) {
+        currentPhase = CombatPhase.idle; // Acordou da paralisia
+      }
+      return;
+    } 
     
+    /*
     if (hitFlashTimer > 0) {
       hitFlashTimer -= dt;
       if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) {
@@ -148,6 +159,7 @@ class PlayerCombatStats {
       }
       return; // Impede que o resto da lógica continue rodando
     }
+    */
     if (comboCount > 0) {
       comboTimer -= dt;
       if (comboTimer <= 0) {

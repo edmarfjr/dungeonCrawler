@@ -24,10 +24,31 @@ class Item {
 
   final bool hasReach;
   final bool hasStun;
+  final bool noShield;
+  final bool hasChargeAttack;
+  final bool hasPoisonAttack;
+  final bool walkSlow;
+  final bool walkFast;
+  final bool easyDash;
+  final bool hasRegen;
 
   final void Function(Item item, DungeonCrawlerGame game)? onUse;
 
-  Item(this.name, this.type, this.imagePath, this.power, {this.quantity = 1, this.onUse, this.cor = Palette.branco, this.manaCost = 0, this.hasReach = false, this.hasStun = false});
+  Item(this.name, this.type, this.imagePath, this.power, {
+    this.quantity = 1, 
+    this.onUse, 
+    this.cor = Palette.branco, 
+    this.manaCost = 0, 
+    this.hasReach = false, 
+    this.hasStun = false,
+    this.noShield = false,
+    this.hasChargeAttack = false,
+    this.hasPoisonAttack = false,
+    this.walkSlow = false,
+    this.walkFast = false,
+    this.easyDash = false,
+    this.hasRegen = false,
+  });
 }
 
 class ItemDatabase {
@@ -94,30 +115,40 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.2;
   });
 
-  static Item get tanga => Item("Tanga", ItemType.armor, 'itens/tanga.png', 0, cor: Colors.white, onUse: (item, game) {
+  static Item get tanga => Item("Tanga", ItemType.armor, 'itens/tanga.png', 0,easyDash: true, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = 5.0;
-    game.dashCusto = 7;
   });
 
   static Item get armaduraCouro => Item("Armadura de Couro", ItemType.armor, 'itens/leatherArmor.png', 2, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = 0.0;
-    game.dashCusto = 15;
   });
-  static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 3, cor: Colors.white, onUse: (item, game) {
+
+  static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 4, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.staminaRegenBonus = -10.0;
-    game.dashCusto = 15;
+  });
+
+  static Item get armaduraBug => Item("Armadura de Carapaça", ItemType.armor, 'itens/armorBug.png', 2,hasPoisonAttack:true, hasRegen:true, easyDash: true, cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.staminaRegenBonus = 0.0;
   });
 
   static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 3, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.moveSpeedPenalty = 0.0;
+    //game.playerCombatStats.moveSpeedPenalty = 0.0;
   });
 
   static Item get escudoMadeira => Item("Escudo de Madeira", ItemType.shield, 'itens/woodShield.png', 3, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.moveSpeedPenalty = 0.0;
+    //game.playerCombatStats.moveSpeedPenalty = 0.0;
   });
 
-  static Item get escudoFerro => Item("Escudo de Ferro", ItemType.shield, 'itens/ironShield.png', 5, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.moveSpeedPenalty = 0.5;
+  static Item get escudoFerro => Item("Escudo de Ferro", ItemType.shield, 'itens/ironShield.png', 5, walkSlow: true, cor: Colors.white, onUse: (item, game) {
+    //game.playerCombatStats.moveSpeedPenalty = 0.5;
+  });
+
+  static Item get braceleteNaga => Item("Bracelete Naga", ItemType.shield, 'itens/bracerNaga.png', 5, walkFast: true, easyDash: true ,noShield: true, hasChargeAttack: true, cor: Colors.white, onUse: (item, game) {
+
+  });
+
+  static Item get braceleteFung => Item("Bracelete Fungico", ItemType.shield, 'itens/bracerFung.png', 5, walkFast: true, easyDash: true, noShield: true, hasPoisonAttack: true, cor: Colors.white, onUse: (item, game) {
+
   });
 
   static Item get healthPotion => Item("Poção Vermelha", ItemType.consumable, 'itens/potionVermelha.png', cor: Colors.white, 40, quantity: 1, onUse: (item, game) {

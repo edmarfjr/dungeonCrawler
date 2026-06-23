@@ -113,12 +113,14 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         case EnemyType.orc:
         case EnemyType.bug:
         case EnemyType.esqueleto:
+        case EnemyType.jester:
           totalColumns = 6;
           break;
         case EnemyType.boss1:
           totalColumns = 9;
           break;
         case EnemyType.infectado:
+        case EnemyType.naga:
           totalColumns = 8;
           break;
         default:
@@ -130,7 +132,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       
       SpriteAnimation? defendAnim;
       if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug 
-      || entry.key == EnemyType.infectado || entry.key == EnemyType.esqueleto) {
+      || entry.key == EnemyType.infectado || entry.key == EnemyType.esqueleto || entry.key == EnemyType.jester
+       || entry.key == EnemyType.naga) {
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
@@ -142,7 +145,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       SpriteAnimation? windup2;
       SpriteAnimation? active2;
       SpriteAnimation? recovery2;
-      if (entry.key == EnemyType.infectado) {
+      if (entry.key == EnemyType.infectado || entry.key == EnemyType.naga) {
         windup2 = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: false);
         active2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 0.15, loop: false);
         recovery2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 1.0, loop: false);
@@ -479,13 +482,15 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     final shieldPaint = Paint();
     shieldPaint.colorFilter =  ColorFilter.mode(corEscudo, BlendMode.modulate); 
 
-    if (playerStats.hitFlashTimer > 0) { 
+    if (playerStats.VfxTimer > 0) { 
       playerPaint.colorFilter =  ColorFilter.mode(playerStats.flashColor, BlendMode.modulate); 
     }
     if(playerStats.cansado) {
       playerPaint.colorFilter = const ColorFilter.mode(Palette.bege, BlendMode.modulate); 
     }
-    bool isShieldInFront = playerStats.currentPhase == CombatPhase.active || playerStats.currentPhase == CombatPhase.recovery;
+    
+    bool noShield = playerStats.equippedShield?.noShield ?? false;
+    bool isShieldInFront = noShield || playerStats.currentPhase == CombatPhase.active || playerStats.currentPhase == CombatPhase.recovery;
 
     if (isShieldInFront){
       // 1. Desenha o Corpo

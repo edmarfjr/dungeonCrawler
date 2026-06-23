@@ -12,7 +12,8 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, garra, esqueleto }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2,
+infectado, boss2, garra, esqueleto, jester, naga }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -79,7 +80,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   bool isFlipped = false;
 
   bool isPoison = false;
-  double poisonTmr = 0;
+  double poisonTmr = 2;
 
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
@@ -125,10 +126,11 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (gameRef.activeMessage != null) return;
 
     if(isPoison){
-      if(poisonTmr>0){
-        poisonTmr -= dt;
-        hp -= 5;
+      poisonTmr -= dt;
+      if(poisonTmr<=0){
+        hp -= game.playerCombatStats.wis/2;
         poisonTmr = 2;
+        game.combatOverlay.addFloatingText((game.playerCombatStats.wis/2).toString(), getHurtbox(size), Palette.verde);
         if (hp<=0)isDying = true;
       }
     }
@@ -428,7 +430,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     );
   }
 
-  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize,{dist = 20}) {
+  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize,{double dist = 20}) {
     double scale = screenSize.x * 0.35;
     double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
     double reachPixels = dist;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
@@ -1054,7 +1056,7 @@ class BugEnemy extends Enemy {
   BugEnemy() : super(name: 'bug',
     type: EnemyType.bug, 
     color: Palette.cinza,
-    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.bugOrgan]
   ) {
@@ -1128,7 +1130,7 @@ class WormEnemy extends Enemy {
   WormEnemy() : super(name: 'worm',
     type: EnemyType.worm, 
     color: Palette.cinza,
-    hp: 40, maxHp: 40, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -20 ,drop: [ItemDatabase.bugOrgan],
     maxAttackCooldown: 0
@@ -1460,9 +1462,9 @@ class InfectadoEnemy extends Enemy {
   InfectadoEnemy() : super(name: 'infectado',
     type: EnemyType.infectado, 
     color: Palette.cinza, // Cor do escudo/armadura
-    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 90, maxHp: 90, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: []
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteFung]
   ) {
     isMelee = true;
   }
@@ -1772,7 +1774,7 @@ class EsqueletoEnemy extends Enemy {
   EsqueletoEnemy() : super(name: 'esqueleto',
     type: EnemyType.esqueleto, 
     color: Palette.cinza, // Cor do escudo/armadura
-    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 120, maxHp: 120, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
     hitboxWidth: 100, hitboxHeight: 100, hitboxOffsetY: 10,drop: [ItemDatabase.clava]
   ) {
@@ -1837,3 +1839,281 @@ class EsqueletoEnemy extends Enemy {
   }
 }
 
+class JesterEnemy extends Enemy {
+  double _hopTimer = 0.0;
+  double _targetStrafe = 0.0;
+  bool _isHopping = false;
+
+  JesterEnemy() : super(
+    name: 'jester',
+    type: EnemyType.jester,
+    color: Palette.amarelo, 
+    hp: 100, maxHp: 100, dropEssence: 20, 
+    width: 130, height: 130, 
+    hurtboxWidth: 70, hurtboxHeight: 100,
+    hitboxWidth: 80, hitboxHeight: 80, 
+    speed: 1.5, 
+    maxAttackCooldown: 2.5, 
+    drop: [],
+    isMelee: false, 
+  ) {
+    _targetStrafe = strafePosition;
+    _hopTimer = 0.0;
+    maxJumpHeight = 0.25;
+    maxJumpTime = 1.2;
+  }
+
+  @override
+  bool get canChangeRow {
+    bool isAttacking = currentPhase == CombatPhase.windup || 
+                       currentPhase == CombatPhase.active || 
+                       currentPhase == CombatPhase.recovery;
+    return !isAttacking && !_isHopping;
+  }
+
+  // 2. CORREÇÃO: A verdadeira defesa de dano!
+  @override
+  bool get isVulnerable {
+    // Só leva dano se estiver nas fases de ataque. 
+    // Na fase idle, pulando, ou na sua nova fase 'guard', ele bloqueia!
+    return currentPhase == CombatPhase.windup || 
+           currentPhase == CombatPhase.active || 
+           currentPhase == CombatPhase.recovery;
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+
+    attackCooldown -= dt;
+    
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && !_isHopping) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.5; 
+      attackCooldown = maxAttackCooldown;
+    }
+  }
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery;
+
+    // --- INTELIGÊNCIA DE DEFESA ---
+    if (isPlayerAttacking && !isSelfAttacking) {
+      // Se o jogador estiver atacando, o Jester "congela" na pose de defesa.
+      // E como isVulnerable retornará 'false', ele vai bloquear o dano perfeitamente!
+      currentPhase = CombatPhase.guard;
+      animTimer = 0.5; 
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      // Assim que o jogador terminar de atacar, ele baixa a guarda rapidamente
+      animTimer -= dt;
+      if (animTimer <= 0) currentPhase = CombatPhase.idle;
+    }
+
+    // 1. LÓGICA DE DECISÃO DO PULO
+    // Só pode decidir pular se estiver parado (idle) e não estiver no meio de um pulo
+    if (currentPhase == CombatPhase.idle || currentPhase == CombatPhase.guard && !_isHopping) {
+      _hopTimer -= dt;
+
+      if (_hopTimer <= 0) {
+        List<double> linhas = [-1.0, 0.0, 1.0];
+        linhas.remove(strafePosition); 
+        _targetStrafe = linhas[Random().nextInt(linhas.length)];
+
+        _isHopping = true;
+        jumpTimer = maxJumpTime; 
+        _hopTimer = maxJumpTime + 0.2; 
+      }
+    }
+
+    // 2. LÓGICA DE MOVIMENTO HORIZONTAL
+    if (_isHopping) {
+      if ((strafePosition - _targetStrafe).abs() > 0.05) {
+        strafePosition += (_targetStrafe > strafePosition ? 1 : -1) * speed * dt;
+      } else {
+        strafePosition = _targetStrafe;
+      }
+
+      if (jumpTimer <= 0) {
+        _isHopping = false;
+        strafePosition = _targetStrafe; 
+      }
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+
+    // 3. LÓGICA DE ATAQUE (Disparo do Projétil)
+    // Usamos o update principal porque a classe base desativa o updateBehavior enquanto ataca!
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true; // Trava para atirar apenas 1 vez por animação
+
+      double startY = yPosition + visualYOffset;
+
+      // Cria o projétil teleguiado e joga no cenário
+      // Ajuste o vx/vy para a curva que achar mais legal para o Jester
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition, 
+        startY, 
+        0.0,   // vx (velocidade X inicial)
+        -1.5,  // vy (força do arremesso para cima)
+        this,
+        isHoming: true
+      ));
+    }
+  }
+}
+
+class NagaEnemy extends Enemy {
+  bool isFleeing = false;
+
+  NagaEnemy() : super(
+    name: 'naga',isBoss: true,
+    type: EnemyType.naga, 
+    color: Palette.vermelhoEsc, 
+    hp: 250, maxHp: 250, dropEssence: 100, 
+    width: 192, height: 192, speed: 0.45,
+    hurtboxWidth: 100, hurtboxHeight: 170, hurtboxOffsetY: 0,
+    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteNaga]
+  ) {
+    isMelee = true;
+    damage = 5; // Dano base do ataque normal
+  }
+
+  // MÁGICA 1: Se ele estiver invocando, desligamos o melee para a hitbox não machucar o jogador!
+  
+
+  @override
+  bool get isVulnerable => currentPhase != CombatPhase.guard;
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+
+    // 1. Lê a mente do jogador (Igual ao Orc comum)
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    // 2. Verifica se o próprio chefe está ocupado atacando ou invocando
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery ||
+                           currentPhase == CombatPhase.windup2 || 
+                           currentPhase == CombatPhase.active2 || 
+                           currentPhase == CombatPhase.recovery2;
+
+    // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
+    if (isPlayerAttacking && !isSelfAttacking) {
+      // O jogador tentou bater e o Chefe está livre: Levanta o Escudo!
+      currentPhase = CombatPhase.guard;
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      // O jogador parou de bater: Abaixa o Escudo!
+      currentPhase = CombatPhase.idle;
+    }
+
+    // --- MOVIMENTO NORMAL ---
+    if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
+      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+      if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+        isFleeing = true;
+      }
+
+      if (isFleeing && (strafePosition <= -0.98 || strafePosition >= 0.98)) {
+        isFleeing = false;
+      }
+
+      // --- LÓGICA DE MOVIMENTO ---
+      if (isFleeing) {
+        // Foge para a direção OPOSTA ao jogador
+        double dir = -(player.strafePosition - strafePosition).sign;
+        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        strafePosition += dir * speed * dt;
+      } else {
+        // Vai para a direção DO jogador (com zona morta para não tremer)
+        if (distanceToPlayer > 0.01) {
+          double dir = (player.strafePosition - strafePosition).sign;
+          strafePosition += dir * speed * dt;
+        }
+      }
+
+      // Garante que não vai sair da tela
+      strafePosition = strafePosition.clamp(-1.0, 1.0);
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    bool isCloseY = true;
+
+    if (currentPhase == CombatPhase.idle && isFrontRow) {
+      
+
+      // 2. ALTERNÂNCIA DE ATAQUES
+      if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
+        isHeavyAttack = !isHeavyAttack; // Alterna entre normal e pesado!
+
+        naoInterrompe = isHeavyAttack;
+
+        if(isHeavyAttack){
+          currentPhase = CombatPhase.windup2;
+        }else{
+          currentPhase = CombatPhase.windup;
+        }
+        
+        
+        // O ataque pesado tem um aviso (windup) BEM MAIOR para dar tempo de o jogador esquivar
+        animTimer = isHeavyAttack ? 0.8 : 0.5; 
+        attackCooldown = maxAttackCooldown;
+        
+        // O dano sobe violentamente no ataque pesado
+        damage = isHeavyAttack ? 10 : 5; 
+      }
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+
+    if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
+      animTimer -= dt;
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        else if (currentPhase == CombatPhase.active2) { currentPhase = CombatPhase.recovery2; animTimer = 1.0; } 
+        else { currentPhase = CombatPhase.idle; }
+      }
+    }
+
+    super._updatePhase(dt);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (currentPhase == CombatPhase.windup) {
+      Paint? auraPaint;
+      
+      if (isHeavyAttack) {
+        auraPaint = Paint()
+          ..color = Palette.vermelho.withOpacity(0.6)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      }
+
+      if (auraPaint != null) {
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 1.5, auraPaint);
+      }
+    }
+
+    super.render(canvas); 
+  }
+}
