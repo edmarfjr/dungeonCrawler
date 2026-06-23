@@ -13,7 +13,7 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2,
-infectado, boss2, garra, esqueleto, jester, naga }
+infectado, boss2, garra, esqueleto, jester, naga, mao }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -81,6 +81,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
   bool isPoison = false;
   double poisonTmr = 2;
+  bool imunePoison;
 
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
@@ -92,6 +93,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     this.isMelee = true,
     this.isBoss = false,
     this.dieAnim = CombatPhase.hit,
+    this.imunePoison = false,
     required this.drop,
   }) : attackCooldown = Random().nextDouble() * maxAttackCooldown, 
        super(anchor: Anchor.center
@@ -1248,6 +1250,7 @@ class FungoEnemy extends Enemy {
     hitboxWidth: 0, hitboxHeight: 0,
     drop: [],
     maxAttackCooldown: 4.0,isMelee: false,
+    imunePoison: true,
   );
 
   double floatTimer = 0.0;
@@ -1368,6 +1371,7 @@ class Fungo2Enemy extends Enemy {
     hitboxWidth: 0, hitboxHeight: 0,
     drop: [],
     maxAttackCooldown: 4.0,isMelee: false,
+    imunePoison: true,
   );
 
   double floatTimer = 0.0;
@@ -1464,7 +1468,8 @@ class InfectadoEnemy extends Enemy {
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 90, maxHp: 90, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteFung]
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteFung],
+    imunePoison: true,
   ) {
     isMelee = true;
   }
@@ -1630,7 +1635,7 @@ class RainhaInsetoEnemy extends Enemy {
     hp: 300, maxHp: 300, dropEssence: 100, width: 192, height: 192, speed: 0.3,
     hurtboxWidth: 192, hurtboxHeight: 192, hurtboxOffsetY: 0,
     hitboxWidth: 0, hitboxHeight: 0,
-    drop: [],
+    drop: [ItemDatabase.armaduraBug],
     maxAttackCooldown: 4.5,
     isBoss: true,
     isMelee: false,
@@ -1776,7 +1781,8 @@ class EsqueletoEnemy extends Enemy {
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 120, maxHp: 120, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
-    hitboxWidth: 100, hitboxHeight: 100, hitboxOffsetY: 10,drop: [ItemDatabase.clava]
+    hitboxWidth: 100, hitboxHeight: 100, hitboxOffsetY: 10,drop: [],
+    imunePoison: true,
   ) {
     isMelee = true;
   }
@@ -1849,7 +1855,7 @@ class JesterEnemy extends Enemy {
     type: EnemyType.jester,
     color: Palette.amarelo, 
     hp: 100, maxHp: 100, dropEssence: 20, 
-    width: 130, height: 130, 
+    width: 144, height: 144, 
     hurtboxWidth: 70, hurtboxHeight: 100,
     hitboxWidth: 80, hitboxHeight: 80, 
     speed: 1.5, 
@@ -1979,7 +1985,7 @@ class NagaEnemy extends Enemy {
     type: EnemyType.naga, 
     color: Palette.vermelhoEsc, 
     hp: 250, maxHp: 250, dropEssence: 100, 
-    width: 192, height: 192, speed: 0.45,
+    width: 144, height: 144, speed: 0.45,
     hurtboxWidth: 100, hurtboxHeight: 170, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteNaga]
   ) {
@@ -2115,5 +2121,152 @@ class NagaEnemy extends Enemy {
     }
 
     super.render(canvas); 
+  }
+}
+
+class HandEnemy extends Enemy {
+  double _teleportTimer = 0.0;
+  int _nextAttackType = 1; // 1 = Tiro Direto, 2 = Chuva de Pedras
+
+  HandEnemy() : super(
+    name: 'Mão',
+    type: EnemyType.mao,
+    color: Palette.cinzaEsc, 
+    hp: 150, maxHp: 150, dropEssence: 30, 
+    width: 144, height: 144, 
+    hurtboxWidth: 80, hurtboxHeight: 130,
+    hitboxWidth: 90, hitboxHeight: 90, 
+    speed: 0.0,
+    maxAttackCooldown: 3.0, 
+    drop: [],
+    isMelee: false, 
+  ) {
+    _teleportTimer = 2.0; 
+  }
+
+  @override
+  bool get isVulnerable {
+    return currentPhase == CombatPhase.windup || 
+           currentPhase == CombatPhase.active || 
+           currentPhase == CombatPhase.recovery ||
+           currentPhase == CombatPhase.windup2 || 
+           currentPhase == CombatPhase.active2 || 
+           currentPhase == CombatPhase.recovery2;
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt; 
+    
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      // Decide aleatoriamente qual será o próximo ataque (1 ou 2)
+      _nextAttackType = Random().nextBool() ? 1 : 2;
+      
+      if (_nextAttackType == 1) {
+        currentPhase = CombatPhase.windup;
+      } else {
+        currentPhase = CombatPhase.windup2;
+      }
+      animTimer = 0.7; // Windup um pouco mais longo para dar tempo do jogador reagir
+      attackCooldown = maxAttackCooldown;
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    // Se a Mão estiver parada e faltarem 0.4 segundos ou menos para o teleporte...
+    if (currentPhase == CombatPhase.idle && _teleportTimer > 0 && _teleportTimer <= 0.4) {
+      
+      // ...nós usamos a mesma matemática de piscar do hitFlashTimer!
+      // Multiplicar por 20 faz o piscar ser bem frenético e assustador.
+      if ((_teleportTimer * 20).toInt() % 2 == 0) {
+        return; // Retorna prematuramente para pular o desenho neste frame (ficando invisível)
+      }
+    }
+    
+    // Se não entrou no 'if' acima (ou se é o frame visível do piscar), desenha normalmente:
+    super.render(canvas);
+  }
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+    
+    // Atualizado para reconhecer que está atacando mesmo se for o Ataque 2
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
+                           currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
+
+    if (isPlayerAttacking && !isSelfAttacking) {
+      currentPhase = CombatPhase.guard;
+      animTimer = 0.5; 
+    } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
+      animTimer -= dt;
+      if (animTimer <= 0) currentPhase = CombatPhase.idle;
+    }
+
+    if (currentPhase == CombatPhase.idle) {
+      _teleportTimer -= dt;
+      if (_teleportTimer <= 0) {
+        List<double> linhas = [-1.0, 0.0, 1.0];
+        linhas.remove(strafePosition); 
+        strafePosition = linhas[Random().nextInt(linhas.length)];
+        _teleportTimer = 1.5 + Random().nextDouble() * 2.0; 
+      }
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+
+    // =========================================================================
+    // NOVO: RELÓGIO CUSTOMIZADO PARA AS FASES SECUNDÁRIAS
+    // A classe base não conhece o "windup2", então nós fazemos a transição aqui!
+    if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
+      animTimer -= dt;
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup2) { 
+          currentPhase = CombatPhase.active2; 
+          animTimer = 0.15; 
+          attackHit = false; 
+        }
+        else if (currentPhase == CombatPhase.active2) { 
+          currentPhase = CombatPhase.recovery2; 
+          animTimer = 1.0; 
+        } 
+        else { 
+          currentPhase = CombatPhase.idle; 
+        }
+      }
+    }
+    // =========================================================================
+
+    // --- EXECUÇÃO DOS ATAQUES (Separados por fase!) ---
+    
+    // Dispara apenas quando atingir o active 1
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true; 
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition, yPosition + visualYOffset, 0.0, -1.5, this, isHoming: true
+      ));
+    }
+
+    // Dispara apenas quando atingir o active 2
+    if (currentPhase == CombatPhase.active2 && !attackHit) {
+      attackHit = true; 
+
+      gameRef.shakeScreen(0.2, 15.0);
+      
+      List<double> linhas = [-1.0,-0.5, 0.0, 0.5 ,1.0];
+      linhas.shuffle();
+      
+      for (int i = 0; i < 3; i++) {
+        gameRef.combatOverlay.add(ArcProjectile(
+          linhas[i], -0.4, 0.0, 0.0, this, grav: 2 
+        ));
+      }
+    }
   }
 }

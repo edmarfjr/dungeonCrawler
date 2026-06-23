@@ -159,6 +159,7 @@ class _MapPainter extends CustomPainter {
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
     final paintSpike = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
+    final paintPoison = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.verde;
     final paintShrine = Paint()..color = Palette.roxo;
     final paintCrate = Paint()..color = Palette.marrom;
 
@@ -180,6 +181,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.chest) canvas.drawRect(tileRect, paintChest);
         else if (tile == TileType.shrine) canvas.drawRect(tileRect, paintShrine);
         else if (tile == TileType.spike) canvas.drawRect(tileRect, paintSpike);
+        else if (tile == TileType.poison) canvas.drawRect(tileRect, paintPoison);
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
       }

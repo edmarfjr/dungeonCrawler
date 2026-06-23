@@ -41,7 +41,7 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
       
       double direction = (playerX - strafeX).sign;
       
-      vx += direction * 4.0 * dt; 
+      vx += direction * 4.5 * dt; 
       
       vx = vx.clamp(-2.5, 2.5);
     }

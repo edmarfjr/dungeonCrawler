@@ -121,6 +121,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           break;
         case EnemyType.infectado:
         case EnemyType.naga:
+        case EnemyType.mao:
           totalColumns = 8;
           break;
         default:
@@ -133,7 +134,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       SpriteAnimation? defendAnim;
       if (entry.key == EnemyType.orc || entry.key == EnemyType.boss1 || entry.key == EnemyType.bug 
       || entry.key == EnemyType.infectado || entry.key == EnemyType.esqueleto || entry.key == EnemyType.jester
-       || entry.key == EnemyType.naga) {
+      || entry.key == EnemyType.naga || entry.key == EnemyType.mao) {
         defendAnim = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: true);
       }
 
@@ -145,7 +146,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       SpriteAnimation? windup2;
       SpriteAnimation? active2;
       SpriteAnimation? recovery2;
-      if (entry.key == EnemyType.infectado || entry.key == EnemyType.naga) {
+      if (entry.key == EnemyType.infectado || entry.key == EnemyType.naga || entry.key == EnemyType.mao) {
         windup2 = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: false);
         active2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 0.15, loop: false);
         recovery2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 1.0, loop: false);

@@ -106,6 +106,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   final ValueNotifier<int> mainMenuCursor = ValueNotifier<int>(0);
   final ValueNotifier<int> pauseMenuCursor = ValueNotifier<int>(0);
+
+  double shakeTimer = 0.0;
+  double shakeIntensity = 0.0;
+
+  void shakeScreen(double duration, double intensity) {
+    shakeTimer = duration;
+    shakeIntensity = intensity;
+  }
   
   int get levelUpCost {
     int totalLevel = (playerCombatStats.str + playerCombatStats.con + playerCombatStats.wis).toInt();
@@ -171,7 +179,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.armaduraBug
      // ItemDatabase.toxicCloud,
 
     ];
@@ -418,6 +425,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.esqueleto: await images.load('actors/esqueleto.png'),
       EnemyType.jester: await images.load('actors/jester.png'),
       EnemyType.naga: await images.load('actors/naga.png'),
+      EnemyType.mao: await images.load('actors/mao.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -442,6 +450,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.infectado: await images.load('effects/soco.png'), 
       EnemyType.esqueleto: await images.load('effects/golpeLargo.png'), 
       EnemyType.jester: await images.load('effects/bola.png'), 
+      EnemyType.mao: await images.load('effects/bola.png'), 
       EnemyType.naga: await images.load('effects/golpe.png'), 
     };
 
@@ -488,7 +497,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   @override
   void render(Canvas canvas) {
-    super.render(canvas); 
+    if (shakeTimer > 0) {
+      canvas.save(); // Salva a posição normal
+      
+      // Sorteia números entre -0.5 e 0.5, multiplicados pela intensidade
+      double dx = (Random().nextDouble() - 0.5) * shakeIntensity;
+      double dy = (Random().nextDouble() - 0.5) * shakeIntensity;
+      
+      canvas.translate(dx, dy); // Arremessa a tela inteira fora do lugar!
+      
+      super.render(canvas); // Desenha TUDO (Combate, Masmorra, etc)
+      
+      canvas.restore(); // Puxa a tela de volta pro lugar
+    } else {
+      // Se não tem terremoto, desenha normal
+      super.render(canvas);
+    }
 
     if (activeMessage != null) {
       double boxWidth = size.x * 0.8; double boxHeight = 100;
@@ -756,6 +780,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   @override
   void update(double dt) {
     super.update(dt);
+
+    if (shakeTimer > 0) {
+      shakeTimer -= dt;
+    }
 
     if (leftTapTimer > 0) leftTapTimer -= dt;
     if (rightTapTimer > 0) rightTapTimer -= dt;
@@ -1040,8 +1068,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
 
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
-        triggerEncounter();
-        //_triggerSpecificEncounter(EnemyType.slime);
+        //triggerEncounter();
+        _triggerSpecificEncounter(EnemyType.mao);
       }
 
       if (event.logicalKey == LogicalKeyboardKey.keyX) {
@@ -1192,6 +1220,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       iniPool.add(() => NagaEnemy());
     }
 
+    if(dungeon.level >= 8){
+      iniPool.add(() => HandEnemy());
+    }
+
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
       Enemy newEnemy = iniPool[enemyType]();
@@ -1261,6 +1293,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.fungo2: newEnemy = Fungo2Enemy(); break;
         case EnemyType.infectado: newEnemy = InfectadoEnemy(); break;
         case EnemyType.esqueleto: newEnemy = EsqueletoEnemy(); break;
+        case EnemyType.mao: newEnemy = HandEnemy(); break;
         case EnemyType.boss1: isBoss = true; newEnemy = OrcChefe(); break;
         case EnemyType.boss2:
 
@@ -1571,6 +1604,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       bool easyDashShield = playerCombatStats.equippedShield?.easyDash ?? false; 
       bool easyDashArmor = playerCombatStats.equippedArmor?.easyDash ?? false; 
+      bool chargeAttackShield = playerCombatStats.equippedShield?.hasChargeAttack ?? false; 
+      bool chargeAttackWeapon = playerCombatStats.equippedWeapon?.hasChargeAttack ?? false; 
       double dcusto = dashCusto;
       if (easyDashShield || easyDashArmor) dcusto = dashCusto/2;
       
@@ -1598,14 +1633,19 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
       if (input == GameInput.down) downPressed = true;
       if (input == GameInput.buttonA) {
-        //_performAttack(); 
-        if (playerCombatStats.currentPhase == CombatPhase.idle) {
-          playerCombatStats.currentPhase = CombatPhase.windup;
-          playerCombatStats.isCharging = true;
-          playerCombatStats.chargeTimer = 0.0;
-          playerCombatStats.isHeavyAttack = false;
-          playerCombatStats.animTimer = 0.5; // Reseta o temporizador visual da animação
+        if(chargeAttackShield || chargeAttackWeapon){
+          if (playerCombatStats.currentPhase == CombatPhase.idle) {
+            playerCombatStats.currentPhase = CombatPhase.windup;
+            playerCombatStats.isCharging = true;
+            playerCombatStats.chargeTimer = 0.0;
+            playerCombatStats.isHeavyAttack = false;
+            playerCombatStats.animTimer = 0.5; // Reseta o temporizador visual da animação
+          }
+        }else{
+          _performAttack();
         }
+        // 
+        
       }
       
       if (input == GameInput.up && playerCombatStats.consumables.isNotEmpty) {
