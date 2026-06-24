@@ -73,8 +73,8 @@ class PlayerCombatStats {
   bool isHeavyAttack = false;
 
   //List<PlayerProjectile> activeProjectiles = [];
-  double VfxTimer = 0.0;
-  Color VfxColor = Palette.vermelho;
+  double vfxTimer = 0.0;
+  Color vfxColor = Palette.vermelho;
 
   List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
@@ -126,8 +126,8 @@ class PlayerCombatStats {
   }
 
   void applyEffect(double duration, Color cor){
-    VfxColor = cor;
-    VfxTimer = duration;
+    vfxColor = cor;
+    vfxTimer = duration;
   }
 
   void updatePhase(double dt) {
@@ -143,9 +143,9 @@ class PlayerCombatStats {
         moveSpeed = moveSpeedIni;
       }
     }
-    if (VfxTimer > 0){
-      VfxTimer -= dt;
-      if (VfxTimer <= 0 && currentPhase == CombatPhase.hit) {
+    if (vfxTimer > 0){
+      vfxTimer -= dt;
+      if (vfxTimer <= 0 && currentPhase == CombatPhase.hit) {
         currentPhase = CombatPhase.idle; // Acordou da paralisia
       }
       return;
@@ -192,6 +192,12 @@ class PlayerCombatStats {
     double scale = screenSize.x * 0.35;
     double cx = (screenSize.x / 2) + (strafePosition * scale);
     double cy = screenSize.y - 70 - 55;
+    bool wide = equippedWeapon?.isWide ?? false;
+    if(wide){
+       hitboxWidth = 140;
+    }else{
+      hitboxWidth = 70;
+    }
     return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: hitboxWidth, height: hitboxHeight);
   }
 
@@ -199,7 +205,12 @@ class PlayerCombatStats {
     double scale = screenSize.x * 0.35;
     double cx = (screenSize.x / 2) + (strafePosition * scale);
     double cy = screenSize.y - 70 - 55;
-    return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: 120, height: 120);
+    bool wide = equippedWeapon?.isWide ?? false;
+    double size = 144;
+    if(wide){
+       hitboxWidth = 192;
+    }
+    return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: size, height: size);
   }
 
 }

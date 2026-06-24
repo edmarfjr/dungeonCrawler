@@ -13,7 +13,7 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2,
-infectado, boss2, garra, esqueleto, jester, naga, mao, doll }
+infectado, boss2, garra, esqueleto, jester, naga, mao, doll, goblinShop }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -325,7 +325,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // Inimigos voadores ou de teto (spider, bat) ficam com o 'yPosition' no alto, 
     // mas a sombra deles tem que ser cravada no 0.75 (chão)!
     // Adicione o Fungo ou outros inimigos voadores nesta lista se precisarem.
-    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo || type == EnemyType.doll) ? 0.75 : yPosition;
+    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo
+    || type == EnemyType.doll || type == EnemyType.goblinShop) ? 0.75 : yPosition;
 
     // 2. CALCULA O VÃO ATÉ O CHÃO (Gap to Floor)
     // Calcula a distância do centro do inimigo até o chão verdadeiro, somando 
@@ -795,7 +796,7 @@ class BatEnemy extends Enemy {
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,drop: [ItemDatabase.meat]
   ) {
     isMelee = true;
-    yPosition = flightHeight; // Já nasce colado no teto
+    yPosition = flightHeight; 
     targetY = flightHeight;
   }
 
@@ -2333,7 +2334,7 @@ class DollEnemy extends Enemy {
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 60,drop: []
   ) {
     isMelee = true;
-    yPosition = flightHeight; // Já nasce colado no teto
+    yPosition = flightHeight; 
     targetY = flightHeight;
   }
 
@@ -2397,6 +2398,136 @@ class DollEnemy extends Enemy {
       }
 
     } else {
+      if(isDying) return;
+      // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
+      if ((yPosition - targetY).abs() > 0.01) {
+        double verticalSpeed = speed; // Velocidade que ele volta para o teto
+        yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
+      }
+
+      // Controla a intenção de altura baseada na fase
+      if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
+        targetY = attackHeight; // Mantém no chão para você poder bater nele
+      } else if (currentPhase == CombatPhase.idle) {
+        targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
+        priority = isFrontRow ? 10 : 0;
+      }
+    }
+  }
+}
+
+class GoblinShopEnemy extends Enemy {
+  double currentDir = 1.0;
+  
+  final double flightHeight = 0.5; 
+  final double attackHeight = 0.75;   
+  double targetStrafe = 0;
+
+  GoblinShopEnemy() : super(
+    type: EnemyType.goblinShop, name: 'vendedor',
+    color: Palette.amarelo, 
+    hp: 150, maxHp: 150, dropEssence: 50, width: 144, height: 144, speed: 0.5,
+    hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10,drop: []
+  ) {
+    yPosition = flightHeight; 
+    targetY = flightHeight;
+  }
+
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // FASE DE PATRULHA
+    if (currentPhase == CombatPhase.idle) {
+      targetY = flightHeight; 
+      if ((yPosition - flightHeight).abs() < 0.05) {
+        strafePosition += currentDir * speed * dt;
+        
+        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+      }
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+   
+    // Decide atacar se o tempo estourou E se ele estiver fisicamente lá no alto
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
+
+      if(Random().nextBool()){
+        isMelee = true;
+        currentPhase = CombatPhase.windup; 
+        animTimer = 0.8; // Tempo de preparo/mergulho
+        targetY = attackHeight; // Comando para a classe pai: "Desça para o chão!"
+        attackCooldown = maxAttackCooldown;
+        targetStrafe = gameRef.playerCombatStats.strafePosition;
+      }else{
+        isMelee = false;
+        currentPhase = CombatPhase.windup2; 
+        animTimer = 0.5;
+      }
+      
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); 
+
+    if (currentPhase == CombatPhase.windup) {
+      priority = 15;
+      targetY = attackHeight;
+
+      // 1. Descobre a diferença nos eixos X e Y
+      double dx = targetStrafe - strafePosition;
+      double dy = targetY - yPosition;
+      
+      // 2. Calcula a distância total em linha reta (Teorema de Pitágoras)
+      double distance = sqrt(dx * dx + dy * dy);
+
+      // 3. Move o morcego simultaneamente nos dois eixos se ainda não chegou ao alvo
+      if (distance > 0.01) {
+        double diveSpeed = speed*3; // Velocidade do mergulho (Aumente se quiser mais agressivo)
+        double moveStep = diveSpeed * dt;
+
+        // Trava de segurança para ele não "passar do ponto" e tremer
+        if (moveStep > distance) moveStep = distance;
+
+        // Distribui a velocidade perfeitamente na diagonal
+        strafePosition += (dx / distance) * moveStep;
+        yPosition += (dy / distance) * moveStep;
+      }
+
+    } else {
+      if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
+        animTimer -= dt;
+        
+        if (animTimer <= 0) {
+          if (currentPhase == CombatPhase.windup2) {
+            currentPhase = CombatPhase.active2;
+            animTimer = 0.5; 
+            gameRef.combatOverlay.add(ArcProjectile(
+              strafePosition-0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+            ));
+            gameRef.combatOverlay.add(ArcProjectile(
+              strafePosition, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+            ));
+            gameRef.combatOverlay.add(ArcProjectile(
+              strafePosition+0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+            ));
+          } 
+          else if (currentPhase == CombatPhase.active2) {
+            currentPhase = CombatPhase.recovery2;
+            animTimer = 0.5;
+          } 
+          else if (currentPhase == CombatPhase.recovery2) {
+            currentPhase = CombatPhase.idle;
+          }
+        }
+        return; // Bloqueia a IA padrão enquanto ele conjura as magias
+      }
       if(isDying) return;
       // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
       if ((yPosition - targetY).abs() > 0.01) {

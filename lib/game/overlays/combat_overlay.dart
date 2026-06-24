@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'dart:math';
 import 'package:dungeon_crawler/game/components/Effects/buff_particles.dart';
+import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
 import 'package:dungeon_crawler/game/components/Effects/floating_text.dart';
@@ -56,7 +57,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   Map<Enemy, SpriteAnimationTicker> enemyTickers = {};       
   Map<Enemy, CombatPhase> enemyLastPhase = {};      
 
-  final ui.Image playerSlashImage;
+  List <ui.Image> playerSlashImage;
   ui.Image weaponSheetImage; 
   ui.Image armorSheetImage; 
   ui.Image shieldSheetImage;
@@ -124,6 +125,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         case EnemyType.mao:
           totalColumns = 8;
           break;
+        case EnemyType.goblinShop:
+          totalColumns = 7;
+          break; 
         default:
           totalColumns = 5;
           break;
@@ -155,6 +159,11 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         windup2 = sheet.createAnimation(row: 0, from: 7, to: 8, stepTime: 1.0, loop: false);
         active2 = sheet.createAnimation(row: 0, from: 8, to: 9, stepTime: 0.15, loop: false);
         recovery2 = sheet.createAnimation(row: 0, from: 8, to: 9, stepTime: 1.0, loop: false);
+      }
+      if (entry.key == EnemyType.goblinShop) {
+        windup2 = sheet.createAnimation(row: 0, from: 5, to: 6, stepTime: 1.0, loop: false);
+        active2 = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 0.15, loop: false);
+        recovery2 = sheet.createAnimation(row: 0, from: 6, to: 7, stepTime: 1.0, loop: false);
       }
 
       enemyAnimationSets[entry.key] = EnemyAnimationSet(
@@ -366,16 +375,19 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
 
   void _drawEffects(Canvas canvas) {
-    if (playerStats.VfxTimer > 0) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = playerStats.VfxColor.withOpacity(playerStats.VfxTimer.clamp(0.0, 0.5)));
+    if (playerStats.vfxTimer > 0) {
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = playerStats.vfxColor.withOpacity(playerStats.vfxTimer.clamp(0.0, 0.5)));
     }
   }
 
   void _drawAttackEffects(Canvas canvas) {
     if (playerStats.currentPhase == CombatPhase.active) {
+      int slashIdx = 0;
+      bool wide = playerStats.equippedWeapon?.isWide ?? false;
+      if (wide) slashIdx = 1;
       canvas.drawImageRect(
-        playerSlashImage,
-        Rect.fromLTWH(0, 0, playerSlashImage.width.toDouble(), playerSlashImage.height.toDouble()),
+        playerSlashImage[slashIdx],
+        Rect.fromLTWH(0, 0, playerSlashImage[slashIdx].width.toDouble(), playerSlashImage[slashIdx].height.toDouble()),
         playerStats.getHitboxImageSize(size), 
         Paint()
       );
@@ -483,7 +495,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     final shieldPaint = Paint();
     shieldPaint.colorFilter =  ColorFilter.mode(corEscudo, BlendMode.modulate); 
 
-    if (playerStats.VfxTimer > 0) { 
+    if (playerStats.vfxTimer > 0) { 
       playerPaint.colorFilter =  ColorFilter.mode(playerStats.flashColor, BlendMode.modulate); 
     }
     if(playerStats.cansado) {
@@ -568,8 +580,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     }
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
-      double keyX = size.x/2 - 20;
-      double keyY = 5;
+      double keyX = size.x/2 + 40;
+      double keyY = 20;
       
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, 40, 40), Paint()..color = Palette.preto);
       try {
@@ -585,7 +597,21 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, 40, 40), Paint()..color = Palette.amarelo..style = PaintingStyle.stroke..strokeWidth = 1);
       
     }
-  
+
+    if (gameRef.currentState == GameState.exploration) {
+      
+      String direc = 'N';
+      switch (gameRef.player.facing) {
+      case Direction.north: direc = 'N'; break;
+      case Direction.east:  direc = 'E'; break;
+      case Direction.south: direc = 'S'; break;
+      case Direction.west:  direc = 'W'; break;
+    }
+      TextPainter(
+          text: TextSpan(text: direc, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
+          textDirection: TextDirection.ltr,
+        )..layout()..paint(canvas, Offset(size.x/2, 20));
+    }
   }
 
   void _drawEnemyUI(Canvas canvas) {

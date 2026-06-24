@@ -158,6 +158,7 @@ class _MapPainter extends CustomPainter {
     final paintDoor = Paint()..color = Palette.vermelhoEsc;
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
+    final paintKey = Paint()..color = Palette.laranja;
     final paintSpike = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
     final paintPoison = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.verde;
     final paintShrine = Paint()..color = Palette.roxo;
@@ -170,7 +171,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-        //  continue;
+          //continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -186,6 +187,10 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
         else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
+
+        if (map.keyPosition!.x == x && map.keyPosition!.y == y){
+          canvas.drawRect(tileRect, paintKey);
+        }
 
       }
     }

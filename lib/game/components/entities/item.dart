@@ -31,6 +31,7 @@ class Item {
   final bool walkFast;
   final bool easyDash;
   final bool hasRegen;
+  final bool isWide;
   final int value;
 
   final void Function(Item item, DungeonCrawlerGame game)? onUse;
@@ -49,6 +50,7 @@ class Item {
     this.walkFast = false,
     this.easyDash = false,
     this.hasRegen = false,
+    this.isWide = false,
     this.value = 1,
   });
 }
@@ -72,7 +74,7 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 15,value:6, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png',isWide:true, 15,value:6, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
@@ -155,8 +157,8 @@ class ItemDatabase {
 
   static Item get healthPotion => Item("Poção Vermelha", ItemType.consumable, 'itens/potionVermelha.png', cor: Colors.white, 40, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.vermelho;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.vermelho;
     //if (game.currentState == GameState.exploration) {
     game.showMessage("Você recuperou ${item.power} de HP!");
     //}
@@ -164,8 +166,8 @@ class ItemDatabase {
 
   static Item get meat => Item("Carne", ItemType.consumable, 'itens/meat.png', cor: Colors.white, 10, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.vermelho;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.vermelho;
     //if (game.currentState == GameState.exploration) {
     game.showMessage("Você recuperou ${item.power} de HP!");
     //}
@@ -173,8 +175,8 @@ class ItemDatabase {
 
   static Item get manaPotion => Item("Poção Azul", ItemType.consumable, 'itens/potionAzul.png', cor: Colors.white, 100, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.mana = min(game.playerCombatStats.wis*3, game.playerCombatStats.mana + item.power);
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.azul;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.azul;
     //if (game.currentState == GameState.exploration) {
     game.showMessage("Você recuperou ${item.power} de Mana!");
     //}
@@ -184,8 +186,8 @@ class ItemDatabase {
     game.playerCombatStats.cansado = false;
     game.playerCombatStats.stamina = game.playerCombatStats.con*3;
     game.playerCombatStats.staminaInfiniteTmr = 6;
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.verdeCla;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.verdeCla;
     game.showMessage("Você recuperou todo seu fôlego!");
     //if (game.currentState == GameState.exploration) {
    // game.showMessage("Você recuperou ${item.power} de Stamina!");
@@ -195,8 +197,8 @@ class ItemDatabase {
   static Item get reflexPotion => Item("Poção Amarela", ItemType.consumable, 'itens/potionAmarela.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.reflex = true;
     game.showMessage("Você se sente mais ágil!");
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.amarelo;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.amarelo;
     //if (game.currentState == GameState.exploration) {
    // game.showMessage("Você recuperou ${item.power} de Stamina!");
     //}
@@ -204,8 +206,8 @@ class ItemDatabase {
 
   static Item get bugOrgan => Item("Orgão de inseto", ItemType.consumable, 'itens/organ.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.poisonTmr = 0;
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.vermelhoCla;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.vermelhoCla;
     game.showMessage("Você se sente melhor!");
     //if (game.currentState == GameState.exploration) {
    // game.showMessage("Você recuperou ${item.power} de Stamina!");
@@ -219,8 +221,8 @@ class ItemDatabase {
       return;
     }
     FlameAudio.play('sfx/fire.wav');
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.laranja;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.laranja;
     for (var enemy in game.combatOverlay.enemies) {
       if (enemy.isAlive) { 
         enemy.hp -= item.power; 
@@ -242,8 +244,8 @@ class ItemDatabase {
       return;
     }
     //FlameAudio.play('sfx/fire.wav');
-    game.playerCombatStats.VfxTimer = 0.5;
-    game.playerCombatStats.VfxColor = Palette.branco;
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.branco;
     for (var enemy in game.combatOverlay.enemies) {
       if (enemy.isAlive) { 
         enemy.applyHitStun(0.8); 
@@ -258,7 +260,7 @@ class ItemDatabase {
       return;
     }
     FlameAudio.play('sfx/hit.wav');
-   // game.playerCombatStats.explosionVfxTimer = 0.5;
+   // game.playerCombatStats.explosionvfxTimer = 0.5;
     Enemy enemy = game.combatOverlay.enemies[Random().nextInt(game.combatOverlay.enemies.length)];
     if (!enemy.isAlive) {
       while(!enemy.isAlive){

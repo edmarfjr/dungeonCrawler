@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -13,9 +15,10 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   double radius;
   final Enemy owner; 
   final bool isHoming;
+  String imgPath;
   
 
-  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{ this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5})
+  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{ this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5, this.imgPath = ''})
       : super(
           anchor: Anchor.center, 
           priority: 100,           
@@ -24,7 +27,12 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
 
       @override
   Future<void> onLoad() async {
-    final img = gameRef.combatOverlay.enemySlashImages[owner.type];
+    ui.Image? img;
+    if(imgPath == ''){
+      img = gameRef.combatOverlay.enemySlashImages[owner.type];
+    }else{
+      img = await game.images.load('effects/slime_eye.png');
+    }
     if (img != null) {
       sprite = Sprite(img);
       paint = Paint()..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
