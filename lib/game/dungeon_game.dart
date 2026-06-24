@@ -653,12 +653,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else if (currentShopPhase == ShopPhase.steal) {
         // Título intimidador
         TextPaint dangerTitle = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 24, fontFamily: 'pixelFont'));
-        dangerTitle.render(canvas, "ROUBAR?", Vector2(20, startY - 20));
+        dangerTitle.render(canvas, "ROUBAR?", Vector2(20, startY - 15));
         
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
           String texto = "${item.name} (Grátis!)";
-          (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + (i * 30)));
+          (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + 15 +(i * 30)));
         }
       }
     }
