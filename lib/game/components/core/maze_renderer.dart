@@ -22,6 +22,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final List <ui.Image> trapImage;
   final ui.Image roamerImage;
   final ui.Image bossImage;
+  final ui.Image shopImage;
   final ui.Image shrineImage;
 
   double _bumpTimer = 0.0;
@@ -43,6 +44,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.shrineImage,
     required this.openChestImage,
     required this.crateImage,
+    required this.shopImage,
   });
 
   void triggerWallBump({required bool forward}) {
@@ -160,7 +162,11 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         }
 
         if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, bossImage, 0.3, 0.0, Palette.vermelhoCla);
+          _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Palette.vermelhoCla);
+        }
+
+         if (tile == TileType.shop && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, shopImage, 0.6, 0.0, Colors.white);
         }
 
         if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
@@ -225,7 +231,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Se o inimigo estiver na coordenada que o laço está varrendo agora...
           if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
             // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
-            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.3, 0.0,Palette.vermelhoCla);
+            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelhoCla);
           }
         }
       }

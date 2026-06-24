@@ -13,7 +13,7 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2,
-infectado, boss2, garra, esqueleto, jester, naga, mao }
+infectado, boss2, garra, esqueleto, jester, naga, mao, doll }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -211,7 +211,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
     currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
     
-    if (!isAttacking) {
+    if (!isAttacking && !isDying) {
       if ((yPosition - targetY).abs() > 0.01) yPosition += (targetY > yPosition ? 1 : -1) * speed * dt; 
       updateBehavior(dt, gameRef.playerCombatStats);
       checkAttackDecision(dt, gameRef.playerCombatStats, gameRef.size);
@@ -325,7 +325,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // Inimigos voadores ou de teto (spider, bat) ficam com o 'yPosition' no alto, 
     // mas a sombra deles tem que ser cravada no 0.75 (chão)!
     // Adicione o Fungo ou outros inimigos voadores nesta lista se precisarem.
-    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo) ? 0.75 : yPosition;
+    double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo || type == EnemyType.doll) ? 0.75 : yPosition;
 
     // 2. CALCULA O VÃO ATÉ O CHÃO (Gap to Floor)
     // Calcula a distância do centro do inimigo até o chão verdadeiro, somando 
@@ -371,6 +371,22 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       
       double screenTopLocalY = -(position.y - size.y / 2);
       double posX = size.x / 2 + 4;
+      canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
+      canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaint);
+    }
+
+    if (type == EnemyType.doll) {
+      final webPaint = Paint()..color = Palette.bege..strokeWidth = 5.0..style = PaintingStyle.stroke..isAntiAlias = false;
+      final webPaintBorder = Paint()..color = Palette.preto..strokeWidth = 15.0..isAntiAlias = false..style = PaintingStyle.stroke;  
+      
+      double screenTopLocalY = -(position.y - size.y / 2);
+      double posX = size.x / 2 + 4;
+      canvas.drawLine(Offset(posX+hurtboxWidth/2, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
+      canvas.drawLine(Offset(posX+hurtboxWidth/2, size.y / 2), Offset(posX, screenTopLocalY), webPaint);
+
+      canvas.drawLine(Offset(posX-hurtboxWidth/2, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
+      canvas.drawLine(Offset(posX-hurtboxWidth/2, size.y / 2), Offset(posX, screenTopLocalY), webPaint);
+
       canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
       canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaint);
     }
@@ -843,6 +859,7 @@ class BatEnemy extends Enemy {
       }
 
     } else {
+      if(isDying) return;
       // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
       if ((yPosition - targetY).abs() > 0.01) {
         double verticalSpeed = speed; // Velocidade que ele volta para o teto
@@ -1058,7 +1075,7 @@ class BugEnemy extends Enemy {
   BugEnemy() : super(name: 'bug',
     type: EnemyType.bug, 
     color: Palette.cinza,
-    hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 100, maxHp: 100, dropEssence: 30, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.bugOrgan]
   ) {
@@ -1163,7 +1180,7 @@ class OvoEnemy extends Enemy {
   OvoEnemy() : super(name: 'ovo',
     type: EnemyType.ovo, 
     color: Palette.cinza,
-    hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 80, maxHp: 80, dropEssence: 10, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.bugOrgan],
     maxAttackCooldown: 5, isMelee: false, dieAnim: CombatPhase.recovery,
@@ -1245,7 +1262,7 @@ class FungoEnemy extends Enemy {
     name: 'fungo',
     type: EnemyType.fungo,
     color: Palette.roxo,
-    hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.5,
+    hp: 60, maxHp: 60, dropEssence: 20, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: -10,
     hitboxWidth: 0, hitboxHeight: 0,
     drop: [],
@@ -1466,7 +1483,7 @@ class InfectadoEnemy extends Enemy {
   InfectadoEnemy() : super(name: 'infectado',
     type: EnemyType.infectado, 
     color: Palette.cinza, // Cor do escudo/armadura
-    hp: 90, maxHp: 90, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 90, maxHp: 90, dropEssence: 40, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteFung],
     imunePoison: true,
@@ -1779,7 +1796,7 @@ class EsqueletoEnemy extends Enemy {
   EsqueletoEnemy() : super(name: 'esqueleto',
     type: EnemyType.esqueleto, 
     color: Palette.cinza, // Cor do escudo/armadura
-    hp: 120, maxHp: 120, dropEssence: 20, width: 144, height: 144, speed: 0.6,
+    hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
     hitboxWidth: 100, hitboxHeight: 100, hitboxOffsetY: 10,drop: [],
     imunePoison: true,
@@ -1849,6 +1866,8 @@ class JesterEnemy extends Enemy {
   double _hopTimer = 0.0;
   double _targetStrafe = 0.0;
   bool _isHopping = false;
+  bool isSummoning = false;
+  double summonCooldown = 10.0;
 
   JesterEnemy() : super(
     name: 'jester',
@@ -1856,11 +1875,11 @@ class JesterEnemy extends Enemy {
     color: Palette.amarelo, 
     hp: 100, maxHp: 100, dropEssence: 20, 
     width: 144, height: 144, 
-    hurtboxWidth: 70, hurtboxHeight: 100,
+    hurtboxWidth: 70, hurtboxHeight: 140,
     hitboxWidth: 80, hitboxHeight: 80, 
     speed: 1.5, 
     maxAttackCooldown: 2.5, 
-    drop: [],
+    drop: [ItemDatabase.bola],
     isMelee: false, 
   ) {
     _targetStrafe = strafePosition;
@@ -1891,6 +1910,15 @@ class JesterEnemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
 
     attackCooldown -= dt;
+    summonCooldown -= dt;
+
+    if (summonCooldown <= 0) {
+        isSummoning = true;
+        currentPhase = CombatPhase.windup;
+        animTimer = 0.5; // Fica 1.5s tocando o berrante / fazendo a pose
+        summonCooldown = 10.0 + Random().nextDouble() * 5.0; 
+        return;
+      }
     
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && !_isHopping) {
       currentPhase = CombatPhase.windup;
@@ -1961,19 +1989,38 @@ class JesterEnemy extends Enemy {
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true; // Trava para atirar apenas 1 vez por animação
 
-      double startY = yPosition + visualYOffset;
+      if(isSummoning){
+        isSummoning= false;
+        _spawnDoll();
 
-      // Cria o projétil teleguiado e joga no cenário
-      // Ajuste o vx/vy para a curva que achar mais legal para o Jester
-      gameRef.combatOverlay.add(ArcProjectile(
-        strafePosition, 
-        startY, 
-        0.0,   // vx (velocidade X inicial)
-        -1.5,  // vy (força do arremesso para cima)
-        this,
-        isHoming: true
-      ));
+      }else{
+        double startY = yPosition + visualYOffset;
+
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, 
+          startY, 
+          0.0,
+          -0.5,
+          this,
+          grav: 1,
+          isHoming: true
+        ));
+      }
+
     }
+  }
+
+  void _spawnDoll() {
+    var doll = DollEnemy();
+    
+    doll.isFrontRow = isFrontRow; 
+    
+    doll.strafePosition = strafePosition + (Random().nextBool() ? 0.3 : -0.3);
+    doll.strafePosition = doll.strafePosition.clamp(-1.0, 1.0);
+
+    gameRef.combatOverlay.enemies.add(doll);
+    parent?.add(doll);
+    
   }
 }
 
@@ -1984,7 +2031,7 @@ class NagaEnemy extends Enemy {
     name: 'naga',isBoss: true,
     type: EnemyType.naga, 
     color: Palette.vermelhoEsc, 
-    hp: 250, maxHp: 250, dropEssence: 100, 
+    hp: 250, maxHp: 250, dropEssence: 40, 
     width: 144, height: 144, speed: 0.45,
     hurtboxWidth: 100, hurtboxHeight: 170, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteNaga]
@@ -2132,7 +2179,7 @@ class HandEnemy extends Enemy {
     name: 'Mão',
     type: EnemyType.mao,
     color: Palette.cinzaEsc, 
-    hp: 150, maxHp: 150, dropEssence: 30, 
+    hp: 150, maxHp: 150, dropEssence: 40, 
     width: 144, height: 144, 
     hurtboxWidth: 80, hurtboxHeight: 130,
     hitboxWidth: 90, hitboxHeight: 90, 
@@ -2249,7 +2296,7 @@ class HandEnemy extends Enemy {
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true; 
       gameRef.combatOverlay.add(ArcProjectile(
-        strafePosition, yPosition + visualYOffset, 0.0, -1.5, this, isHoming: true
+        strafePosition, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1
       ));
     }
 
@@ -2264,8 +2311,105 @@ class HandEnemy extends Enemy {
       
       for (int i = 0; i < 3; i++) {
         gameRef.combatOverlay.add(ArcProjectile(
-          linhas[i], -0.4, 0.0, 0.0, this, grav: 2 
+          linhas[i], -0.4, 0.0, 0.0, this, grav: 1 
         ));
+      }
+    }
+  }
+}
+
+class DollEnemy extends Enemy {
+  double currentDir = 1.0;
+  
+  final double flightHeight = 0.5; 
+  final double attackHeight = 0.75;   
+  double targetStrafe = 0;
+
+  DollEnemy() : super(
+    type: EnemyType.doll, name: 'boneco',
+    color: Palette.roxo, 
+    hp: 70, maxHp: 70, dropEssence: 10, width: 144, height: 144, speed: 0.5,
+    hurtboxWidth: 40, hurtboxHeight: 120, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 60,drop: []
+  ) {
+    isMelee = true;
+    yPosition = flightHeight; // Já nasce colado no teto
+    targetY = flightHeight;
+  }
+
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    // FASE DE PATRULHA
+    if (currentPhase == CombatPhase.idle) {
+      targetY = flightHeight; // Garante que a intenção é ficar no teto
+
+      // Só flutua de um lado pro outro se já tiver chegado lá em cima
+      if ((yPosition - flightHeight).abs() < 0.05) {
+        strafePosition += currentDir * speed * dt;
+        
+        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+      }
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+   
+    // Decide atacar se o tempo estourou E se ele estiver fisicamente lá no alto
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 1.0; // Tempo de preparo/mergulho
+      targetY = attackHeight; // Comando para a classe pai: "Desça para o chão!"
+      attackCooldown = maxAttackCooldown;
+      targetStrafe = gameRef.playerCombatStats.strafePosition;
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); // A classe pai resolve a cor, timers e sprites
+
+    if (currentPhase == CombatPhase.windup) {
+      priority = 15;
+      targetY = attackHeight;
+
+      // 1. Descobre a diferença nos eixos X e Y
+      double dx = targetStrafe - strafePosition;
+      double dy = targetY - yPosition;
+      
+      // 2. Calcula a distância total em linha reta (Teorema de Pitágoras)
+      double distance = sqrt(dx * dx + dy * dy);
+
+      // 3. Move o morcego simultaneamente nos dois eixos se ainda não chegou ao alvo
+      if (distance > 0.01) {
+        double diveSpeed = speed*3; // Velocidade do mergulho (Aumente se quiser mais agressivo)
+        double moveStep = diveSpeed * dt;
+
+        // Trava de segurança para ele não "passar do ponto" e tremer
+        if (moveStep > distance) moveStep = distance;
+
+        // Distribui a velocidade perfeitamente na diagonal
+        strafePosition += (dx / distance) * moveStep;
+        yPosition += (dy / distance) * moveStep;
+      }
+
+    } else {
+      if(isDying) return;
+      // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
+      if ((yPosition - targetY).abs() > 0.01) {
+        double verticalSpeed = speed; // Velocidade que ele volta para o teto
+        yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
+      }
+
+      // Controla a intenção de altura baseada na fase
+      if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
+        targetY = attackHeight; // Mantém no chão para você poder bater nele
+      } else if (currentPhase == CombatPhase.idle) {
+        targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
+        priority = isFrontRow ? 10 : 0;
       }
     }
   }

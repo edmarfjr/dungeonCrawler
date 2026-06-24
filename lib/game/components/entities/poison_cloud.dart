@@ -48,7 +48,7 @@ class PoisonCloud extends SpriteComponent with HasGameRef<DungeonCrawlerGame> {
       flipHorizontally(); 
     }
 
-    if (tmr <= 0 || !owner.isAlive) {
+    if (tmr <= 0 || !owner.isAlive || game.currentState == GameState.exploration) {
       removeFromParent();
       return;
     }

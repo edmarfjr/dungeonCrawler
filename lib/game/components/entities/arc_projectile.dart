@@ -8,13 +8,14 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   double yPos;
   double vx;
   double vy;
+  double speedX;
   double grav;
   double radius;
   final Enemy owner; 
   final bool isHoming;
   
 
-  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{ this.grav = 3.0,this.radius = 30, this.isHoming = false})
+  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{ this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5})
       : super(
           anchor: Anchor.center, 
           priority: 100,           
@@ -41,7 +42,7 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
       
       double direction = (playerX - strafeX).sign;
       
-      vx += direction * 4.5 * dt; 
+      vx += direction * speedX * dt; 
       
       vx = vx.clamp(-2.5, 2.5);
     }
@@ -49,7 +50,7 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
     strafeX += vx * dt;
     yPos += vy * dt;
 
-    if (yPos > 1.0 || !owner.isAlive) {
+    if (yPos > 1.0 || !owner.isAlive || game.currentState == GameState.exploration) {
       removeFromParent();
       return;
     }

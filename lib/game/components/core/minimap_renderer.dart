@@ -113,6 +113,10 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             tilePaint.color = Palette.marrom;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
+          case TileType.shop:
+            tilePaint.color = Palette.azulCla;
+            canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
+            break;
         }
 
         // Desenha a Chave se ela estiver nessa posição e o jogador ainda não pegou

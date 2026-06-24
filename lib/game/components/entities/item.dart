@@ -11,7 +11,7 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
   
-enum ItemType { weapon, armor, shield, consumable, spell }
+enum ItemType { weapon, armor, shield, consumable, spell, coin }
 
 class Item {
   final String name;
@@ -31,6 +31,7 @@ class Item {
   final bool walkFast;
   final bool easyDash;
   final bool hasRegen;
+  final int value;
 
   final void Function(Item item, DungeonCrawlerGame game)? onUse;
 
@@ -48,6 +49,7 @@ class Item {
     this.walkFast = false,
     this.easyDash = false,
     this.hasRegen = false,
+    this.value = 1,
   });
 }
 
@@ -275,6 +277,10 @@ class ItemDatabase {
     }
   });
 
+  static Item get coin => Item("moeda", ItemType.coin, 'itens/coin.png', cor: Colors.white, 3, quantity: 1, onUse: (item, game) {
+  
+  });
+
   
   static Item get slimeEye => Item("Olho de Slime", ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
@@ -294,11 +300,38 @@ class ItemDatabase {
     double calculatedDamage = item.power + game.playerCombatStats.str.toDouble();
 
     final ui.Image img = await game.images.load('effects/slime_eye.png');
-    game.combatOverlay.add(SlimeEyeProjectile(
+    game.combatOverlay.add(BounceProjectile(
       startPosition: launchPos, 
       velocity: initialVelocity,
       damage: calculatedDamage,
       img: img,
+    ));
+  });
+
+  static Item get bola => Item("Bola", ItemType.consumable, 'itens/bola.png', 5, quantity: 1, cor: Colors.white, onUse: (item, game) async {
+    if (game.currentState != GameState.combat) {
+      game.showMessage("Guarde isso para usar durante as batalhas!");
+      item.quantity++;
+      return;
+    }
+    double scale = game.size.x * 0.35; 
+    double playerPixelX = (game.size.x / 2) + (game.playerCombatStats.strafePosition * scale);
+    
+    Vector2 launchPos = Vector2(playerPixelX, game.size.y * 0.70);
+
+    double randomAngleOffsetX = (Random().nextDouble() * 0.4) - 0.2; 
+    double projectileSpeed = 550.0; 
+    Vector2 initialVelocity = Vector2(randomAngleOffsetX, -1.0).normalized() * projectileSpeed;
+
+    double calculatedDamage = item.power + game.playerCombatStats.str.toDouble();
+
+    final ui.Image img = await game.images.load('effects/bola.png');
+    game.combatOverlay.add(BounceProjectile(
+      startPosition: launchPos, 
+      velocity: initialVelocity,
+      damage: calculatedDamage,
+      img: img,
+      remainingTime: 30
     ));
   });
 

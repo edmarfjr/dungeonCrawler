@@ -162,6 +162,7 @@ class _MapPainter extends CustomPainter {
     final paintPoison = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.verde;
     final paintShrine = Paint()..color = Palette.roxo;
     final paintCrate = Paint()..color = Palette.marrom;
+    final paintShop = Paint()..color = Palette.azulCla;
 
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
@@ -169,7 +170,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-          continue;
+        //  continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -184,6 +185,8 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.poison) canvas.drawRect(tileRect, paintPoison);
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
+        else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
+
       }
     }
 

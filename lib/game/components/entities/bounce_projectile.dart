@@ -6,21 +6,22 @@ import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame_audio/flame_audio.dart';
 
-class SlimeEyeProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
+class BounceProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   Vector2 velocity;
   double damage;        // Dano do item
-  double remainingTime = 6.0; // O olho some sozinho após 6 segundos...
-  int maxBounces = 10;       // ...ou após quicar 10 vezes pelas paredes/inimigos
+  double remainingTime; // O olho some sozinho após 6 segundos...
+  //int maxBounces = 10;       // ...ou após quicar 10 vezes pelas paredes/inimigos
   int bounceCount = 0;
   ui.Image img;
   double tamanho;
   bool liberado = false;
+  
 
   // Guarda uma lista de inimigos atingidos com um pequeno cooldown 
   // para o projétil não dar dano múltiplo no mesmo inimigo no mesmo frame
   final Map<Enemy, double> _hitCooldowns = {};
 
-  SlimeEyeProjectile({required Vector2 startPosition, required this.velocity, required this.img, this.damage = 3, this.tamanho = 30})
+  BounceProjectile({required Vector2 startPosition, required this.velocity, required this.img, this.damage = 3, this.tamanho = 30,this.remainingTime = 6})
       : super(
           position: startPosition,
           size: Vector2(144, 144),
@@ -45,11 +46,10 @@ class SlimeEyeProjectile extends PositionComponent with HasGameRef<DungeonCrawle
   @override
   void update(double dt) {
     super.update(dt);
-    
+    if(gameRef.currentState == GameState.paused)return;
     // 1. Controle de vida do projétil
     remainingTime -= dt;
-    if (remainingTime <= 0 || bounceCount >= maxBounces) {
-      
+    if (remainingTime <= 0){// || bounceCount >= maxBounces) {
       liberado = true;
     }
 
@@ -141,6 +141,11 @@ class SlimeEyeProjectile extends PositionComponent with HasGameRef<DungeonCrawle
         removeFromParent();
         return;
       }
+    }
+
+    if(game.currentState == GameState.exploration){
+      removeFromParent();
+      return;
     }
     
   }
