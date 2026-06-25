@@ -7,59 +7,68 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
-  final double tileSize = 4.0; // Tamanho de cada bloco no minimapa em pixels
+  final double tileSize = 4.0;
   final int viewRadius = 7;
+  
   @override
   void render(Canvas canvas) {
     super.render(canvas);
     
-    // Mostra o minimapa apenas na fase de exploração
     if (gameRef.currentState != GameState.exploration) return;
 
     final map = gameRef.dungeon;
     final player = gameRef.player;
 
-    // Calcula o tamanho total da janela fixa em pixels
-    int viewDiameter = (viewRadius * 2) + 1; // Ex: 7 + 7 + 1 = 15 blocos
+    int viewDiameter = (viewRadius * 2) + 1; 
     double mapWidth = viewDiameter * tileSize;
     double mapHeight = viewDiameter * tileSize;
     
-    // Posiciona o minimapa no canto superior direito da tela
-    double startX = gameRef.size.x - mapWidth ;
+    double startX = gameRef.size.x - mapWidth;
     double startY = 0.0; 
 
-    // Guardar o estado do canvas para aplicar o recorte seguro (Clip)
-    canvas.save();
+    final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth, mapHeight);
 
-    // 1. Fundo do Minimapa (Borda preta translúcida fixa)
-    final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth-1, mapHeight);
+    // 1. Fundo do Minimapa
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
-    canvas.drawRect(backgroundRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.save();
+    canvas.clipRect(backgroundRect);
 
-    // Máscara de Recorte: Garante que NADA desenhado saia para fora do quadrado do minimapa
-    canvas.clipRect(Rect.fromLTWH(startX, startY, mapWidth, mapHeight));
+    // =====================================================================
+    // A MÁGICA: TRAVA DE CÂMARA (CLAMPING)
+    // =====================================================================
+    int cameraX = player.x;
+    int cameraY = player.y;
 
-    // 2. DESENHO DOS BLOCOS RELATIVOS À POSIÇÃO DO JOGADOR
-    // Varre uma matriz restrita ao redor do jogador, e não o mapa inteiro!
-    for (int offsetScaleY = -viewRadius; offsetScaleY <= viewRadius; offsetScaleY++) {
-      for (int offsetScaleX = -viewRadius; offsetScaleX <= viewRadius; offsetScaleX++) {
+    // Impede que a câmara tente mostrar o vazio além das bordas do mapa!
+    int minCam = viewRadius;
+    int maxCamX = max(minCam, map.width - 1 - viewRadius);
+    int maxCamY = max(minCam, map.height - 1 - viewRadius);
+
+    if (cameraX < minCam) cameraX = minCam;
+    if (cameraX > maxCamX) cameraX = maxCamX;
+    
+    if (cameraY < minCam) cameraY = minCam;
+    if (cameraY > maxCamY) cameraY = maxCamY;
+
+    // Define qual é o bloco que fica no canto superior esquerdo do minimapa
+    int startMapX = cameraX - viewRadius;
+    int startMapY = cameraY - viewRadius;
+    // =====================================================================
+
+
+    // 2. DESENHO DOS BLOCOS DA MASMORRA
+    for (int y = 0; y < viewDiameter; y++) {
+      for (int x = 0; x < viewDiameter; x++) {
         
-        // Coordenada real dentro da matriz global da dungeon
-        int mapX = player.x + offsetScaleX;
-        int mapY = player.y + offsetScaleY;
+        int mapX = startMapX + x;
+        int mapY = startMapY + y;
 
-        // Posição onde este bloco específico deve ser desenhado na tela
-        double renderX = startX + (offsetScaleX + viewRadius) * tileSize;
-        double renderY = startY + (offsetScaleY + viewRadius) * tileSize;
-
-        // Se estiver fora dos limites da masmorra gerada, desenha o vazio/parede externa
-        if (mapX < 0 || mapX >= map.width || mapY < 0 || mapY >= map.height) {
-          canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), Paint()..color = Palette.preto);
-          continue;
-        }
-
-        // Só desenha se o jogador já tiver explorado/iluminado este bloco (Fog of War)
+        // Se por algum motivo o mapa for minúsculo, previne erros
+        if (mapX < 0 || mapX >= map.width || mapY < 0 || mapY >= map.height) continue;
         if (!map.explored[mapY][mapX]) continue;
+
+        double renderX = startX + (x * tileSize);
+        double renderY = startY + (y * tileSize);
 
         TileType tile = map.getTile(mapX, mapY);
         Paint tilePaint = Paint();
@@ -96,12 +105,10 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
             break;
           case TileType.spike:
-            // Spikes mudam de cor conforme o estado da armadilha
             tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.poison:
-            // Spikes mudam de cor conforme o estado da armadilha
             tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.verde;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
@@ -117,21 +124,18 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             tilePaint.color = Palette.azulCla;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
+          case TileType.font:
+            tilePaint.color = Palette.azul;
+            canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
+            break;
         }
 
-        // Desenha a Chave se ela estiver nessa posição e o jogador ainda não pegou
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && !player.hasKey) {
-          canvas.drawRect(
-            Rect.fromLTWH(renderX + 1, renderY + 1, tileSize/2, tileSize/2),
-            Paint()..color = Palette.amarelo
-          );
+          canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize/2, tileSize/2), Paint()..color = Palette.amarelo);
         }
 
         if (map.droppedItems.containsKey(Point(mapX, mapY)) && map.droppedItems[Point(mapX, mapY)]!.isNotEmpty) {
-          canvas.drawRect(
-            Rect.fromLTWH(renderX + 2, renderY + 2, tileSize, tileSize),
-            Paint()..color = Palette.azulCla
-          );
+          canvas.drawRect(Rect.fromLTWH(renderX + 2, renderY + 2, tileSize, tileSize), Paint()..color = Palette.azulCla);
         }
       }
     }
@@ -139,25 +143,33 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     // 3. DESENHO DOS INIMIGOS PRÓXIMOS
     final enemyPaint = Paint()..color = Palette.vermelho;
     for (var enemy in map.roamingEnemies) {
-      // Verifica se o inimigo está dentro do raio visível do radar do minimapa
-      int offsetX = enemy.x - player.x;
-      int offsetY = enemy.y - player.y;
-
-      if (offsetX.abs() <= viewRadius && offsetY.abs() <= viewRadius) {
-        if (map.explored[enemy.y][enemy.x]) {
-          double renderX = startX + (offsetX + viewRadius) * tileSize;
-          double renderY = startY + (offsetY + viewRadius) * tileSize;
-          canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize-1, tileSize-1), enemyPaint);
+      if (map.explored[enemy.y][enemy.x]) {
+        // Calcula a posição do inimigo relativa à câmara do minimapa
+        int ex = enemy.x - startMapX;
+        int ey = enemy.y - startMapY;
+        
+        // Só desenha se ele estiver dentro do visor do minimapa
+        if (ex >= 0 && ex < viewDiameter && ey >= 0 && ey < viewDiameter) {
+          double renderX = startX + (ex * tileSize);
+          double renderY = startY + (ey * tileSize);
+         //canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize-1, tileSize-1), enemyPaint);
+          canvas.drawCircle(Offset(renderX+tileSize/2, renderY+tileSize/2), tileSize/2, enemyPaint);
         }
       }
     }
 
-    // 4. DESENHO DO JOGADOR (Sempre centralizado no radar!)
-    double playerRenderX = startX + viewRadius * tileSize;
-    double playerRenderY = startY + viewRadius * tileSize;
-    canvas.drawRect(Rect.fromLTWH(playerRenderX, playerRenderY, tileSize, tileSize), Paint()..color = Palette.azul);
+    // 4. DESENHO DO JOGADOR
+    // O jogador agora move-se livremente no radar quando a câmara trava na parede!
+    int playerRelX = player.x - startMapX;
+    int playerRelY = player.y - startMapY;
+    
+    double playerRenderX = startX + (playerRelX * tileSize);
+    double playerRenderY = startY + (playerRelY * tileSize);
+    
+    //canvas.drawRect(Rect.fromLTWH(playerRenderX, playerRenderY, tileSize, tileSize), Paint()..color = Palette.azul);
+    canvas.drawCircle(Offset(playerRenderX+tileSize/2, playerRenderY+tileSize/2), tileSize/2, Paint()..color = Palette.azul);
 
-    // 5. Indicador minúsculo de direção do jogador (Seta/Ponto de direção)
+    // Indicador de direção do jogador
     double dx = 0, dy = 0;
     switch (player.facing) {
       case Direction.north: dy = -tileSize * 0.35; break;
@@ -171,7 +183,15 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
       Paint()..color = Palette.vermelhoCla
     );
 
-    // Restaurar o canvas para o estado original (remover o Clip) para não afetar o resto da interface
     canvas.restore();
+    
+    // 5. Borda final por cima de tudo
+    canvas.drawRect(
+      backgroundRect, 
+      Paint()
+        ..color = Palette.branco
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+    );
   }
 }

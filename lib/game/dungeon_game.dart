@@ -439,6 +439,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final ui.Image floorImg3 = await images.load('tilesets/floor1.png');
 
     final ui.Image shopImg = await images.load('tilesets/shop.png');
+    final ui.Image fontImg = await images.load('tilesets/fonte.png');
 
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
@@ -474,6 +475,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.mao: await images.load('actors/mao.png'),
       EnemyType.doll: await images.load('actors/doll.png'),
       EnemyType.goblinShop: await images.load('actors/goblinShop.png'),
+      EnemyType.boss3: await images.load('actors/boss3.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -503,6 +505,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.naga: await images.load('effects/golpe.png'), 
       EnemyType.doll: await images.load('effects/golpe.png'), 
       EnemyType.goblinShop: await images.load('effects/golpe.png'), 
+      EnemyType.boss3: await images.load('effects/soco2.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -524,6 +527,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       openChestImage: openChestSprite,
       crateImage: crateSprite,
       shopImage: shopImg,
+      fontImage: fontImg,
     );
     renderer.size = size; 
     add(renderer);
@@ -570,8 +574,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       double boxWidth = size.x * 0.8; double boxHeight = 100;
       double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
-      canvas.drawRect(rect, Paint()..color = Colors.black.withOpacity(0.95));
-      canvas.drawRect(rect, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(rect, Paint()..color = Palette.preto);
+      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
       final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
       textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
@@ -599,9 +603,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           
           // Opcional: Pinta a palavra "ROUBAR" de vermelho para destacar o perigo
           TextPaint paintToUse = normalPaint;
-          if (i == shopCursor) paintToUse = selectPaint;
-          else if (i == 2) paintToUse = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
-
+          if (i == shopCursor){
+             paintToUse = selectPaint;
+          }else if (i == 2) {
+            paintToUse = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
+          }
           paintToUse.render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + (i * 30)));
         }
       }
@@ -627,12 +633,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           bool isEquipped = (item == playerCombatStats.equippedWeapon || item == playerCombatStats.equippedArmor || item == playerCombatStats.equippedShield);
           String sufixo = isEquipped ? " (Equipado)" : "";
           
-          String texto = "${item.name} (x${item.quantity})$sufixo - Vender por: \$${valorVenda}";
+          String texto = "${item.name} (x${item.quantity})$sufixo - Vender por: \$$valorVenda";
           
           TextPaint paintToUse = normalPaint;
-          if (i == shopCursor) paintToUse = selectPaint;
-          else if (isEquipped) paintToUse = TextPaint(style: const TextStyle(color: Palette.cinzaEsc, fontSize: 16, fontFamily: 'pixelFont'));
-
+          if (i == shopCursor) {
+            paintToUse = selectPaint;
+          } else if (isEquipped) {
+            paintToUse = TextPaint(style: const TextStyle(color: Palette.cinzaEsc, fontSize: 16, fontFamily: 'pixelFont'));
+          }
           (i == shopCursor ? selectPaint : paintToUse).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + 15 +(i * 30)));
         }
       }
@@ -642,7 +650,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         int valorVenda = (itemToSell!.value * 0.5).floor();
         if (valorVenda < 1) valorVenda = 1;
 
-        titlePaint.render(canvas, "Vender ${itemToSell!.name} por \$${valorVenda}?", Vector2(20, startY));
+        titlePaint.render(canvas, "Vender ${itemToSell!.name} por \$$valorVenda?", Vector2(20, startY));
         
         List<String> options = ["VENDER", "SAIR"];
         for (int i = 0; i < options.length; i++) {
@@ -696,7 +704,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     if (currentState == GameState.levelUp) {
       final overlayRect = Rect.fromLTWH(0, 0, size.x, size.y * 0.66);
-      canvas.drawRect(overlayRect, Paint()..color = Colors.black.withOpacity(0.85));
+      canvas.drawRect(overlayRect, Paint()..color = Palette.preto);
 
       final borderPaint = Paint()..color = Palette.roxo..style = PaintingStyle.stroke..strokeWidth = 3;
       canvas.drawRect(overlayRect.deflate(15), borderPaint);
@@ -803,7 +811,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       double menuY = (size.y - menuHeight) / 2;
 
       final menuRect = Rect.fromLTWH(menuX, menuY, menuWidth, menuHeight);
-      canvas.drawRect(menuRect, Paint()..color = Palette.preto.withOpacity(0.95));
+      canvas.drawRect(menuRect, Paint()..color = Palette.preto);
       canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
       List<String> options = ["Equipar/Usar", "Descartar", "Cancelar"];
@@ -1022,6 +1030,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           case 6:
             _triggerSpecificEncounter(EnemyType.boss2);
             break;
+          case 9:
+            _triggerSpecificEncounter(EnemyType.boss3);
+            break;
         }
         
       }
@@ -1233,7 +1244,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.doll);
+          _triggerSpecificEncounter(EnemyType.boss3);
         }
       }
 
@@ -1283,7 +1294,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double dmg = max(1, enemy.damage - defense);
     bool unblockable = enemy.isHeavyAttack;
     
-    if(dashTimer>0)return;
+    if(dashTimer>0 || playerCombatStats.invencibleTmr > 0)return;
 
     if (playerCombatStats.isGuarding && !unblockable) {
       FlameAudio.play('sfx/block.wav');
@@ -1462,6 +1473,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.doll: newEnemy = DollEnemy(); break;
         case EnemyType.goblinShop: newEnemy = GoblinShopEnemy(); break;
         case EnemyType.boss1: isBoss = true; newEnemy = OrcChefe(); break;
+        case EnemyType.boss3: isBoss = true; newEnemy = MagoEnemy(); break;
         case EnemyType.boss2:
 
           isBoss = true;
@@ -2148,6 +2160,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (playerTile == TileType.shop) {
       openShop();
+    }
+
+    if (playerTile == TileType.font) {
+      playerCombatStats.hp = playerCombatStats.maxHp;
+      playerCombatStats.mana = playerCombatStats.wis*3;
+      playerCombatStats.vfxTimer = 0.5;
+      playerCombatStats.vfxColor = Palette.vermelho;
+      showMessage("Você se sente revigorado!");
+
     }
 
     if (playerTile == TileType.shrine) {

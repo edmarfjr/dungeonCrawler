@@ -164,6 +164,7 @@ class _MapPainter extends CustomPainter {
     final paintShrine = Paint()..color = Palette.roxo;
     final paintCrate = Paint()..color = Palette.marrom;
     final paintShop = Paint()..color = Palette.azulCla;
+    final fontShop = Paint()..color = Palette.azul;
 
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
@@ -171,7 +172,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-          //continue;
+          continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -187,6 +188,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
         else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
+        else if (tile == TileType.font) canvas.drawRect(tileRect, fontShop);
 
         if (map.keyPosition!.x == x && map.keyPosition!.y == y){
           canvas.drawRect(tileRect, paintKey);
@@ -196,10 +198,11 @@ class _MapPainter extends CustomPainter {
     }
 
     // Desenha o Jogador
-    Rect tileRect = Rect.fromLTWH(offsetX + playerX * tileSize, offsetY + playerY * tileSize, tileSize, tileSize);
+    //Rect tileRect = Rect.fromLTWH(offsetX + playerX * tileSize, offsetY + playerY * tileSize, tileSize, tileSize);
     final playerPaint = Paint()..color = Palette.azul;
 
-    canvas.drawRect(tileRect, playerPaint);
+    //canvas.drawRect(tileRect, playerPaint);
+    canvas.drawCircle(Offset((offsetX + playerX * tileSize)+tileSize/2, (offsetY + playerY * tileSize)+tileSize/2), tileSize/2, playerPaint);
   }
 
   @override

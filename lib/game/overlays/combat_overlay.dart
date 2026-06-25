@@ -453,6 +453,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawPlayer(Canvas canvas) {
+    if (playerStats.invencibleTmr>0 && (playerStats.invencibleTmr * 15).toInt() % 2 == 0) return;
+    
     double playerWidth = 196; double playerHeight = 196;
     double yOffset = 0; double duration = 0.5;
 
@@ -581,7 +583,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     }
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
       double keyX = size.x/2 + 40;
-      double keyY = 20;
+      double keyY = 10;
       
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, 40, 40), Paint()..color = Palette.preto);
       try {
@@ -589,7 +591,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           gameRef.keySprite, 
           Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
           Rect.fromLTWH(keyX, keyY, 40, 40),
-          Paint()..colorFilter = ColorFilter.mode(Palette.laranja, BlendMode.modulate)
+          Paint()..colorFilter = ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
         );
       } catch (e) {
         // Fallback caso a imagem dê erro
@@ -610,7 +612,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       TextPainter(
           text: TextSpan(text: direc, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x/2, 20));
+        )..layout()..paint(canvas, Offset(size.x/2, 18));
     }
   }
 

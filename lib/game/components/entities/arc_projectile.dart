@@ -16,9 +16,15 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   final Enemy owner; 
   final bool isHoming;
   String imgPath;
+  double waitTmr;
+  double _flipTimer = 0.0; 
+  final double _flipInterval = 0.1;
+  bool corNormal = true;
+  bool travouMira = false;
+  double alvoX = 0;
   
 
-  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{ this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5, this.imgPath = ''})
+  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{this.waitTmr = 0, this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5, this.imgPath = ''})
       : super(
           anchor: Anchor.center, 
           priority: 100,           
@@ -31,7 +37,7 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
     if(imgPath == ''){
       img = gameRef.combatOverlay.enemySlashImages[owner.type];
     }else{
-      img = await game.images.load('effects/slime_eye.png');
+      img = await game.images.load(imgPath);
     }
     if (img != null) {
       sprite = Sprite(img);
@@ -42,13 +48,33 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   @override
   void update(double dt) {
     if(gameRef.currentState == GameState.paused)return;
+    
     super.update(dt);
+    
+    if(waitTmr>0){
+      waitTmr-=dt;
+      return;
+    }else if(!travouMira){
+      travouMira = true;
+      alvoX = gameRef.playerCombatStats.strafePosition;
+    }
+
+    _flipTimer += dt; 
+
+    if (_flipTimer >= _flipInterval) {
+      _flipTimer -= _flipInterval; 
+      corNormal = !corNormal;
+      if(corNormal){
+        paint = Paint()..colorFilter = ColorFilter.mode(Colors.white, BlendMode.modulate);
+      }else{
+        paint = Paint()..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
+      }
+    }
+
     vy += grav * dt; 
 
     if (isHoming && isFalling) {
-      double playerX = gameRef.playerCombatStats.strafePosition;
-      
-      double direction = (playerX - strafeX).sign;
+      double direction = (alvoX - strafeX).sign;
       
       vx += direction * speedX * dt; 
       

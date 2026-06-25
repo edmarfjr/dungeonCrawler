@@ -4,6 +4,7 @@ import 'package:dungeon_crawler/game/components/Effects/healing_cloud_effect.dar
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
+import 'package:dungeon_crawler/game/components/entities/fire_pillar.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:dungeon_crawler/game/components/entities/poison_cloud.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
@@ -13,7 +14,7 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2,
-infectado, boss2, garra, esqueleto, jester, naga, mao, doll, goblinShop }
+infectado, boss2, garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3 }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -326,7 +327,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // mas a sombra deles tem que ser cravada no 0.75 (chão)!
     // Adicione o Fungo ou outros inimigos voadores nesta lista se precisarem.
     double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo
-    || type == EnemyType.doll || type == EnemyType.goblinShop) ? 0.75 : yPosition;
+    || type == EnemyType.doll || type == EnemyType.goblinShop || type == EnemyType.boss3) ? 0.75 : yPosition;
 
     // 2. CALCULA O VÃO ATÉ O CHÃO (Gap to Floor)
     // Calcula a distância do centro do inimigo até o chão verdadeiro, somando 
@@ -2544,4 +2545,94 @@ class GoblinShopEnemy extends Enemy {
       }
     }
   }
+}
+
+class MagoEnemy extends Enemy {
+  double moveTimer = 0.0;
+  double currentDir = 1.0;
+
+  final double flightHeight = 0.5; 
+  final double attackHeight = 0.7;  
+
+  bool ataque2 = false;
+
+  MagoEnemy() : super(name:'mago',
+    type: EnemyType.boss3, color: Palette.roxo, hp: 400, maxHp: 400, dropEssence: 10, width: 192, height: 192, speed: 0.4,
+    hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 8,
+    drop: []
+  );
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    moveTimer -= dt;
+    if (moveTimer <= 0) {
+      currentDir = (Random().nextInt(3) - 1).toDouble();
+      moveTimer = 1.0 + Random().nextDouble() * 1.5;
+
+      if(Random().nextBool()){
+        targetY = flightHeight;
+      }else{
+        targetY = attackHeight;
+      }
+
+
+    }
+    
+    strafePosition += currentDir * speed * dt;
+    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+   
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 0.8; // Tempo de preparo/mergulho
+      attackCooldown = maxAttackCooldown;
+      ataque2 = Random().nextBool();
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); 
+
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true;
+
+      if(ataque2){
+        _shootfirePillar();
+      } else {
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 0, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset - 0.2 , 0.0, -0.2, this, waitTmr: 0.5, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+      //  gameRef.combatOverlay.add(ArcProjectile(
+      //    strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1.5 ,isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+      //  ));
+      //  gameRef.combatOverlay.add(ArcProjectile(
+      //    strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 2, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+      //  ));
+      }
+    }
+  }
+
+  Future<void> _shootfirePillar() async {
+    double startY = 0.8;
+    //double startX = 0.8;
+    //if(gameRef.playerCombatStats.strafePosition < 0) startX = -0.8;
+    final ui.Image img = await game.images.load('effects/fire.png');
+    gameRef.combatOverlay.add(FirePillar(strafePosition, startY, 0.0,0, this, img:img));
+  }
+
 }

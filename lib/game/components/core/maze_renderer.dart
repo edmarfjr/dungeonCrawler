@@ -24,6 +24,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image bossImage;
   final ui.Image shopImage;
   final ui.Image shrineImage;
+  final ui.Image fontImage;
 
   double _bumpTimer = 0.0;
   double _maxBumpTime = 0.18; // Duração do tranco (180 milissegundos é o Sweet Spot)
@@ -45,6 +46,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.openChestImage,
     required this.crateImage,
     required this.shopImage,
+    required this.fontImage,
   });
 
   void triggerWallBump({required bool forward}) {
@@ -157,12 +159,16 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
         }
 
+        if (tile == TileType.font && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
+        }
+
         if (tile == TileType.crate && gameRef.currentState == GameState.exploration) {
           _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Palette.marrom);
         }
 
         if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Palette.vermelhoCla);
+          _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Palette.vermelho);
         }
 
          if (tile == TileType.shop && gameRef.currentState == GameState.exploration) {
@@ -231,7 +237,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Se o inimigo estiver na coordenada que o laço está varrendo agora...
           if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
             // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
-            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelhoCla);
+            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelho);
           }
         }
       }

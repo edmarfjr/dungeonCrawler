@@ -76,6 +76,8 @@ class PlayerCombatStats {
   double vfxTimer = 0.0;
   Color vfxColor = Palette.vermelho;
 
+  double invencibleTmr = 0;
+
   List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
   void recalculateMaxHp() {
@@ -123,6 +125,7 @@ class PlayerCombatStats {
     currentPhase = CombatPhase.hit; // Interrompe qualquer ação atual
     comboCount = 0; // Quebra o combo
     attackHit = false; // Cancela ataques ativos
+    invencibleTmr = duration * 2;
   }
 
   void applyEffect(double duration, Color cor){
@@ -131,6 +134,11 @@ class PlayerCombatStats {
   }
 
   void updatePhase(double dt) {
+
+    if(invencibleTmr > 0) {
+      invencibleTmr -= dt;
+    }
+    
     if(staminaInfiniteTmr > 0) {
       staminaInfiniteTmr -= dt;
     }
