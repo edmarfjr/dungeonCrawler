@@ -895,7 +895,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     _initializeInventory();
     
-    dungeon.level = 1;
+    dungeon.level = 7;
     player.hasKey = false;
 
     dungeon.width = mapSize;
@@ -1262,7 +1262,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.boss3);
+          _triggerSpecificEncounter(EnemyType.infectado);
         }
       }
 

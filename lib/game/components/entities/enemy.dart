@@ -128,7 +128,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (!isAlive) return;
     if (gameRef.activeMessage != null) return;
 
-    if(isPoison){
+    if(isPoison && !imunePoison){
       poisonTmr -= dt;
       if(poisonTmr<=0){
         hp -= game.playerCombatStats.wis/2;
@@ -1477,7 +1477,7 @@ class Fungo2Enemy extends Enemy {
 
 class InfectadoEnemy extends Enemy {
   bool isFleeing = false;
-  bool isPoison = false;
+  bool isPoisonAtk = false;
 
   InfectadoEnemy() : super(name: 'infectado',
     type: EnemyType.infectado,  damage: 12,
@@ -1560,10 +1560,10 @@ class InfectadoEnemy extends Enemy {
 
       // 2. ALTERNÂNCIA DE ATAQUES
       if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
-        isPoison = !isPoison;
-        isMelee = !isPoison;
+        isPoisonAtk = !isPoisonAtk;
+        isMelee = !isPoisonAtk;
 
-        if (isPoison){
+        if (isPoisonAtk){
           currentPhase = CombatPhase.windup2;
         }else{
           currentPhase = CombatPhase.windup;
