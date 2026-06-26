@@ -12,6 +12,7 @@ class FirePillar extends SpriteComponent with HasGameRef<DungeonCrawlerGame> {
   double vy;
   double radius;
   double tmr = 5;
+  double sizeImg;
   final Enemy owner; 
   double _flipTimer = 0.0; 
   final double _flipInterval = 0.1;
@@ -21,15 +22,16 @@ class FirePillar extends SpriteComponent with HasGameRef<DungeonCrawlerGame> {
     this.yPos, 
     this.vx, 
     this.vy, 
-    this.owner, 
+    this.owner,
     {
       this.radius = 80,
-      required ui.Image img,
+      required ui.Image img, 
+      this.sizeImg = 288
     }
   ) : super(
           anchor: Anchor.center, 
           priority: 20,           
-          size: Vector2(144, 144), 
+          size: Vector2(sizeImg, sizeImg), 
       ) {
     
     sprite = Sprite(img);

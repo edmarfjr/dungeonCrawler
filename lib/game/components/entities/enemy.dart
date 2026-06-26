@@ -719,7 +719,7 @@ class OrcEnemy extends Enemy {
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.clava]
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.clavaOrc]
   ) {
     isMelee = true;
   }
@@ -2474,7 +2474,7 @@ class GoblinShopEnemy extends Enemy {
   }
 
   @override
-  void update(double dt) {
+  Future<void> update(double dt) async {
     super.update(dt); 
 
     if (currentPhase == CombatPhase.windup) {
@@ -2509,15 +2509,25 @@ class GoblinShopEnemy extends Enemy {
           if (currentPhase == CombatPhase.windup2) {
             currentPhase = CombatPhase.active2;
             animTimer = 0.5; 
-            gameRef.combatOverlay.add(ArcProjectile(
-              strafePosition-0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
-            ));
-            gameRef.combatOverlay.add(ArcProjectile(
-              strafePosition, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
-            ));
-            gameRef.combatOverlay.add(ArcProjectile(
-              strafePosition+0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
-            ));
+
+            if(Random().nextBool()){
+              gameRef.combatOverlay.add(ArcProjectile(
+                strafePosition-0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+              ));
+              gameRef.combatOverlay.add(ArcProjectile(
+                strafePosition, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+              ));
+              gameRef.combatOverlay.add(ArcProjectile(
+                strafePosition+0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+              ));
+            }else{
+              double startY = 0.63;
+              List<double> posX = [0.4,0,-0.4];
+              posX.shuffle();
+              final ui.Image img = await game.images.load('effects/raio.png');
+              gameRef.combatOverlay.add(FirePillar(posX[0], startY, 0.0,0, this, img:img,tmr: 0.5));
+            }
+            
           } 
           else if (currentPhase == CombatPhase.active2) {
             currentPhase = CombatPhase.recovery2;
@@ -2555,13 +2565,26 @@ class MagoEnemy extends Enemy {
   final double attackHeight = 0.7;  
 
   bool ataque2 = false;
+  bool podeInvocar = false;
+  bool isSummoning = false;
+  double summonTmr = 5;
+
 
   MagoEnemy() : super(name:'mago',
-    type: EnemyType.boss3, color: Palette.roxo, hp: 400, maxHp: 400, dropEssence: 10, width: 192, height: 192, speed: 0.4,
+    type: EnemyType.boss3, color: Palette.roxo, hp: 60, maxHp: 60, dropEssence: 10, width: 192, height: 192, speed: 0.4,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 8,
     drop: []
   );
+
+  bool get _temEsqueleto {
+    return gameRef.combatOverlay.enemies.any((e) => e is EsqueletoEnemy && e.isAlive);
+  }
+
+  @override
+  bool get canChangeRow {
+    return !_temEsqueleto;
+  }
 
   @override
   void updateBehavior(double dt, PlayerCombatStats player) {
@@ -2587,52 +2610,90 @@ class MagoEnemy extends Enemy {
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
+
+    if(podeInvocar){
+      summonTmr -= dt;
+    }
+
+    if(summonTmr <=0 && currentPhase == CombatPhase.idle && !_temEsqueleto){
+      isFrontRow = false;
+      isSummoning = true;
+      currentPhase = CombatPhase.windup; 
+      animTimer = 0.8; 
+      summonTmr = 20;
+    }
    
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 0.8; // Tempo de preparo/mergulho
+      animTimer = 0.8; 
       attackCooldown = maxAttackCooldown;
       ataque2 = Random().nextBool();
     }
+  }
+
+  void _spawnEsqueleto() {
+    var esq1 = EsqueletoEnemy();
+    var esq2 = EsqueletoEnemy();
+
+    esq1.isFrontRow = true; 
+    esq2.isFrontRow = true; 
+    
+    esq1.strafePosition = 0.3;
+    esq2.strafePosition = -0.3;
+
+    gameRef.combatOverlay.enemies.add(esq1);
+    gameRef.combatOverlay.enemies.add(esq2);
+    parent?.add(esq1);
+    parent?.add(esq2);
+    
   }
 
   @override
   void update(double dt) {
     super.update(dt); 
 
+    if(hp <= maxHp/2 && !podeInvocar) podeInvocar = true;
+
     if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
 
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true;
 
-      if(ataque2){
-        _shootfirePillar();
-      } else {
-        gameRef.combatOverlay.add(ArcProjectile(
-          strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 0, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
-        ));
-        gameRef.combatOverlay.add(ArcProjectile(
-          strafePosition, yPosition + visualYOffset - 0.2 , 0.0, -0.2, this, waitTmr: 0.5, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
-        ));
-        gameRef.combatOverlay.add(ArcProjectile(
-          strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
-        ));
-      //  gameRef.combatOverlay.add(ArcProjectile(
-      //    strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1.5 ,isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
-      //  ));
-      //  gameRef.combatOverlay.add(ArcProjectile(
-      //    strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 2, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
-      //  ));
+      if(isSummoning){
+        isSummoning = false;
+        _spawnEsqueleto();
+      }else{
+        if(ataque2){
+          _shootfirePillar();
+        } else {
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 0, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+          ));
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition, yPosition + visualYOffset - 0.2 , 0.0, -0.2, this, waitTmr: 0.5, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+          ));
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+          ));
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1.5 ,isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+          ));
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 2, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+          ));
+        }
       }
+
+      
     }
   }
 
   Future<void> _shootfirePillar() async {
-    double startY = 0.8;
-    //double startX = 0.8;
-    //if(gameRef.playerCombatStats.strafePosition < 0) startX = -0.8;
-    final ui.Image img = await game.images.load('effects/fire.png');
-    gameRef.combatOverlay.add(FirePillar(strafePosition, startY, 0.0,0, this, img:img));
+    double startY = 0.63;
+    double startX = 0.8;
+    if(gameRef.playerCombatStats.strafePosition > 0) startX = -0.8;
+    final ui.Image img = await game.images.load('effects/firePillar.png');
+    gameRef.combatOverlay.add(FirePillar(startX, startY, 0.0,0, this, img:img));
   }
 
 }

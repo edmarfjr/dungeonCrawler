@@ -33,6 +33,7 @@ class Item {
   final bool hasRegen;
   final bool isWide;
   final int value;
+  final int str;
 
   final void Function(Item item, DungeonCrawlerGame game)? onUse;
 
@@ -52,6 +53,7 @@ class Item {
     this.hasRegen = false,
     this.isWide = false,
     this.value = 1,
+    this.str = 5,
   });
 }
 
@@ -74,7 +76,7 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png',isWide:true, 15,value:6, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', str:6, 15,value:6, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
@@ -83,7 +85,7 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 2;
   });
 
-  static Item get lanca => Item("Lança", ItemType.weapon, 'itens/lanca.png', 12, cor: Colors.white,value:6, hasReach: true, onUse: (item, game) {
+  static Item get lanca => Item("Lança", ItemType.weapon, 'itens/lanca.png', 12, cor: Colors.white, str:8, value:6, hasReach: true, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
@@ -92,7 +94,7 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaOrc => Item("Espada Orc", ItemType.weapon, 'itens/orcSword.png', 12, cor: Colors.white,value:8, hasStun: true, onUse: (item, game) {
+  static Item get espadaOrc => Item("Espada Orc", ItemType.weapon, 'itens/orcSword.png', 12, cor: Colors.white, str:8,value:8, hasStun: true, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
@@ -101,7 +103,7 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Colors.white, onUse: (item, game) {
+  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Colors.white, str:10, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;

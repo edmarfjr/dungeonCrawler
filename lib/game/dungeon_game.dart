@@ -222,6 +222,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
+      ItemDatabase.espadaLonga,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -570,18 +571,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       super.render(canvas);
     }
 
-    if (activeMessage != null) {
-      double boxWidth = size.x * 0.8; double boxHeight = 100;
-      double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
-      final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
-      canvas.drawRect(rect, Paint()..color = Palette.preto);
-      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
-      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
-      textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
-      textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
-    }
-
     if (currentState == GameState.shop) {
       // Fundo escuro transparente
       canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
@@ -751,6 +740,19 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       );
       final helpPainter = TextPainter(text: helpSpan, textDirection: TextDirection.ltr)..layout();
       helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
+    }
+
+    
+    if (activeMessage != null) {
+      double boxWidth = size.x * 0.8; double boxHeight = 100;
+      double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
+      final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
+      canvas.drawRect(rect, Paint()..color = Palette.preto);
+      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
+      textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
+      textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
     }
   }
 
@@ -1512,6 +1514,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void startInput(GameInput input) {
+    if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
     if (currentState == GameState.shop) {
       // Movimentação do Cursor
       if (input == GameInput.up) {
@@ -2064,9 +2067,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     String fileName = item.imagePath.split('/').last;
 
     if (item.type == ItemType.weapon) { 
-      playerCombatStats.equippedWeapon = item; 
-      if (item.onUse != null) item.onUse!(item, this);
-      await changeWeaponSprite('actors/$fileName'); 
+      if (item.str > playerCombatStats.str){
+        FlameAudio.play('sfx/denied.wav');
+        showMessage("você precisa de ${item.str.toString()} de força para equipar");
+      }else{
+        playerCombatStats.equippedWeapon = item; 
+        if (item.onUse != null) item.onUse!(item, this);
+        await changeWeaponSprite('actors/$fileName'); 
+      }
+      
     }
     else if (item.type == ItemType.armor) { 
       playerCombatStats.equippedArmor = item; 
