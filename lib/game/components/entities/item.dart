@@ -31,9 +31,12 @@ class Item {
   final bool walkFast;
   final bool easyDash;
   final bool hasRegen;
+  final bool staminaSlowRegen;
   final bool isWide;
   final int value;
   final int str;
+  final int peso;
+  final bool projetil;
 
   final void Function(Item item, DungeonCrawlerGame game)? onUse;
 
@@ -52,8 +55,11 @@ class Item {
     this.easyDash = false,
     this.hasRegen = false,
     this.isWide = false,
+    this.staminaSlowRegen = false,
     this.value = 1,
     this.str = 5,
+    this.peso = 0,
+    this.projetil = false,
   });
 }
 
@@ -67,6 +73,15 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 2;
   });
 
+  static Item get varinha => Item("Varinha Mágica", ItemType.weapon, 'itens/varinha.png', 5,projetil:true, cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.staminaCost = 3.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 1.5;
+  });
+
   static Item get espadaCurta => Item("Espada Curta", ItemType.weapon, 'itens/sword.png', 7,value:4, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
@@ -76,13 +91,22 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', str:6, 15,value:6, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaLonga => Item("Espada Longa", ItemType.weapon, 'itens/longSword.png', 10, str:6,value:6, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
-    game.playerCombatStats.staminaCost = 4.0;
+    game.playerCombatStats.staminaCost = 5.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 2;
+  });
+
+  static Item get claymore => Item("Claymore", ItemType.weapon, 'itens/claymore.png', str:8, 15,value:6,isWide: true ,cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.2;
+    game.playerCombatStats.staminaCost = 6.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 1.8;
   });
 
   static Item get lanca => Item("Lança", ItemType.weapon, 'itens/lanca.png', 12, cor: Colors.white, str:8, value:6, hasReach: true, onUse: (item, game) {
@@ -103,41 +127,71 @@ class ItemDatabase {
     game.playerCombatStats.critMultiplier = 1.5;
   });
 
-  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, cor: Colors.white, str:10, onUse: (item, game) {
+  static Item get machado => Item("Machado", ItemType.weapon, 'itens/axe.png', 20, value:16,isWide: true , cor: Colors.white, str:10, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
-    game.playerCombatStats.staminaCost = 5.0;
+    game.playerCombatStats.staminaCost = 10.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 3.5;
+  });
+
+  static Item get clava => Item("Clava", ItemType.weapon, 'itens/club.png', 6, cor: Colors.white,value:5, hasStun: true, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.2;
+    game.playerCombatStats.staminaCost = 4.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 2;
+  });
+
+  static Item get clavaOrc => Item("Clava Orc", ItemType.weapon, 'itens/clubOrc.png', 10, cor: Colors.white,value:4, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.3;
+    game.playerCombatStats.staminaCost = 8.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 1.2;
   });
 
-  static Item get clava => Item("Clava", ItemType.weapon, 'itens/club.png', 20, cor: Colors.white,value:5, hasStun: true, onUse: (item, game) {
+  static Item get warhammer => Item("Martelo de Guerra", ItemType.weapon, 'itens/warhammer.png', 12,value:14, str:10, hasStun: true, hasChargeAttack: true,cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
     game.playerCombatStats.staminaCost = 5.0;
     game.playerCombatStats.critChance = 5;
-    game.playerCombatStats.critMultiplier = 1.2;
+    game.playerCombatStats.critMultiplier = 2.8;
   });
 
   static Item get tanga => Item("Tanga", ItemType.armor, 'itens/tanga.png', 0,easyDash: true, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.staminaRegenBonus = 5.0;
+
   });
 
-  static Item get armaduraCouro => Item("Armadura de Couro", ItemType.armor, 'itens/leatherArmor.png', 2,value:4, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.staminaRegenBonus = 0.0;
+  static Item get armaduraCouro => Item("Armadura de Couro", ItemType.armor, 'itens/leatherArmor.png', 5, peso:1, value:4, cor: Colors.white, onUse: (item, game) {
+
   });
 
-  static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png', 4,value:6, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.staminaRegenBonus = -10.0;
+  static Item get gambeson => Item("Jaquetão", ItemType.armor, 'itens/gambeson.png', 3, peso:1, value:4, cor: Colors.white, onUse: (item, game) {
+
   });
 
-  static Item get armaduraBug => Item("Armadura de Carapaça", ItemType.armor, 'itens/armorBug.png',value:10, 2,hasPoisonAttack:true, hasRegen:true, easyDash: true, cor: Colors.white, onUse: (item, game) {
-    game.playerCombatStats.staminaRegenBonus = 0.0;
+  static Item get armaduraFerro => Item("Armadura de Ferro", ItemType.armor, 'itens/armor.png',12, peso:3,staminaSlowRegen:true,value:10, cor: Colors.white, onUse: (item, game) {
+
   });
 
-  static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 3, cor: Colors.white, onUse: (item, game) {
+  static Item get armaduraBronze => Item("Armadura de Bronze", ItemType.armor, 'itens/bronzeArmor.png', 10, peso:3,walkSlow: true,value:8, cor: Colors.white, onUse: (item, game) {
+
+  });
+
+   static Item get armaduraAco => Item("Armadura de Aço", ItemType.armor, 'itens/steelArmor.png',15,value:12, peso:3, cor: Colors.white, onUse: (item, game) {
+
+  });
+
+  static Item get armaduraBug => Item("Armadura de Carapaça", ItemType.armor, 'itens/armorBug.png',8,value:10, peso:2,hasPoisonAttack:true, hasRegen:true, easyDash: true, cor: Colors.white, onUse: (item, game) {
+
+  });
+
+  static Item get bloquel => Item("Bloquel", ItemType.shield, 'itens/buckler.png', 0, cor: Colors.white, onUse: (item, game) {
     //game.playerCombatStats.moveSpeedPenalty = 0.0;
   });
 
@@ -145,7 +199,11 @@ class ItemDatabase {
     //game.playerCombatStats.moveSpeedPenalty = 0.0;
   });
 
-  static Item get escudoFerro => Item("Escudo de Ferro", ItemType.shield, 'itens/ironShield.png', 5,value:6, walkSlow: true, cor: Colors.white, onUse: (item, game) {
+  static Item get escudoFerro => Item("Escudo de Ferro", ItemType.shield, 'itens/ironShield.png', 5,value:6, cor: Colors.white, onUse: (item, game) {
+    //game.playerCombatStats.moveSpeedPenalty = 0.5;
+  });
+
+  static Item get escudoTorre => Item("Escudo Torre", ItemType.shield, 'itens/towerShield.png', 8,value:6, walkSlow: true, cor: Colors.white, onUse: (item, game) {
     //game.playerCombatStats.moveSpeedPenalty = 0.5;
   });
 

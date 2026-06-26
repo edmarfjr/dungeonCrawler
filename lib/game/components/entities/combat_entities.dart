@@ -97,14 +97,14 @@ class PlayerCombatStats {
   void recoverStamina(double dt) {
     if(staminaTmr > 0) {
       staminaTmr -= dt;
-      return; // Ainda no delay, não regenera
+      return; 
     }
     if (!isGuarding && stamina < (con*3)) {
       stamina += ((str*3) + staminaRegenBonus) * dt; 
       if (stamina > (con*3)){
         stamina = (con*3);
         if(cansado) {
-          cansado = false; // Recuperou o fôlego!
+          cansado = false; 
         }
       } 
     }

@@ -125,9 +125,11 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.font:
+          case TileType.fontPoison:
             tilePaint.color = Palette.azul;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
+          
         }
 
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && !player.hasKey) {

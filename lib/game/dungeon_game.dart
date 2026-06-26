@@ -8,6 +8,7 @@ import 'package:dungeon_crawler/game/components/core/maze_renderer.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
 import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
+import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
 import 'package:dungeon_crawler/game/overlays/combat_overlay.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
@@ -222,7 +223,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.espadaLonga,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -322,13 +322,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     // Lista mestra para buscar as instâncias reais dos itens pelo nome
     List<Item> allGameItems = [
       //armas
-      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,
-      ItemDatabase.clava, ItemDatabase.espadaOrc, ItemDatabase.lanca,
+      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
+      ItemDatabase.espadaOrc, ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.clavaOrc,ItemDatabase.warhammer,
+      ItemDatabase.varinha,
       //armaduras
-      ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug, 
+      ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug,ItemDatabase.armaduraAco,
+      ItemDatabase.armaduraBronze, ItemDatabase.gambeson,
       //escudos
       ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.braceleteFung, 
-      ItemDatabase.braceleteNaga, 
+      ItemDatabase.braceleteNaga, ItemDatabase.escudoTorre,
       //pocoes
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
       //itens
@@ -418,6 +420,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/buckler.png',
       'itens/slime_eye.png',
       'itens/club.png',
+      'itens/clubOrc.png',
       'itens/web.png',
       'itens/meat.png',
       'itens/faca.png',
@@ -431,6 +434,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/armorBug.png',
       'itens/bola.png',
       'itens/coin.png',
+      'itens/claymore.png',
+      'itens/warhammer.png',
+      'itens/steelArmor.png',
+      'itens/bronzeArmor.png',
+      'itens/towerShield.png',
+      'itens/gambeson.png',
+      'itens/varinha.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
@@ -895,23 +905,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     player.y = dungeon.playerSpawn.y;
     player.facing = Direction.north;
 
-    List<Item> armas = [ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.lanca,];
-    List<Item> armaduras = [ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,];
-    List<Item> escudos = [ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro,];
-    List<Item> pocoes = [ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,];
-    
-    armas.shuffle();
-    armaduras.shuffle();
-    escudos.shuffle();
-    pocoes.shuffle();
+    shopInventory = [
+      ItemDatabase.clava,
+      ItemDatabase.gambeson,
+      ItemDatabase.escudoFerro,
+      ItemDatabase.staminaPotion
+    ];
 
-    shopInventory = [];
-
-    shopInventory.add(armas[0]);
-    shopInventory.add(armaduras[0]);
-    shopInventory.add(escudos[0]);
-    shopInventory.add(pocoes[0]);
-    
     combatOverlay.enemies.clear();
   }
 
@@ -1056,7 +1056,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     if (playerCombatStats.currentPhase == CombatPhase.entering || playerCombatStats.currentPhase == CombatPhase.exiting) return;
 
-    // REFACTOR: Congela o update global enquanto houver mensagens ativas na fila
     if (activeMessage != null) {
       return; 
     }
@@ -1099,6 +1098,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       if (playerCombatStats.currentPhase == CombatPhase.active && !playerCombatStats.attackHit) {
         playerCombatStats.attackHit = true;
+
+        bool projAtk = playerCombatStats.equippedWeapon?.projetil ?? false;
+
+        if(projAtk){
+          if(playerCombatStats.mana >= 3){
+            playerCombatStats.mana -= 3;
+            projetil();
+          }
+        }else{
+        }
+
         for (var enemy in combatOverlay.enemies) {
           if (!enemy.isFrontRow && !weaponHasReach) continue;
           if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(size))){
@@ -1114,7 +1124,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               if (isCrit) {
                 damage *= playerCombatStats.critMultiplier;
                 combatOverlay.addFloatingText("*CRIT.*", enemy.getHurtbox(size), Palette.amarelo);
-                if(weaponHasStun) stun = 0.8;
+                if(weaponHasStun){
+                  stun = 1;
+                  combatOverlay.addFloatingText("*STUN*", enemy.getHurtbox(size), Palette.amarelo);
+                } 
               }
               enemy.hp -= damage;
               enemy.applyHitStun(stun);
@@ -1168,12 +1181,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (isFreeToMove) {
       bool noShield = playerCombatStats.equippedShield?.noShield ?? false;
       bool shieldWalkSlow = playerCombatStats.equippedShield?.walkSlow ?? false;
+      bool armorWalkSlow = playerCombatStats.equippedArmor?.walkSlow ?? false;
       bool shieldWalkFast = playerCombatStats.equippedShield?.walkFast ?? false;
-
+      int peso = playerCombatStats.equippedArmor?.peso ?? 0;
       double moveSpeedPenalty = 0;
 
-      if(shieldWalkSlow) moveSpeedPenalty = -5;
-      if(shieldWalkFast) moveSpeedPenalty = 5;
+      if(shieldWalkSlow || armorWalkSlow) moveSpeedPenalty = 1;
+      if(shieldWalkFast) moveSpeedPenalty = -1;
+
+      moveSpeedPenalty += peso*0.2;
 
       if (downPressed && !playerCombatStats.cansado && !noShield) {
         playerCombatStats.isGuarding = true; 
@@ -1291,6 +1307,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
+  Future<void> projetil() async {
+    final ui.Image img = await images.load('effects/magia.png');
+    double damage = playerCombatStats.equippedWeapon?.power ?? 5; 
+    FlameAudio.play('sfx/fire.wav');
+     combatOverlay.add(PlayerProjectile(
+       playerCombatStats.strafePosition, 0.75, 1.5, damage * playerCombatStats.wis * 0.5 , Palette.azulCla, width: 48, height: 48
+       ,img : img
+    ));
+  }
+
   void applyEnemyDamage(Enemy enemy) {
     double defense = playerCombatStats.equippedArmor?.power ?? 0; 
     double dmg = max(1, enemy.damage - defense);
@@ -1310,14 +1336,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         }
         playerCombatStats.flashColor = Palette.cinza;
         playerCombatStats.hitFlashTimer = 0.1; 
-      } else { 
+      }/* else { 
         playerCombatStats.stamina = 0; 
         playerCombatStats.hp -= dmg; 
         playerCombatStats.applyHitStun(0.3);
         combatOverlay.playerHitTicker.reset(); 
         combatOverlay.weaponHitTicker.reset();
-        
-      }
+      }*/
     } else { 
       FlameAudio.play('sfx/hit.wav');
       playerCombatStats.hp -= dmg; 
@@ -1440,8 +1465,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           List<Item> allEquipments = [
             ItemDatabase.espadaCurta,
             ItemDatabase.armaduraFerro,
+            ItemDatabase.armaduraAco,
+            ItemDatabase.armaduraBronze,
+            ItemDatabase.clava,
             ItemDatabase.espadaLonga,
+            ItemDatabase.varinha,
+            ItemDatabase.gambeson,
+            ItemDatabase.escudoTorre,
+            ItemDatabase.warhammer,
             ItemDatabase.lanca,
+            ItemDatabase.claymore,
             ItemDatabase.armaduraCouro,
             ItemDatabase.machado,
             ItemDatabase.firePillar,
@@ -1519,7 +1552,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       // Movimentação do Cursor
       if (input == GameInput.up) {
         shopCursor--;
-        FlameAudio.play('sfx/hover.wav'); // Som opcional
+        FlameAudio.play('sfx/hover.wav'); 
       }
       if (input == GameInput.down) {
         shopCursor++;
@@ -1528,10 +1561,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       // --- LIMITES DO CURSOR ---
       int maxCursor = 0;
-      if (currentShopPhase == ShopPhase.main) maxCursor = 3; // Comprar, Vender, Sair
+      if (currentShopPhase == ShopPhase.main) maxCursor = 3; 
       else if (currentShopPhase == ShopPhase.buy) maxCursor = max(0, shopInventory.length - 1);
+      else if (currentShopPhase == ShopPhase.steal) maxCursor = max(0, shopInventory.length - 1);
       else if (currentShopPhase == ShopPhase.sell) maxCursor = max(0, playerCombatStats.inventory.length - 1);
-      else if (currentShopPhase == ShopPhase.confirmSell) maxCursor = 1; // Vender, Sair
+      else if (currentShopPhase == ShopPhase.confirmSell) maxCursor = 1; 
 
       if (shopCursor < 0) shopCursor = maxCursor;
       if (shopCursor > maxCursor) shopCursor = 0;
@@ -1637,7 +1671,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         // FASE 4: CONFIRMAR VENDA
         else if (currentShopPhase == ShopPhase.confirmSell) {
           if (shopCursor == 0 && itemToSell != null) { // VENDER
-            int valorVenda = (itemToSell!.value * 0.5).floor(); // Vende pela metade do preço!
+            int valorVenda = (itemToSell!.value * 0.25).ceil(); 
             if (valorVenda < 1) valorVenda = 1;
 
             _addCoins(valorVenda);
@@ -1646,7 +1680,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             if (itemToSell!.quantity <= 0) {
               playerCombatStats.inventory.remove(itemToSell);
             }
-            
             FlameAudio.play('sfx/use_item.wav');
             currentShopPhase = ShopPhase.sell; // Volta pra lista de venda
             shopCursor = 0;
@@ -1677,19 +1710,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             // 2. Toca um som de alarme/erro
             // FlameAudio.play('sfx/alarm.wav'); 
 
-            // 3. Deleta a loja do mapa!
-            // Aqui você deve usar a sua função/variável que controla a grade do mapa 
-            // para apagar o tile do mercador que está na frente do jogador. Exemplo:
+            // 3. Deleta a loja do mapa
              int nx = player.x; int ny = player.y;
              dungeon.grid[ny][nx] = TileType.floor;
             
-            // 4. Inicia o combate com o Mercador furioso!
-            // Substitua 'EnemyType.boss1' pelo tipo de inimigo que representa o Mercador/Guarda
-            //currentState = GameState.combat;
+            // 4. Inicia o combate com o Mercador 
             showMessage("LADRÃO! VOCÊ PAGARÁ COM A VIDA!");
             _triggerSpecificEncounter(EnemyType.goblinShop);
-            // Se você já tem um método que puxa a luta (como _triggerSpecificEncounter), chame-o:
-            // triggerSpecificEncounter(EnemyType.boss1); 
             
             // Força a saída do menu
             return;
@@ -1962,7 +1989,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     // --- MODO COMBATE ---
     if (currentState == GameState.combat) {
-      // REFACTOR: Intercepta o botão [A] se houver caixas de diálogo na fila de combate
       if (activeMessage != null) { 
         if (input == GameInput.buttonA) dismissMessage(); 
         return; 
@@ -1972,7 +1998,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       bool easyDashArmor = playerCombatStats.equippedArmor?.easyDash ?? false; 
       bool chargeAttackShield = playerCombatStats.equippedShield?.hasChargeAttack ?? false; 
       bool chargeAttackWeapon = playerCombatStats.equippedWeapon?.hasChargeAttack ?? false; 
-      double dcusto = dashCusto;
+
+      int peso = playerCombatStats.equippedArmor?.peso ?? 0; 
+
+      double dcusto = dashCusto + peso*2 ;
       if (easyDashShield || easyDashArmor) dcusto = dashCusto/2;
       
       if (input == GameInput.left) {
@@ -2081,6 +2110,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.equippedArmor = item; 
       if (item.onUse != null) item.onUse!(item, this);
       await changeArmorSprite('actors/$fileName'); 
+
+      int peso = playerCombatStats.equippedArmor?.peso ?? 0;
+      double staminaDelay = 0.5;
+      if (peso == 2) staminaDelay = 0.6;
+      else if(peso == 3) staminaDelay = 1.0;
+      playerCombatStats.staminaRegenDelay = staminaDelay;
     }
     else if (item.type == ItemType.shield) { 
       playerCombatStats.equippedShield = item; 
@@ -2136,7 +2171,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.poisonTmr = 10; 
       playerCombatStats.applyHitStun(0.3); 
       showMessage("Você pisou em uma armadilha de veneno!");
-      if (playerCombatStats.hp <= 0) handlePlayerDeath();
     }
 
     if (playerCombatStats.poisonTmr > 0){
@@ -2177,7 +2211,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.vfxTimer = 0.5;
       playerCombatStats.vfxColor = Palette.vermelho;
       showMessage("Você se sente revigorado!");
+    }
 
+    if (playerTile == TileType.fontPoison) {
+      playerCombatStats.poisonTmr = 10; 
+      playerCombatStats.vfxTimer = 0.5;
+      playerCombatStats.vfxColor = Palette.verde;
+      showMessage("Você se sente mal!");
     }
 
     if (playerTile == TileType.shrine) {
@@ -2207,9 +2247,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           player.y = dungeon.playerSpawn.y;
           player.facing = Direction.north;
 
-          List<Item> armas = [ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.lanca,];
-          List<Item> armaduras = [ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,];
-          List<Item> escudos = [ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro,];
+          /*
+          List<Item> armas = [ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.clava,ItemDatabase.warhammer,];
+          List<Item> armaduras = [ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco, ItemDatabase.gambeson,
+          ItemDatabase.armaduraBronze,];
+          List<Item> escudos = [ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro,ItemDatabase.escudoTorre,];
           List<Item> pocoes = [ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,];
           
           List<Item> unownedWeapons = armas.where((equip) {
@@ -2233,8 +2275,43 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           shopInventory.add(unownedArmors[0]);
           shopInventory.add(unownedShields[0]);
           shopInventory.add(pocoes[0]);
+        */
 
-          
+          List<Item> Items = [
+            //armas
+            ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
+            ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.warhammer,ItemDatabase.varinha,
+            //armaduras
+            ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco,
+            ItemDatabase.armaduraBronze, ItemDatabase.gambeson,
+            //escudos
+            ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.escudoTorre,
+            //magias
+            ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+          ];
+
+          List<Item> Consumiveis = [
+            //pocoes
+            ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
+            //itens
+            ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
+            ItemDatabase.bugOrgan, ItemDatabase.bola,
+          ];
+
+          List<Item> unownedItens = Items.where((equip) {
+            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
+          }).toList();
+
+          unownedItens.addAll(Consumiveis);
+
+          unownedItens.shuffle();
+
+          shopInventory = [];
+
+          shopInventory.add(unownedItens[0]);
+          shopInventory.add(unownedItens[1]);
+          shopInventory.add(unownedItens[2]);
+          shopInventory.add(unownedItens[3]);
 
           await saveGame();
         });
@@ -2260,7 +2337,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         List<Item> allEquipments = [
           ItemDatabase.espadaCurta,
           ItemDatabase.armaduraFerro,
+          ItemDatabase.armaduraAco,
+          ItemDatabase.armaduraBronze,
           ItemDatabase.espadaLonga,
+          ItemDatabase.varinha,
+          ItemDatabase.escudoTorre,
+          ItemDatabase.warhammer,
+          ItemDatabase.clava,
+          ItemDatabase.claymore,
           ItemDatabase.lanca,
           ItemDatabase.armaduraCouro,
           ItemDatabase.machado,

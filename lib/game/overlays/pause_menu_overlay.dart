@@ -172,7 +172,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-           continue;
+          continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -188,7 +188,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
         else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
-        else if (tile == TileType.font) canvas.drawRect(tileRect, fontShop);
+        else if (tile == TileType.font || tile == TileType.fontPoison) canvas.drawRect(tileRect, fontShop);
 
         if (map.keyPosition!.x == x && map.keyPosition!.y == y){
           canvas.drawRect(tileRect, paintKey);

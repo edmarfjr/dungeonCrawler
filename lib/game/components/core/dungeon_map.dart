@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/game.dart';
 
-enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font, fontPoison }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -180,7 +180,7 @@ class DungeonMap {
     for (int i = 0; i < floorTiles.length; i++) {
       if (_calculateDistance(floorTiles[i], playerSpawn) >= 6) { selectedKey = floorTiles[i]; floorTiles.removeAt(i); break; }
     }
-    grid[selectedKey!.y][selectedKey!.x] = TileType.font;
+    grid[selectedKey!.y][selectedKey!.x] = Random().nextBool()? TileType.fontPoison: TileType.font;
 
     int numChests = random.nextInt(3) + 1; 
     for (int i = 0; i < numChests; i++) {

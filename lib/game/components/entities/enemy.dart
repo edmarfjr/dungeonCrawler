@@ -644,7 +644,7 @@ class MimicEnemy extends Enemy {
   bool _spawnedProjectiles = false;
 
   MimicEnemy() : super(name:'mimico',
-    type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 5,
+    type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 10,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 0, hitboxHeight: 0, isMelee: false, drop: []
   );/*{
@@ -718,7 +718,7 @@ class OrcEnemy extends Enemy {
     type: EnemyType.orc, 
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
-    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0, damage: 12,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.clavaOrc]
   ) {
     isMelee = true;
@@ -793,7 +793,7 @@ class BatEnemy extends Enemy {
     type: EnemyType.bat, name: 'morcego',
     color: Palette.roxo, 
     hp: 40, maxHp: 40, dropEssence: 10, width: 144, height: 144, speed: 0.5,
-    hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
+    hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0, damage: 5,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,drop: [ItemDatabase.meat]
   ) {
     isMelee = true;
@@ -889,13 +889,10 @@ class OrcChefe extends Enemy {
     type: EnemyType.boss1, 
     color: Palette.vermelhoEsc, 
     hp: 250, maxHp: 250, dropEssence: 100, 
-    width: 192, height: 192, speed: 0.45,
+    width: 192, height: 192, speed: 0.45, damage: 10, isMelee: true,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.espadaOrc]
-  ) {
-    isMelee = true;
-    damage = 5; // Dano base do ataque normal
-  }
+  );
 
   // MÁGICA 1: Se ele estiver invocando, desligamos o melee para a hitbox não machucar o jogador!
   @override
@@ -1002,7 +999,7 @@ class OrcChefe extends Enemy {
         attackCooldown = maxAttackCooldown;
         
         // O dano sobe violentamente no ataque pesado
-        damage = isHeavyAttack ? 10 : 5; 
+        damage = isHeavyAttack ? 20 : 10; 
       }
     }
   }
@@ -1078,7 +1075,7 @@ class BugEnemy extends Enemy {
     type: EnemyType.bug, 
     color: Palette.cinza,
     hp: 100, maxHp: 100, dropEssence: 30, width: 144, height: 144, speed: 0.6,
-    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0, damage: 15,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.bugOrgan]
   ) {
     isMelee = true;
@@ -1150,7 +1147,7 @@ class BugEnemy extends Enemy {
 class WormEnemy extends Enemy {
   WormEnemy() : super(name: 'worm',
     type: EnemyType.worm, 
-    color: Palette.cinza,
+    color: Palette.cinza, damage: 10,
     hp: 50, maxHp: 50, dropEssence: 20, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10, hitboxOffsetX: -20 ,drop: [ItemDatabase.bugOrgan],
@@ -1263,7 +1260,7 @@ class FungoEnemy extends Enemy {
   FungoEnemy() : super(
     name: 'fungo',
     type: EnemyType.fungo,
-    color: Palette.roxo,
+    color: Palette.roxo, damage: 10,
     hp: 60, maxHp: 60, dropEssence: 20, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: -10,
     hitboxWidth: 0, hitboxHeight: 0,
@@ -1384,7 +1381,7 @@ class Fungo2Enemy extends Enemy {
   Fungo2Enemy() : super(
     name: 'fungo',
     type: EnemyType.fungo2,
-    color: Palette.roxo,
+    color: Palette.roxo, damage: 10,
     hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: -10,
     hitboxWidth: 0, hitboxHeight: 0,
@@ -1483,7 +1480,7 @@ class InfectadoEnemy extends Enemy {
   bool isPoison = false;
 
   InfectadoEnemy() : super(name: 'infectado',
-    type: EnemyType.infectado, 
+    type: EnemyType.infectado,  damage: 12,
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 90, maxHp: 90, dropEssence: 40, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
@@ -1618,7 +1615,7 @@ class GarraRainhaEnemy extends Enemy {
   GarraRainhaEnemy(this.rainha, this.strafeOffset) : super(
     name: 'garra',
     type: EnemyType.garra, 
-    color: Palette.vermelho, 
+    color: Palette.vermelho,  damage: 20,
     hp: 120, maxHp: 120, dropEssence: 0, width: 192, height: 192, speed: 0.0,
     hurtboxWidth: 50, hurtboxHeight: 170, hurtboxOffsetY: 0,
     hitboxWidth: 30, hitboxHeight: 80, hitboxOffsetY: 40, 
@@ -1653,7 +1650,7 @@ class RainhaInsetoEnemy extends Enemy {
     color: Palette.roxo,
     hp: 300, maxHp: 300, dropEssence: 100, width: 192, height: 192, speed: 0.3,
     hurtboxWidth: 192, hurtboxHeight: 192, hurtboxOffsetY: 0,
-    hitboxWidth: 0, hitboxHeight: 0,
+    hitboxWidth: 0, hitboxHeight: 0, damage: 20,
     drop: [ItemDatabase.armaduraBug],
     maxAttackCooldown: 4.5,
     isBoss: true,
@@ -1796,7 +1793,7 @@ class RainhaInsetoEnemy extends Enemy {
 class EsqueletoEnemy extends Enemy {
   bool isFleeing = false;
   EsqueletoEnemy() : super(name: 'esqueleto',
-    type: EnemyType.esqueleto, 
+    type: EnemyType.esqueleto,  damage: 15,
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
@@ -1883,6 +1880,7 @@ class JesterEnemy extends Enemy {
     maxAttackCooldown: 2.5, 
     drop: [ItemDatabase.bola],
     isMelee: false, 
+    damage: 15,
   ) {
     _targetStrafe = strafePosition;
     _hopTimer = 0.0;
@@ -2034,7 +2032,7 @@ class NagaEnemy extends Enemy {
     type: EnemyType.naga, 
     color: Palette.vermelhoEsc, 
     hp: 250, maxHp: 250, dropEssence: 40, 
-    width: 144, height: 144, speed: 0.45,
+    width: 144, height: 144, speed: 0.45, damage: 20,
     hurtboxWidth: 100, hurtboxHeight: 170, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteNaga]
   ) {
@@ -2187,7 +2185,7 @@ class HandEnemy extends Enemy {
     hitboxWidth: 90, hitboxHeight: 90, 
     speed: 0.0,
     maxAttackCooldown: 3.0, 
-    drop: [],
+    drop: [], damage: 15,
     isMelee: false, 
   ) {
     _teleportTimer = 2.0; 
@@ -2329,7 +2327,7 @@ class DollEnemy extends Enemy {
 
   DollEnemy() : super(
     type: EnemyType.doll, name: 'boneco',
-    color: Palette.roxo, 
+    color: Palette.roxo,  damage: 15,
     hp: 70, maxHp: 70, dropEssence: 10, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 40, hurtboxHeight: 120, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 60,drop: []
@@ -2426,19 +2424,17 @@ class GoblinShopEnemy extends Enemy {
 
   GoblinShopEnemy() : super(
     type: EnemyType.goblinShop, name: 'vendedor',
-    color: Palette.amarelo, 
+    color: Palette.amarelo,  damage: 15,
     hp: 150, maxHp: 150, dropEssence: 50, width: 144, height: 144, speed: 0.5,
-    hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10,drop: []
+    hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0, maxAttackCooldown: 5,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, drop: []
   ) {
     yPosition = flightHeight; 
     targetY = flightHeight;
   }
 
-
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
-    // FASE DE PATRULHA
     if (currentPhase == CombatPhase.idle) {
       targetY = flightHeight; 
       if ((yPosition - flightHeight).abs() < 0.05) {
@@ -2454,54 +2450,49 @@ class GoblinShopEnemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
    
-    // Decide atacar se o tempo estourou E se ele estiver fisicamente lá no alto
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
 
       if(Random().nextBool()){
         isMelee = true;
         currentPhase = CombatPhase.windup; 
-        animTimer = 0.8; // Tempo de preparo/mergulho
-        targetY = attackHeight; // Comando para a classe pai: "Desça para o chão!"
+        animTimer = 0.8;
+        targetY = attackHeight;
         attackCooldown = maxAttackCooldown;
         targetStrafe = gameRef.playerCombatStats.strafePosition;
       }else{
         isMelee = false;
         currentPhase = CombatPhase.windup2; 
         animTimer = 0.5;
+        attackCooldown = maxAttackCooldown; // IMPORTANTE: Reseta o cooldown para a magia também!
       }
-      
     }
   }
 
+  // NOTE QUE O UPDATE VOLTOU A SER 'void' NORMAL (Sem async)
   @override
-  Future<void> update(double dt) async {
+  void update(double dt) {
     super.update(dt); 
 
     if (currentPhase == CombatPhase.windup) {
       priority = 15;
       targetY = attackHeight;
 
-      // 1. Descobre a diferença nos eixos X e Y
       double dx = targetStrafe - strafePosition;
       double dy = targetY - yPosition;
       
-      // 2. Calcula a distância total em linha reta (Teorema de Pitágoras)
       double distance = sqrt(dx * dx + dy * dy);
 
-      // 3. Move o morcego simultaneamente nos dois eixos se ainda não chegou ao alvo
       if (distance > 0.01) {
-        double diveSpeed = speed*3; // Velocidade do mergulho (Aumente se quiser mais agressivo)
+        double diveSpeed = speed * 3; 
         double moveStep = diveSpeed * dt;
 
-        // Trava de segurança para ele não "passar do ponto" e tremer
         if (moveStep > distance) moveStep = distance;
 
-        // Distribui a velocidade perfeitamente na diagonal
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
       }
-
-    } else {
+    } 
+    else {
       if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
         animTimer -= dt;
         
@@ -2509,25 +2500,7 @@ class GoblinShopEnemy extends Enemy {
           if (currentPhase == CombatPhase.windup2) {
             currentPhase = CombatPhase.active2;
             animTimer = 0.5; 
-
-            if(Random().nextBool()){
-              gameRef.combatOverlay.add(ArcProjectile(
-                strafePosition-0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
-              ));
-              gameRef.combatOverlay.add(ArcProjectile(
-                strafePosition, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
-              ));
-              gameRef.combatOverlay.add(ArcProjectile(
-                strafePosition+0.2, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
-              ));
-            }else{
-              double startY = 0.63;
-              List<double> posX = [0.4,0,-0.4];
-              posX.shuffle();
-              final ui.Image img = await game.images.load('effects/raio.png');
-              gameRef.combatOverlay.add(FirePillar(posX[0], startY, 0.0,0, this, img:img,tmr: 0.5));
-            }
-            
+            attackHit = false; 
           } 
           else if (currentPhase == CombatPhase.active2) {
             currentPhase = CombatPhase.recovery2;
@@ -2537,23 +2510,48 @@ class GoblinShopEnemy extends Enemy {
             currentPhase = CombatPhase.idle;
           }
         }
-        return; // Bloqueia a IA padrão enquanto ele conjura as magias
-      }
-      if(isDying) return;
-      // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
-      if ((yPosition - targetY).abs() > 0.01) {
-        double verticalSpeed = speed; // Velocidade que ele volta para o teto
-        yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
       }
 
-      // Controla a intenção de altura baseada na fase
-      if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
-        targetY = attackHeight; // Mantém no chão para você poder bater nele
-      } else if (currentPhase == CombatPhase.idle) {
-        targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
-        priority = isFrontRow ? 10 : 0;
+      if (currentPhase == CombatPhase.active2 && !attackHit) {
+        attackHit = true; 
+        
+        if (Random().nextBool()) {
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition - 0.25, yPosition + visualYOffset, 0.0, -0.7, this, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+          ));
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition, yPosition + visualYOffset, 0.0, -0.7, this, waitTmr: 0.5, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+          ));
+          gameRef.combatOverlay.add(ArcProjectile(
+            strafePosition + 0.25, yPosition + visualYOffset, 0.0, -0.7, this, waitTmr: 1, isHoming: true, grav: 1, imgPath: 'effects/coin.png'
+          ));
+        } else {
+          double startY = 0.63;
+          List<double> posX = [0.4, 0, -0.4];
+          posX.shuffle();
+          _spawnLightningPillar(posX[0], startY); 
+        }
       }
     }
+
+    if (isDying) return;
+    
+    if ((yPosition - targetY).abs() > 0.01) {
+      double verticalSpeed = speed; 
+      yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
+    }
+
+    if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
+      targetY = attackHeight; 
+    } else if (currentPhase == CombatPhase.idle) {
+      targetY = flightHeight;
+      priority = isFrontRow ? 10 : 0;
+    }
+  }
+
+  Future<void> _spawnLightningPillar(double startX, double startY) async {
+    final ui.Image img = await game.images.load('effects/raio.png');
+    gameRef.combatOverlay.add(FirePillar(startX, startY, 0.0, 0, this, img: img, tmr: 0.5));
   }
 }
 
@@ -2569,10 +2567,9 @@ class MagoEnemy extends Enemy {
   bool isSummoning = false;
   double summonTmr = 5;
 
-
   MagoEnemy() : super(name:'mago',
-    type: EnemyType.boss3, color: Palette.roxo, hp: 60, maxHp: 60, dropEssence: 10, width: 192, height: 192, speed: 0.4,
-    hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
+    type: EnemyType.boss3, color: Palette.roxo, hp: 300, maxHp: 300, dropEssence: 10, width: 192, height: 192, speed: 0.4,
+    hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0, damage: 25,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 8,
     drop: []
   );
@@ -2645,7 +2642,6 @@ class MagoEnemy extends Enemy {
     gameRef.combatOverlay.enemies.add(esq2);
     parent?.add(esq1);
     parent?.add(esq2);
-    
   }
 
   @override
@@ -2683,8 +2679,6 @@ class MagoEnemy extends Enemy {
           ));
         }
       }
-
-      
     }
   }
 
@@ -2695,5 +2689,4 @@ class MagoEnemy extends Enemy {
     final ui.Image img = await game.images.load('effects/firePillar.png');
     gameRef.combatOverlay.add(FirePillar(startX, startY, 0.0,0, this, img:img));
   }
-
 }
