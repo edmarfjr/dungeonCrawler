@@ -895,7 +895,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     _initializeInventory();
     
-    dungeon.level = 7;
+    dungeon.level = 1;
     player.hasKey = false;
 
     dungeon.width = mapSize;
