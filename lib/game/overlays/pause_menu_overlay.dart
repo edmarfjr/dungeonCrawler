@@ -161,7 +161,7 @@ class _MapPainter extends CustomPainter {
     double offsetY = (size.height - (rows * tileSize)) / 2;
 
     final paintWall = Paint()..color = Palette.branco;
-    final paintFloor = Paint()..color = Palette.preto;
+    final paintFloor = Paint()..color = Palette.cinzaEsc;
     final paintDoor = Paint()..color = Palette.vermelhoEsc;
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;

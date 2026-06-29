@@ -149,7 +149,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _removeCoins(int amount) {
     try {
-      var coin = playerCombatStats.inventory.firstWhere((i) => i.name == "Moeda");
+      var coin = playerCombatStats.inventory.firstWhere((i) => i.name == "moeda");
       coin.quantity -= amount;
       if (coin.quantity <= 0) {
         playerCombatStats.inventory.remove(coin);
@@ -223,6 +223,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
+      ItemDatabase.zweihander,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -326,7 +327,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       //armas
       ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
       ItemDatabase.espadaOrc, ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.clavaOrc,ItemDatabase.warhammer,
-      ItemDatabase.varinha,
+      ItemDatabase.varinha,ItemDatabase.zweihander,
       //armaduras
       ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug,ItemDatabase.armaduraAco,
       ItemDatabase.armaduraBronze, ItemDatabase.gambeson,
@@ -443,6 +444,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/towerShield.png',
       'itens/gambeson.png',
       'itens/varinha.png',
+      'itens/zweihander.png',
     ]);
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
@@ -1138,6 +1140,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               FlameAudio.play('sfx/hit.wav');
             }else{
               enemy.applyHitGuard(0.3);
+              playerCombatStats.stamina -= 4;
               playerCombatStats.stamina = max(playerCombatStats.stamina - playerCombatStats.staminaCost,0);
               combatOverlay.addFloatingText("BLOCK!", enemy.getHurtbox(size), Palette.cinzaCla);
               FlameAudio.play('sfx/block.wav');
@@ -1264,7 +1267,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.boss1);
+          _triggerSpecificEncounter(EnemyType.orc);
         }
       }
 
@@ -1330,7 +1333,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       FlameAudio.play('sfx/block.wav');
       if (playerCombatStats.stamina >= 0) {
         if (playerCombatStats.staminaInfiniteTmr <= 0){
-          playerCombatStats.stamina -= (16 - playerCombatStats.equippedShield!.power); 
+          playerCombatStats.stamina -= (8 - playerCombatStats.equippedShield!.power); 
         } 
         playerCombatStats.stamina = playerCombatStats.stamina.clamp(0, playerCombatStats.con * 3);
         if (playerCombatStats.stamina <= 0) {
@@ -1478,6 +1481,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ItemDatabase.armaduraBronze,
             ItemDatabase.clava,
             ItemDatabase.espadaLonga,
+            ItemDatabase.zweihander,
             ItemDatabase.varinha,
             ItemDatabase.gambeson,
             ItemDatabase.escudoTorre,
@@ -2291,7 +2295,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           List<Item> items = [
             //armas
             ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
-            ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.warhammer,ItemDatabase.varinha,
+            ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.warhammer,ItemDatabase.varinha,ItemDatabase.zweihander,
             //armaduras
             ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco,
             ItemDatabase.armaduraBronze, ItemDatabase.gambeson,
@@ -2356,6 +2360,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           ItemDatabase.armaduraAco,
           ItemDatabase.armaduraBronze,
           ItemDatabase.espadaLonga,
+          ItemDatabase.zweihander,
           ItemDatabase.varinha,
           ItemDatabase.escudoTorre,
           ItemDatabase.warhammer,

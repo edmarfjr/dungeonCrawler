@@ -464,7 +464,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     double xPixel = (size.x / 2) + (playerStats.strafePosition * size.x * 0.35) - (playerWidth / 2);
     final dstRect = Rect.fromLTWH(xPixel, size.y - 65 - playerHeight + yOffset, playerWidth, playerHeight);
-    final dstRectWeapon = Rect.fromLTWH(xPixel, size.y - 65 - playerHeight + yOffset + playerStats.offYWeapon, playerWidth, playerHeight);
+    final dstRectWeapon = Rect.fromLTWH(xPixel, size.y - 65 - playerHeight + yOffset - playerStats.offYWeapon, playerWidth, playerHeight);
 
     SpriteAnimationTicker activeTicker;
     SpriteAnimationTicker activeWeaponTicker; 

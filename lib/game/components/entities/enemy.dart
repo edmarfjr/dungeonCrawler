@@ -718,8 +718,8 @@ class OrcEnemy extends Enemy {
     type: EnemyType.orc, 
     color: Palette.cinza, // Cor do escudo/armadura
     hp: 80, maxHp: 80, dropEssence: 20, width: 144, height: 144, speed: 0.6,
-    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0, damage: 12,
-    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.clavaOrc]
+    hurtboxWidth: 80, hurtboxHeight: 130, hurtboxOffsetY: 0, damage: 12,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 20, hitboxOffsetX: 20,drop: [ItemDatabase.clavaOrc]
   ) {
     isMelee = true;
   }
@@ -892,7 +892,7 @@ class OrcChefe extends Enemy {
     hp: 300, maxHp: 300, dropEssence: 100, 
     width: 192, height: 192, speed: 0.45, damage: 20, isMelee: true,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
-    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.espadaOrc]
+    hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 40, hitboxOffsetX: 20,drop: [ItemDatabase.espadaOrc]
   );
 
   // MÁGICA 1: Se ele estiver invocando, desligamos o melee para a hitbox não machucar o jogador!
