@@ -7,7 +7,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
-  final double tileSize = 4.0;
+  final double tileSize = 5.0;
   final int viewRadius = 7;
   
   @override
@@ -84,7 +84,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.floor:
-            tilePaint.color = Palette.cinzaMed;
+            tilePaint.color = Palette.preto;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.door:
@@ -105,11 +105,11 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
             break;
           case TileType.spike:
-            tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
+            tilePaint.color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinzaEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.poison:
-            tilePaint.color = map.spikeState == 0 ? Palette.cinzaCla : Palette.verde;
+            tilePaint.color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinzaEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.shrine:
@@ -168,23 +168,43 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     double playerRenderX = startX + (playerRelX * tileSize);
     double playerRenderY = startY + (playerRelY * tileSize);
     
-    //canvas.drawRect(Rect.fromLTWH(playerRenderX, playerRenderY, tileSize, tileSize), Paint()..color = Palette.azul);
-    canvas.drawCircle(Offset(playerRenderX+tileSize/2, playerRenderY+tileSize/2), tileSize/2, Paint()..color = Palette.azul);
+    // 1. Encontrar o centro exato do bloco onde o jogador está
+    double centerX = playerRenderX + (tileSize / 2);
+    double centerY = playerRenderY + (tileSize / 2);
 
-    // Indicador de direção do jogador
-    double dx = 0, dy = 0;
-    switch (player.facing) {
-      case Direction.north: dy = -tileSize * 0.35; break;
-      case Direction.east:  dx = tileSize * 0.35;  break;
-      case Direction.south: dy = tileSize * 0.35;  break;
-      case Direction.west:  dx = -tileSize * 0.35; break;
-    }
+    canvas.save(); // Salva o canvas antes de rodar
     
-    canvas.drawRect(
-      Rect.fromLTWH(playerRenderX + (tileSize/4) + dx, playerRenderY + (tileSize/4) + dy, tileSize/2, tileSize/2),
-      Paint()..color = Palette.vermelhoCla
-    );
+    // 2. Movemos o "pincel" para o centro do jogador
+    canvas.translate(centerX, centerY);
 
+    // 3. Rotacionamos o canvas de acordo com a direção! (Requer import 'dart:math';)
+    double angle = 0;
+    switch (player.facing) {
+      case Direction.north: angle = 0; break;
+      case Direction.east:  angle = pi / 2; break; // 90 graus
+      case Direction.south: angle = pi; break;     // 180 graus
+      case Direction.west:  angle = -pi / 2; break;// -90 graus
+    }
+    canvas.rotate(angle);
+
+    // 4. Desenhamos a Seta/Nave apontando para cima (Norte)
+    // Como já rotacionamos o canvas, desenhar para cima sempre apontará para a direção certa!
+    Path playerPath = Path();
+    double size = tileSize * 0.4; 
+    
+    playerPath.moveTo(0, -size); // Ponta da seta
+    playerPath.lineTo(size, size); // Perna direita da seta
+    //playerPath.lineTo(0, size * 0.4); // Recuo no meio da base (dá o formato de seta/GPS)
+    playerPath.lineTo(-size, size); // Perna esquerda da seta
+    playerPath.close();
+
+    // 5. Pinta a seta de azul
+    canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
+    
+    // Opcional: Adiciona um contorninho branco ou vermelho para a seta saltar aos olhos!
+    //canvas.drawPath(playerPath, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 0.5);
+
+    // 6. Restaura o canvas para a rotação não afetar a sua moldura do minimapa!
     canvas.restore();
     
     // 5. Borda final por cima de tudo

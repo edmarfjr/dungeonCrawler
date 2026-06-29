@@ -50,6 +50,7 @@ class PauseMenuOverlay extends StatelessWidget {
                     map: game.dungeon,
                     playerX: game.player.x,
                     playerY: game.player.y,
+                    playerFacing: game.player.facing,
                   ),
                 ),
               ),
@@ -139,8 +140,14 @@ class _MapPainter extends CustomPainter {
   final DungeonMap map;
   final int playerX;
   final int playerY;
+  final Direction playerFacing;
 
-  _MapPainter({required this.map, required this.playerX, required this.playerY});
+ _MapPainter({
+    required this.map, 
+    required this.playerX, 
+    required this.playerY,
+    required this.playerFacing, // <-- NOVO
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -154,7 +161,7 @@ class _MapPainter extends CustomPainter {
     double offsetY = (size.height - (rows * tileSize)) / 2;
 
     final paintWall = Paint()..color = Palette.branco;
-    final paintFloor = Paint()..color = Palette.cinzaMed;
+    final paintFloor = Paint()..color = Palette.preto;
     final paintDoor = Paint()..color = Palette.vermelhoEsc;
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
@@ -190,7 +197,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
         else if (tile == TileType.font || tile == TileType.fontPoison) canvas.drawRect(tileRect, fontShop);
 
-        if (map.keyPosition!.x == x && map.keyPosition!.y == y){
+        if (map.keyPosition != null && map.keyPosition!.x == x && map.keyPosition!.y == y){
           canvas.drawRect(tileRect, paintKey);
         }
 
@@ -198,11 +205,41 @@ class _MapPainter extends CustomPainter {
     }
 
     // Desenha o Jogador
-    //Rect tileRect = Rect.fromLTWH(offsetX + playerX * tileSize, offsetY + playerY * tileSize, tileSize, tileSize);
-    final playerPaint = Paint()..color = Palette.azul;
+    // 1. Encontra o centro exato do tile onde o jogador está
+    double centerX = offsetX + (playerX * tileSize) + (tileSize / 2);
+    double centerY = offsetY + (playerY * tileSize) + (tileSize / 2);
 
-    //canvas.drawRect(tileRect, playerPaint);
-    canvas.drawCircle(Offset((offsetX + playerX * tileSize)+tileSize/2, (offsetY + playerY * tileSize)+tileSize/2), tileSize/2, playerPaint);
+    canvas.save(); 
+    
+    // 2. Move o eixo para o centro do jogador
+    canvas.translate(centerX, centerY);
+
+    // 3. Rotaciona o canvas baseado na direção
+    double angle = 0;
+    switch (playerFacing) {
+      case Direction.north: angle = 0; break;
+      case Direction.east:  angle = pi / 2; break; // 90 graus
+      case Direction.south: angle = pi; break;     // 180 graus
+      case Direction.west:  angle = -pi / 2; break;// -90 graus
+    }
+    canvas.rotate(angle);
+
+    // 4. Desenha o Path da seta apontando para cima
+    Path playerPath = Path();
+    
+    // Ajustamos o tamanho da seta para caber certinho dentro do Tile do mapa
+    double sizeArrow = tileSize * 0.4; 
+    
+    playerPath.moveTo(0, -sizeArrow); 
+    playerPath.lineTo(sizeArrow, sizeArrow); 
+   // playerPath.lineTo(0, sizeArrow * 0.4); 
+    playerPath.lineTo(-sizeArrow, sizeArrow); 
+    playerPath.close();
+
+    canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
+    //canvas.drawPath(playerPath, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.0);
+
+    canvas.restore();
   }
 
   @override

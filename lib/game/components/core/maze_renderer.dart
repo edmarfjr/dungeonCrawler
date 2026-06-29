@@ -163,6 +163,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
         }
 
+        if (tile == TileType.fontPoison && gameRef.currentState == GameState.exploration) {
+          _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
+        }
+
         if (tile == TileType.crate && gameRef.currentState == GameState.exploration) {
           _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Palette.marrom);
         }
@@ -201,11 +205,11 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Sempre desenha o chão normal debaixo da armadilha
           _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
 
-          // Calcula a largura de 1 frame (divide a spritesheet por 4)
-          double frameWidth = trapImage[1].width / 4;
+          // Calcula a largura de 1 frame (divide a spritesheet por 5)
+          double frameWidth = trapImage[1].width / 5;
           
           // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
-          Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
+          Rect frameRect = Rect.fromLTWH(map.poisonState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
 
           // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
           _drawBillboardItem(canvas, cx, cz, trapImage[1], 0.7, 0.1,Colors.white, srcRect: frameRect);

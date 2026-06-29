@@ -251,6 +251,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         'grid': gridJson,
         'explored': exploredJson,
         'spikeState': dungeon.spikeState,
+        'poisonState': dungeon.poisonState,
       },
       'player': {
         'x': player.x,
@@ -288,6 +289,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     var dData = data['dungeon'];
     dungeon = DungeonMap(width: dData['width'], height: dData['height']);
     dungeon.spikeState = dData['spikeState'] ?? 0;
+    dungeon.poisonState = dData['poisonState'] ?? 0;
     
     List<dynamic> gridDyn = dData['grid'];
     List<dynamic> expDyn = dData['explored'];
@@ -745,8 +747,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
 
       final helpSpan = const TextSpan(
-        text: "[▲▼] Mudar Linha   [◄►] Alterar Pontos   [A] Confirmar",
-        style: TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'pixelFont')
+        text: "[▲▼] Mudar Linha [◄►] Alterar Pontos [A] Confirmar",
+        style: TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'pixelFont')
       );
       final helpPainter = TextPainter(text: helpSpan, textDirection: TextDirection.ltr)..layout();
       helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
@@ -1262,7 +1264,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.infectado);
+          _triggerSpecificEncounter(EnemyType.boss1);
         }
       }
 
@@ -1271,7 +1273,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
 
       // Navegação de Menus e Nivelamento
-      if (currentState == GameState.levelUp&& activeMessage == null) {
+      if (currentState == GameState.levelUp && activeMessage == null) {
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) startInput(GameInput.left);
@@ -1383,8 +1385,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       () => SlimeEnemy(),
       () => GoblinEnemy(),
       () => SpiderEnemy(),
+      () => BatEnemy(),
+      () => OrcEnemy(),
     ];
     
+    /*
     if(dungeon.level >= 2){
       iniPool.add(() => BatEnemy());
     }
@@ -1392,16 +1397,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(dungeon.level >= 3){
       iniPool.add(() => OrcEnemy());
     }
-
+    */
     if(dungeon.level >= 4){
       iniPool = [
         () => OvoEnemy(),
         () => WormEnemy(),
         () => FungoEnemy(),
-        () => Fungo2Enemy(),      
+        () => Fungo2Enemy(), 
+        () => BugEnemy(),   
+        () => InfectadoEnemy(), 
       ];
     }
-
+  /*
     if(dungeon.level >= 5){
       iniPool.add(() => BugEnemy());
     }
@@ -1409,16 +1416,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(dungeon.level >= 6){
       iniPool.add(() => InfectadoEnemy());
     }
-
+  */
     if(dungeon.level >= 7){
       iniPool = [
         () => EsqueletoEnemy(),
         () => DollEnemy(),
         () => InfectadoEnemy(),
         () => JesterEnemy(),
+        () => NagaEnemy(),
+        () => HandEnemy()
       ];
     }
-
+/*
     if(dungeon.level >= 8){
       iniPool.add(() => NagaEnemy());
     }
@@ -1426,7 +1435,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(dungeon.level >= 8){
       iniPool.add(() => HandEnemy());
     }
-
+*/
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
       Enemy newEnemy = iniPool[enemyType]();
@@ -2159,6 +2168,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _onPlayerStepped() {
     dungeon.advanceSpikes();
+    dungeon.advancePoison();
     playerCombatStats.recoverMana();
     if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 3) {
       playerCombatStats.hp -= 5; 
@@ -2167,7 +2177,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (playerCombatStats.hp <= 0) handlePlayerDeath();
     }
 
-    if (dungeon.getTile(player.x, player.y) == TileType.poison && dungeon.spikeState == 3) {
+    if (dungeon.getTile(player.x, player.y) == TileType.poison && (dungeon.poisonState == 3 || dungeon.poisonState == 4)) {
       playerCombatStats.poisonTmr = 10; 
       playerCombatStats.applyHitStun(0.3); 
       showMessage("Você pisou em uma armadilha de veneno!");
@@ -2177,6 +2187,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.poisonTmr --;
       if(playerCombatStats.hp > 1)playerCombatStats.hp -= 1;   
       playerCombatStats.applyEffect(0.3,Palette.verde);
+      if (playerCombatStats.poisonTmr == 0)showMessage("Você se sente melhor!");
     }
     dungeon.moveEnemies(Point(player.x, player.y));
 
@@ -2277,7 +2288,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           shopInventory.add(pocoes[0]);
         */
 
-          List<Item> Items = [
+          List<Item> items = [
             //armas
             ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
             ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.warhammer,ItemDatabase.varinha,
@@ -2290,7 +2301,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
           ];
 
-          List<Item> Consumiveis = [
+          List<Item> consumiveis = [
             //pocoes
             ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
             //itens
@@ -2298,11 +2309,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ItemDatabase.bugOrgan, ItemDatabase.bola,
           ];
 
-          List<Item> unownedItens = Items.where((equip) {
+          List<Item> unownedItens = items.where((equip) {
             return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
           }).toList();
 
-          unownedItens.addAll(Consumiveis);
+          unownedItens.addAll(consumiveis);
 
           unownedItens.shuffle();
 
@@ -2314,6 +2325,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           shopInventory.add(unownedItens[3]);
 
           await saveGame();
+
+          if(dungeon.level >= 10){
+            currentState = GameState.gameOver;
+            overlays.add('GameOver');
+          }
         });
       } else {
         showMessage("A porta está trancada. Encontre a chave.");
@@ -2326,10 +2342,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         dungeon.grid[player.y][player.x] = TileType.floor; 
         showMessage("O baú era um MÍMICO!!", onDismiss: () { _triggerSpecificEncounter(EnemyType.mimic); }); 
       
-      //} else if (chance < 60) { 
-     //   dungeon.grid[player.y][player.x] = TileType.openChest; 
-      //  int loot = Random().nextInt(30) + 10; 
-      //  showMessage("Você achou $loot Essências!", onDismiss: () { playerCombatStats.essence += loot; }); 
+      } else if (chance < 60) { 
+        dungeon.grid[player.y][player.x] = TileType.openChest; 
+        int loot = Random().nextInt(30) + 10; 
+        showMessage("Você achou $loot Essências!", onDismiss: () { playerCombatStats.essence += loot; }); 
       
       } else {
         dungeon.grid[player.y][player.x] = TileType.openChest; 

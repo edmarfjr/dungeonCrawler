@@ -305,7 +305,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       animTimer -= dt;
       if (animTimer <= 0) {
         if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
-        else if (currentPhase == CombatPhase.active) { currentPhase = CombatPhase.recovery; animTimer = 1.0; } 
+        else if (currentPhase == CombatPhase.active) { currentPhase = CombatPhase.recovery; animTimer = 0.6; } 
         else { currentPhase = CombatPhase.idle; }
       }
     }
@@ -730,6 +730,7 @@ class OrcEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -739,7 +740,7 @@ class OrcEnemy extends Enemy {
                            currentPhase == CombatPhase.recovery;
 
     // --- INTELIGÊNCIA DE DEFESA ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -747,7 +748,7 @@ class OrcEnemy extends Enemy {
 
     // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
-      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+      
 
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
@@ -888,8 +889,8 @@ class OrcChefe extends Enemy {
     name: 'orc chefe',isBoss: true,
     type: EnemyType.boss1, 
     color: Palette.vermelhoEsc, 
-    hp: 250, maxHp: 250, dropEssence: 100, 
-    width: 192, height: 192, speed: 0.45, damage: 10, isMelee: true,
+    hp: 300, maxHp: 300, dropEssence: 100, 
+    width: 192, height: 192, speed: 0.45, damage: 20, isMelee: true,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.espadaOrc]
   );
@@ -903,6 +904,7 @@ class OrcChefe extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
 
     if (isSummoning || currentPhase == CombatPhase.summon) {
       return; 
@@ -919,7 +921,7 @@ class OrcChefe extends Enemy {
                            currentPhase == CombatPhase.recovery2;
 
     // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       // O jogador tentou bater e o Chefe está livre: Levanta o Escudo!
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
@@ -929,8 +931,6 @@ class OrcChefe extends Enemy {
 
     // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
-      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
       }
@@ -974,8 +974,9 @@ class OrcChefe extends Enemy {
       // 1. PRIORIDADE: Invocar o lacaio
       if (summonCooldown <= 0) {
         isSummoning = true;
+        isFrontRow = false;
         currentPhase = CombatPhase.summon;
-        animTimer = 1.5; // Fica 1.5s tocando o berrante / fazendo a pose
+        animTimer = 1.0;
         summonCooldown = 15.0 + Random().nextDouble() * 5.0; // Próximo goblin só daqui a ~17s
         return;
       }
@@ -999,7 +1000,7 @@ class OrcChefe extends Enemy {
         attackCooldown = maxAttackCooldown;
         
         // O dano sobe violentamente no ataque pesado
-        damage = isHeavyAttack ? 20 : 10; 
+        damage = isHeavyAttack ? 25 : 15; 
       }
     }
   }
@@ -1022,7 +1023,7 @@ class OrcChefe extends Enemy {
       animTimer -= dt;
       if (animTimer <= 0) {
         if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
-        else if (currentPhase == CombatPhase.active2) { currentPhase = CombatPhase.recovery2; animTimer = 1.0; } 
+        else if (currentPhase == CombatPhase.active2) { currentPhase = CombatPhase.recovery2; animTimer = 0.4; } 
         else { currentPhase = CombatPhase.idle; }
       }
     }
@@ -1086,6 +1087,7 @@ class BugEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -1101,7 +1103,7 @@ class BugEnemy extends Enemy {
     }
 
     // --- INTELIGÊNCIA DE DEFESA ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1109,8 +1111,6 @@ class BugEnemy extends Enemy {
 
     // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
-      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
       }
@@ -1246,6 +1246,8 @@ class OvoEnemy extends Enemy {
         } else if (currentPhase == CombatPhase.recovery) {
           hp = 0;
           isDying = true; 
+          gameRef.encounterEssence += dropEssence; 
+          gameRef.encounterDrop.addAll(drop);
           currentPhase = CombatPhase.idle; 
         }
       }
@@ -1391,7 +1393,6 @@ class Fungo2Enemy extends Enemy {
   );
 
   double floatTimer = 0.0;
-  bool isHealingAttack = false;
   double startDirection = Random().nextBool() ? 1.0 : -1.0;
 
   @override
@@ -1447,6 +1448,8 @@ class Fungo2Enemy extends Enemy {
         else if (currentPhase == CombatPhase.recovery) {
           hp = 0;
           isDying = true; 
+          gameRef.encounterEssence += dropEssence; 
+          //gameRef.encounterDrop.addAll(drop);
           currentPhase = CombatPhase.idle; 
         }
       }
@@ -1482,7 +1485,7 @@ class InfectadoEnemy extends Enemy {
   InfectadoEnemy() : super(name: 'infectado',
     type: EnemyType.infectado,  damage: 12,
     color: Palette.cinza, // Cor do escudo/armadura
-    hp: 90, maxHp: 90, dropEssence: 40, width: 144, height: 144, speed: 0.6,
+    hp: 90, maxHp: 90, dropEssence: 40, width: 144, height: 144, speed: 0.55,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteFung],
     imunePoison: true,
@@ -1496,6 +1499,7 @@ class InfectadoEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -1508,7 +1512,7 @@ class InfectadoEnemy extends Enemy {
                            currentPhase == CombatPhase.recovery2;
 
     // --- INTELIGÊNCIA DE DEFESA ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1516,8 +1520,6 @@ class InfectadoEnemy extends Enemy {
 
     // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
-      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
       }
@@ -1795,7 +1797,7 @@ class EsqueletoEnemy extends Enemy {
   EsqueletoEnemy() : super(name: 'esqueleto',
     type: EnemyType.esqueleto,  damage: 15,
     color: Palette.cinza, // Cor do escudo/armadura
-    hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144, speed: 0.6,
+    hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144, speed: 0.62,
     hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
     hitboxWidth: 100, hitboxHeight: 100, hitboxOffsetY: 10,drop: [],
     imunePoison: true,
@@ -1809,6 +1811,7 @@ class EsqueletoEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -1818,7 +1821,7 @@ class EsqueletoEnemy extends Enemy {
                            currentPhase == CombatPhase.recovery;
 
     // --- INTELIGÊNCIA DE DEFESA ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1826,8 +1829,6 @@ class EsqueletoEnemy extends Enemy {
 
     // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
-      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
       }
@@ -1929,6 +1930,7 @@ class JesterEnemy extends Enemy {
 
   @override
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
@@ -1936,7 +1938,7 @@ class JesterEnemy extends Enemy {
                            currentPhase == CombatPhase.recovery;
 
     // --- INTELIGÊNCIA DE DEFESA ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       // Se o jogador estiver atacando, o Jester "congela" na pose de defesa.
       // E como isVulnerable retornará 'false', ele vai bloquear o dano perfeitamente!
       currentPhase = CombatPhase.guard;
@@ -2000,9 +2002,10 @@ class JesterEnemy extends Enemy {
           strafePosition, 
           startY, 
           0.0,
-          -0.5,
+          -0.8,
           this,
           grav: 1,
+          speedX: 6,
           isHoming: true
         ));
       }
@@ -2048,7 +2051,7 @@ class NagaEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
-
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     // 1. Lê a mente do jogador (Igual ao Orc comum)
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -2061,7 +2064,7 @@ class NagaEnemy extends Enemy {
                            currentPhase == CombatPhase.recovery2;
 
     // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3) {
       // O jogador tentou bater e o Chefe está livre: Levanta o Escudo!
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
@@ -2071,7 +2074,7 @@ class NagaEnemy extends Enemy {
 
     // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
-      double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+      
 
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
@@ -2237,13 +2240,14 @@ class HandEnemy extends Enemy {
 
   @override
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
     // Atualizado para reconhecer que está atacando mesmo se for o Ataque 2
     bool isSelfAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
                            currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
 
-    if (isPlayerAttacking && !isSelfAttacking) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       currentPhase = CombatPhase.guard;
       animTimer = 0.5; 
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {

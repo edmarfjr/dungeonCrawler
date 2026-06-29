@@ -531,20 +531,21 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawPlayerUI(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 60), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 60), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 75), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
     //double barWidth = (size.x - 40) / 3;
     _drawHorizontalBar(canvas, 10, 10, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
     _drawHorizontalBar(canvas, 10, 25, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
     _drawHorizontalBar(canvas, 10, 40, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
+    
+    //inventario
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
       Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
-      double boxX = size.x - 41;
+      double bxSize = 55;
+      double boxX = size.x - (bxSize + 1);
       double boxY = 1;
-
-      //inventario
       // Desenha a caixa de fundo
-      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 40, 40), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.preto);
       
       try {
         ui.Image itemImg = gameRef.images.fromCache(sel.imagePath);
@@ -555,20 +556,20 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         canvas.drawImageRect(
           itemImg,
           Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
-          Rect.fromLTWH(boxX, boxY, 40, 40), 
+          Rect.fromLTWH(boxX, boxY, bxSize, bxSize), 
           tintPaint // <--- Usa o paint com cor aqui!
         );
       } catch (e) {
         // Se a imagem não for encontrada, não quebra o jogo
       }
-      canvas.drawRect(Rect.fromLTWH(boxX, boxY, 40, 40), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
       String amountText = sel.type == ItemType.spell ? '${sel.manaCost} MP' : '${sel.quantity}x';
       
       TextPainter(
         text: TextSpan(text: amountText, style: TextStyle(fontFamily: 'pixelFont', color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(boxX, 45));
+      )..layout()..paint(canvas, Offset(boxX, bxSize + 5));
       //TextPainter(
       //  text: const TextSpan(text: 'Uso[B]', style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 10)),
       //  textDirection: TextDirection.ltr,
@@ -577,26 +578,27 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         TextPainter(
           text: const TextSpan(text: 'REFLEX', style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 10)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x-44-'REFLEX'.length*10, 20));
+        )..layout()..paint(canvas, Offset(size.x-(bxSize*1.5)-'REFLEX'.length*10, 20));
       }
 
     }
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
-      double keyX = size.x/2 + 40;
+      double bxSize = 55;
+      double keyX = size.x/2 + bxSize;
       double keyY = 10;
       
-      canvas.drawRect(Rect.fromLTWH(keyX, keyY, 40, 40), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.preto);
       try {
         canvas.drawImageRect(
           gameRef.keySprite, 
           Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
-          Rect.fromLTWH(keyX, keyY, 40, 40),
+          Rect.fromLTWH(keyX, keyY, bxSize, bxSize),
           Paint()..colorFilter = ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
         );
       } catch (e) {
         // Fallback caso a imagem dê erro
       }
-      canvas.drawRect(Rect.fromLTWH(keyX, keyY, 40, 40), Paint()..color = Palette.amarelo..style = PaintingStyle.stroke..strokeWidth = 1);
+      canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.amarelo..style = PaintingStyle.stroke..strokeWidth = 1);
       
     }
 
@@ -604,15 +606,15 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       
       String direc = 'N';
       switch (gameRef.player.facing) {
-      case Direction.north: direc = 'N'; break;
-      case Direction.east:  direc = 'E'; break;
-      case Direction.south: direc = 'S'; break;
-      case Direction.west:  direc = 'W'; break;
+      case Direction.north: direc = '-N-'; break;
+      case Direction.east:  direc = '-E-'; break;
+      case Direction.south: direc = '-S-'; break;
+      case Direction.west:  direc = '-W-'; break;
     }
       TextPainter(
           text: TextSpan(text: direc, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x/2, 18));
+        )..layout()..paint(canvas, Offset(size.x/2 - direc.length*6 , 22));
     }
   }
 

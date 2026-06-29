@@ -17,6 +17,7 @@ class DungeonMap {
   Point<int>? keyPosition;
 
   int spikeState = 0;
+  int poisonState = 0;
   
   List<Point<int>> roamingEnemies = [];
 
@@ -26,6 +27,10 @@ class DungeonMap {
 
   void advanceSpikes() {
     spikeState = (spikeState + 1) % 4;
+  }
+
+  void advancePoison() {
+    poisonState = (poisonState + 1) % 5;
   }
 
   DungeonMap({this.width = 20, this.height = 20, this.level = 1}) { generateProceduralMap(); }
@@ -175,12 +180,12 @@ class DungeonMap {
     for (int i = 0; i < floorTiles.length; i++) {
       if (_calculateDistance(floorTiles[i], playerSpawn) >= 6) { selectedKey = floorTiles[i]; floorTiles.removeAt(i); break; }
     }
-    grid[selectedKey!.y][selectedKey!.x] = TileType.shop;
+    grid[selectedKey!.y][selectedKey.x] = TileType.shop;
 
     for (int i = 0; i < floorTiles.length; i++) {
       if (_calculateDistance(floorTiles[i], playerSpawn) >= 6) { selectedKey = floorTiles[i]; floorTiles.removeAt(i); break; }
     }
-    grid[selectedKey!.y][selectedKey!.x] = Random().nextBool()? TileType.fontPoison: TileType.font;
+    grid[selectedKey!.y][selectedKey.x] = Random().nextBool()? TileType.fontPoison: TileType.font;
 
     int numChests = random.nextInt(3) + 1; 
     for (int i = 0; i < numChests; i++) {
