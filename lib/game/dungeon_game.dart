@@ -223,7 +223,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga,
       ItemDatabase.bloquel,
       ItemDatabase.healthPotion,
-      ItemDatabase.zweihander,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -949,7 +948,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('save_game');
     hasSavedGame = false;
-
+    combatOverlay.enemies.clear();
     currentState = GameState.gameOver;
     overlays.add('GameOver');
   }

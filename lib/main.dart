@@ -199,13 +199,23 @@ class _GameScreenState extends State<GameScreen> {
 
   // Os botões A e B continuam iguais, pois geralmente você bate o dedo neles
   Widget _buildActionButton(String label, GameInput input, Color color) {
-    return GestureDetector(
-      onTapDown: (_) {
+    // 1. Trocamos GestureDetector por Listener
+    return Listener(
+      // 2. Garante que o botão deteta o toque mesmo se o dedo deslizar um pouco
+      behavior: HitTestBehavior.opaque, 
+      
+      // 3. onPointerDown é INSTANTÂNEO (ocorre no milissegundo em que o dedo toca no vidro)
+      onPointerDown: (_) {
         HapticFeedback.mediumImpact(); 
         _game.startInput(input);
       },
-      onTapUp: (_) => _game.stopInput(input),
-      onTapCancel: () => _game.stopInput(input),
+      
+      // 4. onPointerUp é quando o dedo levanta
+      onPointerUp: (_) => _game.stopInput(input),
+      
+      // 5. onPointerCancel é quando o sistema interrompe o toque (ex: abrir uma notificação)
+      onPointerCancel: (_) => _game.stopInput(input),
+      
       child: Container(
         width: 80, height: 80,
         decoration: BoxDecoration(
@@ -214,7 +224,15 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: const [BoxShadow(color: Palette.cinzaEsc, blurRadius: 4, offset: Offset(2, 2))],
         ),
         child: Center(
-          child: Text(label, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontWeight: FontWeight.bold, fontSize: 20)),
+          child: Text(
+            label, 
+            style: const TextStyle(
+              fontFamily: 'pixelFont', 
+              color: Palette.branco, 
+              fontWeight: FontWeight.bold, 
+              fontSize: 20
+            )
+          ),
         ),
       ),
     );
