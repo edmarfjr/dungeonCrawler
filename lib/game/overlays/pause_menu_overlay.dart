@@ -11,6 +11,7 @@ class PauseMenuOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final tempoAtual = game.getFormattedRunTime();
     
     return Container(
       color: Palette.preto.withOpacity(0.8),
@@ -33,7 +34,15 @@ class PauseMenuOverlay extends StatelessWidget {
               style: const TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: 18, decoration: TextDecoration.none)
             ),
             const SizedBox(height: 10),
-            
+            Text(
+              'TEMPO DA RUN: $tempoAtual',
+              style: const TextStyle(
+                fontFamily: 'pixelFont',
+                color: Palette.branco,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 10),
             // --- O MAPA ---
             Container(
               width: screenSize.width * 0.50,  

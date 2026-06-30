@@ -123,6 +123,19 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     shakeTimer = duration;
     shakeIntensity = intensity;
   }
+
+  double runTime = 0.0;
+
+  String getFormattedRunTime() {
+    int totalSeconds = runTime.toInt();
+    int minutes = totalSeconds ~/ 60;
+    int seconds = totalSeconds % 60; 
+
+    String minStr = minutes.toString().padLeft(2, '0');
+    String secStr = seconds.toString().padLeft(2, '0');
+
+    return "$minStr:$secStr";
+  }
   
   int get levelUpCost {
     int totalLevel = (playerCombatStats.str + playerCombatStats.con + playerCombatStats.wis).toInt();
@@ -896,6 +909,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void resetGame() {
+    runTime=0;
     for (var enemy in combatOverlay.enemies) {
       enemy.removeFromParent(); 
     }
@@ -983,6 +997,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (rightTapTimer > 0) rightTapTimer -= dt;
     
     if (currentState == GameState.mainMenu || currentState == GameState.paused || currentState == GameState.gameOver) return;
+
+    if (currentState == GameState.exploration || currentState == GameState.combat) {
+      runTime += dt;
+    }
 
     if (currentState == GameState.manual) {
       double scrollSpeed = 450.0; // Velocidade da rolagem em pixels por segundo
