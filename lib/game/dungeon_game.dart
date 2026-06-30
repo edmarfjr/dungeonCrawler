@@ -19,7 +19,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
-enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop }
+enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, vitory }
 enum ShopPhase { main, buy, sell, confirmSell, steal }
 
 ShopPhase currentShopPhase = ShopPhase.main;
@@ -62,6 +62,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late ui.Image openChestSprite;
   late ui.Image trapImage;
   late ui.Image trapImage2;
+  late ui.Image trapImage3;
   late ui.Image roamerSprite;
   late ui.Image bossSprite;
   late ui.Image shrineSprite;
@@ -252,6 +253,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         'explored': exploredJson,
         'spikeState': dungeon.spikeState,
         'poisonState': dungeon.poisonState,
+        'teleportState': dungeon.teleportState,
       },
       'player': {
         'x': player.x,
@@ -290,6 +292,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     dungeon = DungeonMap(width: dData['width'], height: dData['height']);
     dungeon.spikeState = dData['spikeState'] ?? 0;
     dungeon.poisonState = dData['poisonState'] ?? 0;
+    dungeon.teleportState = dData['teleportState'] ?? 0;
     
     List<dynamic> gridDyn = dData['grid'];
     List<dynamic> expDyn = dData['explored'];
@@ -451,6 +454,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final ui.Image floorImg2 = await images.load('tilesets/floor2.png');
     final ui.Image wallImg3 = await images.load('tilesets/wall1.png');
     final ui.Image floorImg3 = await images.load('tilesets/floor1.png');
+    final ui.Image wallImg4 = await images.load('tilesets/tile4.png');
+    final ui.Image floorImg4 = await images.load('tilesets/tile4.png');
 
     final ui.Image shopImg = await images.load('tilesets/shop.png');
     final ui.Image fontImg = await images.load('tilesets/fonte.png');
@@ -467,6 +472,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     openChestSprite = await images.load('tilesets/bauAberto.png');
     trapImage = await images.load('tilesets/trap.png');
     trapImage2 = await images.load('tilesets/trap2.png');
+    trapImage3 = await images.load('tilesets/trap3.png');
     enemySheets = {
       EnemyType.slime: await images.load('actors/slime.png'),
       EnemyType.goblin: await images.load('actors/goblin.png'),
@@ -490,6 +496,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.doll: await images.load('actors/doll.png'),
       EnemyType.goblinShop: await images.load('actors/goblinShop.png'),
       EnemyType.boss3: await images.load('actors/boss3.png'),
+      EnemyType.aberraBruto: await images.load('actors/aberraBruto.png'),
+      EnemyType.aberraVoa: await images.load('actors/aberraVoador.png'),
+      EnemyType.aberraBesta: await images.load('actors/aberraBesta.png'),
+      EnemyType.aberraArv: await images.load('actors/aberraFixo.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -520,6 +530,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.doll: await images.load('effects/golpe.png'), 
       EnemyType.goblinShop: await images.load('effects/golpe.png'), 
       EnemyType.boss3: await images.load('effects/soco2.png'), 
+      EnemyType.aberraBruto: await images.load('effects/porrada.png'), 
+      EnemyType.aberraVoa: await images.load('effects/bola.png'), 
+      EnemyType.aberraBesta: await images.load('effects/bite.png'), 
+      EnemyType.aberraArv: await images.load('effects/porrada.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -528,13 +542,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     renderer = MazeRenderer(
       map: dungeon, 
       player: player, 
-      wallImage: [wallImg,wallImg2,wallImg3], 
-      floorImage: [floorImg,floorImg2,floorImg3],
+      wallImage: [wallImg,wallImg2,wallImg3,wallImg4], 
+      floorImage: [floorImg,floorImg2,floorImg3,floorImg4],
       doorImage: doorTexture, 
       doorImage2: doorTexture2, 
       keyImage: keySprite, 
       chestImage: chestSprite,
-      trapImage: [trapImage,trapImage2],
+      trapImage: [trapImage,trapImage2,trapImage3],
       roamerImage: roamerSprite,
       bossImage: bossSprite,
       shrineImage: shrineSprite,
@@ -916,6 +930,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     ];
 
     combatOverlay.enemies.clear();
+
+    combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
   }
 
   void startGame() {
@@ -948,7 +964,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('save_game');
     hasSavedGame = false;
-    combatOverlay.enemies.clear();
+    for (var e in combatOverlay.enemies){
+      e.isAlive = false;
+    }
     currentState = GameState.gameOver;
     overlays.add('GameOver');
   }
@@ -1266,7 +1284,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.orc);
+          _triggerSpecificEncounter(EnemyType.aberraArv);
         }
       }
 
@@ -1437,7 +1455,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(dungeon.level >= 8){
       iniPool.add(() => HandEnemy());
     }
-*/
+*/  
+    if(dungeon.level >= 10){
+      iniPool = [
+        () => AberraArvEnemy(),
+        () => AberraBestaEnemy(),
+        () => AberraBrutoEnemy(),
+        () => AberraVoaEnemy(),
+      ];
+    }
     for (int i = 0; i < numEnemies; i++) {
       int enemyType = Random().nextInt(iniPool.length); 
       Enemy newEnemy = iniPool[enemyType]();
@@ -1551,6 +1577,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         
         case EnemyType.jester: newEnemy = JesterEnemy(); break;  
         case EnemyType.naga: newEnemy = NagaEnemy(); break;  
+        case EnemyType.aberraBruto: newEnemy = AberraBrutoEnemy(); break;  
+        case EnemyType.aberraVoa: newEnemy = AberraVoaEnemy(); break;  
+        case EnemyType.aberraBesta: newEnemy = AberraBestaEnemy(); break;  
+        case EnemyType.aberraArv: newEnemy = AberraArvEnemy(); break;  
         default: newEnemy = SlimeEnemy(); break;
       }
     newEnemy.strafePosition = 0.0; 
@@ -2172,9 +2202,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _onPlayerStepped() {
     dungeon.advanceSpikes();
     dungeon.advancePoison();
+    dungeon.advanceTeleport();
+
     playerCombatStats.recoverMana();
     if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 3) {
       playerCombatStats.hp -= 5; 
+      shakeScreen(0.3, 10.0);
       playerCombatStats.applyHitStun(0.3); 
       showMessage("Você pisou em uma armadilha de espinhos!");
       if (playerCombatStats.hp <= 0) handlePlayerDeath();
@@ -2182,8 +2215,58 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (dungeon.getTile(player.x, player.y) == TileType.poison && (dungeon.poisonState == 3 || dungeon.poisonState == 4)) {
       playerCombatStats.poisonTmr = 10; 
+      shakeScreen(0.3, 10.0);
       playerCombatStats.applyHitStun(0.3); 
       showMessage("Você pisou em uma armadilha de veneno!");
+    }
+
+    if (dungeon.getTile(player.x, player.y) == TileType.teleport && (dungeon.teleportState == 3 || dungeon.teleportState == 4)) {
+      // 1. Criar uma lista para guardar todos os blocos seguros
+      List<Point<int>> safeTiles = [];
+
+      // 2. Varrer o mapa procurando blocos de chão comum
+      for (int y = 1; y < dungeon.height - 1; y++) {
+        for (int x = 1; x < dungeon.width - 1; x++) {
+          // Queremos teleportar APENAS para chãos vazios, para evitar bugar o jogo
+          if (dungeon.grid[y][x] == TileType.floor) {
+            
+            // (Opcional) Evitar teleportar o jogador para o bloco exato onde ele já está
+            if (x != player.x || y != player.y) {
+              safeTiles.add(Point(x, y));
+            }
+          }
+        }
+      }
+
+      // 3. Se encontrou lugares seguros, faz a mágica!
+      if (safeTiles.isNotEmpty) {
+        // Sorteia um ponto da lista
+        Point<int> randomDest = safeTiles[Random().nextInt(safeTiles.length)];
+
+        // Atualiza a posição do jogador
+        player.x = randomDest.x;
+        player.y = randomDest.y;
+
+        // Atualiza a visão/minimapa imediatamente para o novo local
+        dungeon.explored[player.y][player.x] = true;
+
+        // =========================================================
+        // FEEDBACK PARA O JOGADOR (Game Feel)
+        // =========================================================
+        
+        // Mostra a mensagem no HUD
+        showMessage("Você pisou numa armadilha de Teleporte!");
+        
+        // Treme a tela para dar a sensação de desorientação (usando a função que criamos antes!)
+        shakeScreen(0.3, 10.0);
+        
+        // Toca o som (se você tiver um)
+        // FlameAudio.play('sfx/teleport.wav');
+        
+        // (Opcional) Muda a direção do jogador aleatoriamente para desorientar ainda mais!
+        List<Direction> dirs = [Direction.north, Direction.east, Direction.south, Direction.west];
+        player.facing = dirs[Random().nextInt(dirs.length)];
+      }
     }
 
     if (playerCombatStats.poisonTmr > 0){
@@ -2207,7 +2290,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     TileType playerTile = dungeon.getTile(player.x, player.y);
 
     if (playerTile == TileType.floor || playerTile == TileType.entry || playerTile == TileType.openChest
-     || playerTile == TileType.spike || playerTile == TileType.poison) {
+     || playerTile == TileType.spike || playerTile == TileType.poison || playerTile == TileType.teleport) {
       Point<int> currentPos = Point(player.x, player.y);
       if (!dungeon.droppedItems.containsKey(currentPos) || dungeon.droppedItems[currentPos]!.isEmpty) {
         isPassTurnPromptOpen = true; 
@@ -2329,9 +2412,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
           await saveGame();
 
-          if(dungeon.level >= 10){
-            currentState = GameState.gameOver;
-            overlays.add('GameOver');
+          combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+
+          if(dungeon.level >= 13){
+            currentState = GameState.vitory;
+            overlays.add('Vitory');
           }
         });
       } else {

@@ -27,7 +27,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image fontImage;
 
   double _bumpTimer = 0.0;
-  double _maxBumpTime = 0.18; // Duração do tranco (180 milissegundos é o Sweet Spot)
+  double _maxBumpTime = 0.18; 
   bool _bumpForward = true;
 
   MazeRenderer({
@@ -126,6 +126,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           tileIdx = 2;
         }
 
+        if (map.level >= 10){
+          tileIdx = 3;
+        }
+
         // Sempre desenha o chão
         _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
         _drawCeiling(canvas, cx, cz,floorImage[tileIdx], corChao);
@@ -208,11 +212,23 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           // Calcula a largura de 1 frame (divide a spritesheet por 5)
           double frameWidth = trapImage[1].width / 5;
           
-          // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
           Rect frameRect = Rect.fromLTWH(map.poisonState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
 
           // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
           _drawBillboardItem(canvas, cx, cz, trapImage[1], 0.7, 0.1,Colors.white, srcRect: frameRect);
+        }
+
+        if (tile == TileType.teleport && gameRef.currentState == GameState.exploration) {
+          // Sempre desenha o chão normal debaixo da armadilha
+          _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+
+          // Calcula a largura de 1 frame (divide a spritesheet por 5)
+          double frameWidth = trapImage[2].width / 5;
+          
+          Rect frameRect = Rect.fromLTWH(map.teleportState * frameWidth, 0, frameWidth, trapImage[2].height.toDouble());
+
+          // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
+          _drawBillboardItem(canvas, cx, cz, trapImage[2], 0.6, 0.1,Colors.white, srcRect: frameRect);
         }
 
         Point<int> currentMapPos = Point(mapX, mapY);

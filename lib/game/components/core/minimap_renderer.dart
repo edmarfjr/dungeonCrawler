@@ -105,11 +105,11 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
             break;
           case TileType.spike:
-            tilePaint.color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinzaEsc;
+            tilePaint.color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinza;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.poison:
-            tilePaint.color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinzaEsc;
+            tilePaint.color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinza;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.shrine:
@@ -122,6 +122,10 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             break;
           case TileType.shop:
             tilePaint.color = Palette.azulCla;
+            canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
+            break;
+          case TileType.teleport:
+            tilePaint.color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinza;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.font:

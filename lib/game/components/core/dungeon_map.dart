@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/game.dart';
 
-enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font, fontPoison }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font, fontPoison, teleport }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -18,6 +18,7 @@ class DungeonMap {
 
   int spikeState = 0;
   int poisonState = 0;
+  int teleportState = 0;
   
   List<Point<int>> roamingEnemies = [];
 
@@ -31,6 +32,10 @@ class DungeonMap {
 
   void advancePoison() {
     poisonState = (poisonState + 1) % 5;
+  }
+
+  void advanceTeleport() {
+    teleportState = (teleportState + 1) % 5;
   }
 
   DungeonMap({this.width = 20, this.height = 20, this.level = 1}) { generateProceduralMap(); }
@@ -207,6 +212,7 @@ class DungeonMap {
 
     if (level >= 4) trap = TileType.poison;
     if (level >= 7 && random.nextBool()) trap = TileType.poison;
+    if (level >= 10) trap = TileType.teleport;
 
     int numSpikes = random.nextInt((width/6).toInt() + 1) + (width/6).toInt() - 1; 
     for (int i = 0; i < numSpikes; i++) { 

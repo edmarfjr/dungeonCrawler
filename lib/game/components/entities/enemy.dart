@@ -13,8 +13,8 @@ import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2,
-infectado, boss2, garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3 }
+enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
+garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -204,7 +204,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (hitFlashTimer > 0) {
       hitFlashTimer -= dt;
       if (hitFlashTimer <= 0 && currentPhase == CombatPhase.hit) currentPhase = CombatPhase.idle;
-      return; 
+      if(!naoInterrompe)return; 
     }
     if (game.playerCombatStats.currentPhase == CombatPhase.entering || game.playerCombatStats.reflex) return;
     _updatePhase(dt);
@@ -327,7 +327,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // mas a sombra deles tem que ser cravada no 0.75 (chão)!
     // Adicione o Fungo ou outros inimigos voadores nesta lista se precisarem.
     double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo
-    || type == EnemyType.doll || type == EnemyType.goblinShop || type == EnemyType.boss3) ? 0.75 : yPosition;
+    || type == EnemyType.doll || type == EnemyType.goblinShop || type == EnemyType.boss3
+    || type == EnemyType.aberraVoa) ? 0.75 : yPosition;
 
     // 2. CALCULA O VÃO ATÉ O CHÃO (Gap to Floor)
     // Calcula a distância do centro do inimigo até o chão verdadeiro, somando 
@@ -450,7 +451,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     );
   }
 
-  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize,{double dist = 20}) {
+  void checkAttackPadrao (double dt, PlayerCombatStats player, Vector2 screenSize,{double dist = 20, double windupTmr = 0.5}) {
     double scale = screenSize.x * 0.35;
     double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
     double reachPixels = dist;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
@@ -461,7 +462,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // NOVO: Adicionado '&& isFrontRow' - Inimigos na linha de trás NUNCA atacam!
     if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
       currentPhase = CombatPhase.windup;
-      animTimer = 0.5; 
+      animTimer = windupTmr; 
       attackCooldown = maxAttackCooldown;
     }
   }
@@ -2692,5 +2693,193 @@ class MagoEnemy extends Enemy {
     if(gameRef.playerCombatStats.strafePosition > 0) startX = -0.8;
     final ui.Image img = await game.images.load('effects/firePillar.png');
     gameRef.combatOverlay.add(FirePillar(startX, startY, 0.0,0, this, img:img));
+  }
+}
+
+class AberraBrutoEnemy extends Enemy {
+  bool isFleeing = false;
+  
+  AberraBrutoEnemy() : super(name:'Bruto Aberrante',
+    type: EnemyType.aberraBruto, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144
+    , speed: 0.6, damage: 30,hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 3.0,drop: []
+  ){
+    naoInterrompe = true;
+    isHeavyAttack = true;
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    checkAttackPadrao(dt,player,screenSize);
+  }
+  
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+    if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+      isFleeing = true;
+    }
+    if (isFleeing && (strafePosition <= -0.98 || strafePosition >= 0.98)) {
+      isFleeing = false;
+    }
+
+    // --- LÓGICA DE MOVIMENTO ---
+    if (isFleeing) {
+      double dir = -(player.strafePosition - strafePosition).sign;
+      if (dir == 0) dir = 1.0; 
+      strafePosition += dir * speed * dt;
+    } else {
+      if (distanceToPlayer > 0.01) {
+        double dir = (player.strafePosition - strafePosition).sign;
+        strafePosition += dir * speed * dt;
+      }
+    }
+
+    strafePosition = strafePosition.clamp(-1.0, 1.0);
+  }
+}
+
+class AberraVoaEnemy extends Enemy {
+  double moveTimer = 0.0;
+  double currentDir = 1.0;
+
+  final double flightHeight = 0.5; 
+  final double attackHeight = 0.7;  
+
+
+  AberraVoaEnemy() : super(name:'Aberração Matraqueante',
+    type: EnemyType.aberraVoa, color: Palette.vermelhoEsc, hp: 80, maxHp: 80, dropEssence: 15, width: 144, height: 144, speed: 0.4,
+    hurtboxWidth: 100, hurtboxHeight: 100, hurtboxOffsetY: 0, damage: 20,
+    hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0, isMelee: false,maxAttackCooldown: 4,
+    drop: []
+  );
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    moveTimer -= dt;
+    if (moveTimer <= 0) {
+      currentDir = (Random().nextInt(3) - 1).toDouble();
+      moveTimer = 1.0 + Random().nextDouble() * 1.5;
+
+      if(Random().nextBool()){
+        targetY = flightHeight;
+      }else{
+        targetY = attackHeight;
+      }
+    }
+    
+    strafePosition += currentDir * speed * dt;
+    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 0.8; 
+      attackCooldown = maxAttackCooldown;
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); 
+
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true;
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition, yPosition + visualYOffset, 0.0, -0.2, this, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+      ));
+    }
+  }
+}
+
+class AberraBestaEnemy extends Enemy {
+  bool isFleeing = false;
+  AberraBestaEnemy() : super(name:'besta aberrante',
+    type: EnemyType.aberraBesta, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
+    hurtboxWidth: 100, hurtboxHeight: 100, hurtboxOffsetY: 0,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: []
+  );
+
+  @override 
+  void onHitStun() { 
+    isFleeing = true; 
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    checkAttackPadrao(dt,player,screenSize);
+  }
+  
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+    if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+      isFleeing = true;
+    }
+
+    if (isFleeing && (strafePosition <= -0.98 || strafePosition >= 0.98)) {
+      isFleeing = false;
+    }
+
+    if (isFleeing) {
+      double dir = -(player.strafePosition - strafePosition).sign;
+      if (dir == 0) dir = 1.0;
+      strafePosition += dir * speed * dt;
+    } else {
+      if (distanceToPlayer > 0.01) {
+        double dir = (player.strafePosition - strafePosition).sign;
+        strafePosition += dir * speed * dt;
+      }
+    }
+
+    strafePosition = strafePosition.clamp(-1.0, 1.0);
+  }
+}
+
+class AberraArvEnemy extends Enemy {
+  
+  AberraArvEnemy() : super(name:'Arvore Aberrante',
+    type: EnemyType.aberraArv, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 192, height: 192
+    , speed: 0, damage: 30,hurtboxWidth: 120, hurtboxHeight: 180, hurtboxOffsetY: 0,
+    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 50, hitboxOffsetX: -10, maxAttackCooldown: 2.0,drop: []
+  ){
+    naoInterrompe = true;
+    isHeavyAttack = true;
+    isFrontRow = true;
+  }
+  @override
+  bool get canChangeRow => false;
+
+  @override
+  bool get isVulnerable => currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    checkAttackPadrao(dt,player,screenSize,windupTmr: 1);
+  }
+  
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        else if (currentPhase == CombatPhase.active) { currentPhase = CombatPhase.recovery; animTimer = 1.5; } 
+        else { currentPhase = CombatPhase.idle; }
+      }
+    }
   }
 }

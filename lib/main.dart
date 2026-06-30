@@ -4,6 +4,7 @@ import 'package:dungeon_crawler/game/overlays/gameover_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/main_menu_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/manual_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/pause_menu_overlay.dart';
+import 'package:dungeon_crawler/game/overlays/vitory_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
@@ -60,6 +61,7 @@ class _GameScreenState extends State<GameScreen> {
                     'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
                     'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
                     'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
+                    'Vitory': (context, game) => VitoryOverlay(game: game as DungeonCrawlerGame),
                   },
                   // Define qual menu aparece primeiro quando abre o app
                   initialActiveOverlays: const ['MainMenu'],
@@ -91,8 +93,8 @@ class _GameScreenState extends State<GameScreen> {
                               onPointerCancel: (_) => _handleDPadEnd(),
                               child: Stack(
                                 children: [
-                                  Align(alignment: Alignment.center, child: Container(width: 63, height: 110, decoration: const BoxDecoration(color: Palette.preto, shape: BoxShape.rectangle))),
-                                  Align(alignment: Alignment.center, child: Container(width: 110, height: 63, decoration: const BoxDecoration(color: Palette.preto, shape: BoxShape.rectangle))),
+                                  Align(alignment: Alignment.center, child: Container(width: 63, height: 110, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
+                                  Align(alignment: Alignment.center, child: Container(width: 110, height: 63, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
                                   Align(alignment: Alignment.topCenter, child: _buildStaticArrow(Icons.arrow_upward)),
                                   Align(alignment: Alignment.bottomCenter, child: _buildStaticArrow(Icons.arrow_downward)),
                                   Align(alignment: Alignment.centerLeft, child: _buildStaticArrow(Icons.arrow_back)),
@@ -192,8 +194,8 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildStaticArrow(IconData icon) {
     return Container(
       width: 80, height: 80,
-      decoration: const BoxDecoration(color: Palette.preto, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
-      child: Icon(icon, color: Palette.branco, size: 30),
+      decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
+      child: Icon(icon, color: Palette.preto, size: 30),
     );
   }
 
@@ -228,7 +230,7 @@ class _GameScreenState extends State<GameScreen> {
             label, 
             style: const TextStyle(
               fontFamily: 'pixelFont', 
-              color: Palette.branco, 
+              color: Palette.vermelhoEsc, 
               fontWeight: FontWeight.bold, 
               fontSize: 20
             )

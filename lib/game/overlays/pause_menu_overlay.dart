@@ -166,8 +166,9 @@ class _MapPainter extends CustomPainter {
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
     final paintKey = Paint()..color = Palette.laranja;
-    final paintSpike = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.cinzaEsc;
-    final paintPoison = Paint()..color = map.spikeState == 0 ? Palette.cinzaCla : Palette.verde;
+    final paintSpike = Paint()..color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinza;
+    final paintTele = Paint()..color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinza;
+    final paintPoison = Paint()..color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinza;
     final paintShrine = Paint()..color = Palette.roxo;
     final paintCrate = Paint()..color = Palette.marrom;
     final paintShop = Paint()..color = Palette.azulCla;
@@ -179,7 +180,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-          continue;
+          //continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -192,6 +193,7 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.shrine) canvas.drawRect(tileRect, paintShrine);
         else if (tile == TileType.spike) canvas.drawRect(tileRect, paintSpike);
         else if (tile == TileType.poison) canvas.drawRect(tileRect, paintPoison);
+        else if (tile == TileType.teleport) canvas.drawRect(tileRect, paintTele);
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
         else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
