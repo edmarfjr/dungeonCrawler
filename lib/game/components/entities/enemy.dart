@@ -14,7 +14,8 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
-garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv }
+garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv, aberraCult,
+aberraOvo }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -1302,14 +1303,12 @@ class FungoEnemy extends Enemy {
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
-
-    // Fungos atacam tanto da linha de trás quanto da frente!
+    
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
       currentPhase = CombatPhase.windup;
-      animTimer = 0.8; // Ele demora um pouco para "carregar" o ataque (dá tempo do jogador agir)
+      animTimer = 0.8; 
       attackCooldown = maxAttackCooldown;
       
-      // Joga a moeda: 40% de chance de Curar os aliados, 60% de chance de jogar Esporos
       isHealingAttack = Random().nextDouble() < 0.40;
     }
   }
@@ -2881,5 +2880,202 @@ class AberraArvEnemy extends Enemy {
         else { currentPhase = CombatPhase.idle; }
       }
     }
+  }
+}
+
+class AberraCultistaEnemy extends Enemy {
+  bool isFleeing = false;
+  bool isHealingAttack = false;
+  AberraCultistaEnemy() : super(name:'cultista aberrante',
+    type: EnemyType.aberraCult, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
+    hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: []
+  );
+
+  @override 
+  void onHitStun() { 
+    isFleeing = true; 
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scale = screenSize.x * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scale;
+    double reachPixels = 20;//(hitboxWidth / 2) + (player.hurtboxWidth / 2);
+
+    attackCooldown -= dt;
+    //bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
+
+    // NOVO: Adicionado '&& isFrontRow' - Inimigos na linha de trás NUNCA atacam!
+    if (distancePixels <= reachPixels && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
+      isHealingAttack = Random().nextDouble() < 0.40;
+      isMelee = !isHealingAttack;
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.5; 
+      attackCooldown = maxAttackCooldown;
+    }
+    
+  }
+  
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+    if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+      isFleeing = true;
+    }
+
+    if (isFleeing && (strafePosition <= -0.98 || strafePosition >= 0.98)) {
+      isFleeing = false;
+    }
+
+    if (isFleeing) {
+      double dir = -(player.strafePosition - strafePosition).sign;
+      if (dir == 0) dir = 1.0;
+      strafePosition += dir * speed * dt;
+    } else {
+      if (distanceToPlayer > 0.01) {
+        double dir = (player.strafePosition - strafePosition).sign;
+        strafePosition += dir * speed * dt;
+      }
+    }
+
+    strafePosition = strafePosition.clamp(-1.0, 1.0);
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) {
+          currentPhase = CombatPhase.active;
+          animTimer = 0.5; 
+          
+          if (isHealingAttack) {
+            _castHealingCloud();
+          }
+        } 
+        else if (currentPhase == CombatPhase.active) {
+          currentPhase = CombatPhase.recovery;
+          animTimer = 0.5;
+        } 
+        else if (currentPhase == CombatPhase.recovery) {
+          currentPhase = CombatPhase.idle;
+        }
+      }
+      return; 
+    }
+    
+    super._updatePhase(dt); 
+  }
+
+   void _castHealingCloud() {
+    double currentY = yPosition + visualYOffset + flightOffset;
+    
+    gameRef.combatOverlay.add(HealingCloudEffect(strafePosition, currentY, gameRef));
+
+    for (var enemy in gameRef.combatOverlay.enemies) {
+      if (enemy.isAlive && enemy != this) {
+        
+        double distance = (enemy.strafePosition - strafePosition).abs();
+        
+        if (distance <= 0.4) {
+          double healAmount = 25.0;
+          enemy.hp += healAmount;
+          if (enemy.hp > enemy.maxHp) enemy.hp = enemy.maxHp;
+          
+          gameRef.combatOverlay.addFloatingText(
+            "+${healAmount.toInt()}", 
+            enemy.getHurtbox(gameRef.size), 
+            Palette.verde
+          );
+        }
+      }
+    }
+  }
+}
+
+class AberraOvoEnemy extends Enemy {
+  AberraOvoEnemy() : super(name: 'ovo aberrante',
+    type: EnemyType.aberraOvo, 
+    color: Palette.cinza,
+    hp: 100, maxHp: 100, dropEssence: 15, width: 144, height: 144, speed: 0.6,
+    hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
+    hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0,drop: [],
+    maxAttackCooldown: 8, isMelee: false
+  ){
+    isFrontRow = true;
+  }
+  @override
+  bool get canChangeRow => false;
+
+  late bool _fixedRow;
+
+  @override
+  void update(double dt) {
+    isFrontRow = _fixedRow; 
+    super.update(dt);
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    _fixedRow = isFrontRow; 
+  }
+
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    
+  }
+
+   void _spawnBesta() {
+    var besta = AberraBestaEnemy();
+    
+    besta.isFrontRow = isFrontRow; 
+    besta.priority = priority + 1;
+    
+    besta.strafePosition = strafePosition;
+    besta.strafePosition = besta.strafePosition.clamp(-1.0, 1.0);
+
+    gameRef.combatOverlay.enemies.add(besta);
+    parent?.add(besta);
+    
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    if (attackCooldown <= 0 ) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 0.5; 
+      attackCooldown = 999;
+    }
+  }
+
+  @override
+  void _updatePhase(double dt) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
+      animTimer -= dt;
+      
+      if (animTimer <= 0) {
+        if (currentPhase == CombatPhase.windup) {
+          currentPhase = CombatPhase.active;
+          animTimer = 0.2; 
+          _spawnBesta();
+        } else if (currentPhase == CombatPhase.active) {
+          currentPhase = CombatPhase.recovery;
+          animTimer = 0.1;
+        } else if (currentPhase == CombatPhase.recovery) {
+          currentPhase = CombatPhase.idle; 
+        }
+      }
+      return; 
+    }
+    
+    super._updatePhase(dt); 
   }
 }

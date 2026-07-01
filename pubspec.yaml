@@ -67,9 +67,8 @@ flutter:
     - assets/images/tilesets/
     - assets/images/effects/
     - assets/audio/
-   # - assets/audio/music/
+    - assets/audio/music/
     - assets/audio/sfx/
-  #   - assets/images/a_dot_ham.jpeg
   fonts:
     - family: pixelFont
       fonts:

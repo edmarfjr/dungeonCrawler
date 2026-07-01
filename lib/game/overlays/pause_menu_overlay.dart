@@ -35,7 +35,7 @@ class PauseMenuOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'TEMPO DA RUN: $tempoAtual',
+              'TEMPO: $tempoAtual',
               style: const TextStyle(
                 fontFamily: 'pixelFont',
                 color: Palette.branco,

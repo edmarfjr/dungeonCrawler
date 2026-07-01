@@ -8,6 +8,8 @@ class VitoryOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tempoAtual = game.getFormattedRunTime();
+
     return Container(
       color: Palette.preto,
       child: Center(
@@ -27,6 +29,15 @@ class VitoryOverlay extends StatelessWidget {
                     letterSpacing: 2,
                     decoration: TextDecoration.none, // Remove sublinhados amarelos do Flutter
                   )
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'TEMPO: $tempoAtual',
+                  style: const TextStyle(
+                    fontFamily: 'pixelFont',
+                    color: Palette.branco,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 60),
                 _buildMenuOption(

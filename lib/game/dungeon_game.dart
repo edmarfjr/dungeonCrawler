@@ -513,6 +513,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.aberraVoa: await images.load('actors/aberraVoador.png'),
       EnemyType.aberraBesta: await images.load('actors/aberraBesta.png'),
       EnemyType.aberraArv: await images.load('actors/aberraFixo.png'),
+      EnemyType.aberraCult: await images.load('actors/aberraCultista.png'),
+      EnemyType.aberraOvo: await images.load('actors/aberraOvo.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -544,9 +546,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.goblinShop: await images.load('effects/golpe.png'), 
       EnemyType.boss3: await images.load('effects/soco2.png'), 
       EnemyType.aberraBruto: await images.load('effects/porrada.png'), 
-      EnemyType.aberraVoa: await images.load('effects/bola.png'), 
-      EnemyType.aberraBesta: await images.load('effects/bite.png'), 
+      EnemyType.aberraVoa: await images.load('effects/spore.png'), 
+      EnemyType.aberraBesta: await images.load('effects/bite2.png'), 
       EnemyType.aberraArv: await images.load('effects/porrada.png'), 
+      EnemyType.aberraCult: await images.load('effects/porrada.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -590,6 +593,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     minimap = MinimapRenderer();
     add(minimap);
+
+    FlameAudio.bgm.initialize();
+    await FlameAudio.audioCache.load('music/8-bit-dungeon.mp3');
   }
 
   @override
@@ -909,6 +915,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void resetGame() {
+    if (!FlameAudio.bgm.isPlaying) {
+      FlameAudio.bgm.play('music/8-bit-dungeon.mp3', volume: 0.2);
+    }
     runTime=0;
     for (var enemy in combatOverlay.enemies) {
       enemy.removeFromParent(); 
@@ -960,9 +969,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (currentState == GameState.exploration || currentState == GameState.combat) {
       previousState = currentState;
       currentState = GameState.paused;
+      FlameAudio.bgm.pause();
       overlays.add('PauseMenu');
     } else if (currentState == GameState.paused) {
       currentState = previousState;
+      FlameAudio.bgm.resume();
       overlays.remove('PauseMenu');
     }
   }
@@ -972,6 +983,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     overlays.remove('GameOver');
     currentState = GameState.mainMenu;
     overlays.add('MainMenu');
+    
   }
 
   void handlePlayerDeath() async { 
@@ -1302,7 +1314,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.aberraArv);
+          _triggerSpecificEncounter(EnemyType.aberraOvo);
         }
       }
 
@@ -1480,6 +1492,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         () => AberraBestaEnemy(),
         () => AberraBrutoEnemy(),
         () => AberraVoaEnemy(),
+        () => AberraOvoEnemy(),
+        () => AberraCultistaEnemy(),
       ];
     }
     for (int i = 0; i < numEnemies; i++) {
@@ -1599,6 +1613,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.aberraVoa: newEnemy = AberraVoaEnemy(); break;  
         case EnemyType.aberraBesta: newEnemy = AberraBestaEnemy(); break;  
         case EnemyType.aberraArv: newEnemy = AberraArvEnemy(); break;  
+        case EnemyType.aberraCult: newEnemy = AberraCultistaEnemy(); break;  
+        case EnemyType.aberraOvo: newEnemy = AberraOvoEnemy(); break;  
         default: newEnemy = SlimeEnemy(); break;
       }
     newEnemy.strafePosition = 0.0; 
