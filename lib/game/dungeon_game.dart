@@ -1324,6 +1324,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         showHitboxes = !showHitboxes;
       }
 
+      if (event.logicalKey == LogicalKeyboardKey.keyG) {
+        godMode = !godMode;
+        combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+      }
+
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
@@ -1642,19 +1647,23 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               ..isFlipped = true;
           */
           var cult1 = AberraCultistaEnemy()
-              ..strafePosition = 0.4
-              ..isFrontRow = true;
+              ..strafePosition = 0.5
+              ..isFrontRow = false;
 
           var cult2 = AberraCultistaEnemy()
-              ..strafePosition = -0.4
-              ..isFrontRow = true
+              ..strafePosition = -0.5
+              ..isFrontRow = false
               ..isFlipped = true;
+
+          var cult3 = AberraBrutoEnemy()
+              ..strafePosition = 0
+              ..isFrontRow = true;          
 
           var ant = AntigoEnemy()
             ..strafePosition = 0.0
             ..isFrontRow = false;
           
-          combatOverlay.startEncounter([cult1, cult2, ant]);
+          combatOverlay.startEncounter([cult1, cult2, cult3, ant]);
           playerCombatStats.currentPhase = CombatPhase.entering; 
           playerCombatStats.animTimer = 1;
           return;

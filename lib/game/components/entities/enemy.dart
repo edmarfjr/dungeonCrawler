@@ -2892,7 +2892,16 @@ class AberraCultistaEnemy extends Enemy {
     type: EnemyType.aberraCult, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
     hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 35, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: []
-  );
+  ){
+    isFrontRow = false;
+  }
+
+  bool get _temInimigos {
+    return gameRef.combatOverlay.enemies.any((e) => (e is !AberraCultistaEnemy && e is !AntigoEnemy && e is !TentaculoEnemy) && e.isAlive);
+  }
+
+  @override
+  bool get canChangeRow => !_temInimigos;
 
   @override 
   void onHitStun() { 
@@ -3101,11 +3110,11 @@ class AntigoEnemy extends Enemy {
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 6,
     drop: []
   ){
-    ritualTmr = 20;
+    ritualTmr = 30;
   }
 
   bool get _temCultistas {
-    return gameRef.combatOverlay.enemies.any((e) => e is AberraCultistaEnemy && e.isAlive);
+    return gameRef.combatOverlay.enemies.any((e) => (e is AberraCultistaEnemy || e is AberraBrutoEnemy) && e.isAlive);
   }
 
   bool get _temTentaculos {
@@ -3118,23 +3127,6 @@ class AntigoEnemy extends Enemy {
   @override
   bool get canChangeRow {
     return !_temTentaculos && invocado;
-  }
-
-  void _spawnTentaculo() {
-    var tent1 = TentaculoEnemy()
-      ..isFrontRow = true
-      ..strafePosition = -0.3;
-    gameRef.combatOverlay.enemies.add(tent1);
-    parent?.add(tent1);
-
-    if(terminouRitual){
-      var tent2 = TentaculoEnemy()
-          ..isFrontRow = true
-          ..isFlipped = true
-          ..strafePosition = 0.3;
-      gameRef.combatOverlay.enemies.add(tent2);
-      parent?.add(tent2);
-    }
   }
 
   @override
@@ -3231,6 +3223,24 @@ class AntigoEnemy extends Enemy {
     }
   }
 
+  
+  void _spawnTentaculo() {
+    var tent1 = TentaculoEnemy()
+      ..isFrontRow = true
+      ..strafePosition = 0.4;
+    gameRef.combatOverlay.enemies.add(tent1);
+    parent?.add(tent1);
+
+    if(terminouRitual){
+      var tent2 = TentaculoEnemy()
+          ..isFrontRow = true
+          ..isFlipped = true
+          ..strafePosition = -0.4;
+      gameRef.combatOverlay.enemies.add(tent2);
+      parent?.add(tent2);
+    }
+  }
+
   Future<void> _shootfirePillar() async {
     double startY = 0.63;
     double startX = 0.8;
@@ -3293,7 +3303,7 @@ class TentaculoEnemy extends Enemy {
    
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 1.0; 
+      animTimer = 0.5; 
       targetY = attackHeight; 
       attackCooldown = maxAttackCooldown * (0.8 + Random().nextDouble() * 0.4); 
       targetStrafe = gameRef.playerCombatStats.strafePosition;
@@ -3313,7 +3323,7 @@ class TentaculoEnemy extends Enemy {
       double distance = sqrt(dx * dx + dy * dy);
 
       if (distance > 0.01) {
-        double diveSpeed = speed*3; 
+        double diveSpeed = speed*5; 
         double moveStep = diveSpeed * dt;
 
         if (moveStep > distance) moveStep = distance;
@@ -3325,7 +3335,7 @@ class TentaculoEnemy extends Enemy {
     } else {
       if(isDying) return;
       if ((yPosition - targetY).abs() > 0.01) {
-        double verticalSpeed = speed*2; 
+        double verticalSpeed = speed; 
         yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
       }
 
