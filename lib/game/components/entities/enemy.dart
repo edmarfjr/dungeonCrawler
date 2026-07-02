@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
 garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv, aberraCult,
-aberraOvo }
+aberraOvo, tentaculo, boss4 }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -84,6 +84,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   bool isPoison = false;
   double poisonTmr = 2;
   bool imunePoison;
+
+  double ritualTmr = 0;
 
   Enemy({
     required this.name, required this.type, required this.color, required this.hp, required this.maxHp,
@@ -329,7 +331,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     // Adicione o Fungo ou outros inimigos voadores nesta lista se precisarem.
     double groundYPos = (type == EnemyType.spider || type == EnemyType.bat || type == EnemyType.fungo
     || type == EnemyType.doll || type == EnemyType.goblinShop || type == EnemyType.boss3
-    || type == EnemyType.aberraVoa) ? 0.75 : yPosition;
+    || type == EnemyType.aberraVoa || type == EnemyType.boss4 || type == EnemyType.tentaculo) ? 0.75 : yPosition;
 
     // 2. CALCULA O VÃO ATÉ O CHÃO (Gap to Floor)
     // Calcula a distância do centro do inimigo até o chão verdadeiro, somando 
@@ -400,7 +402,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     int r = (flashC.red * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int g = (flashC.green * (1.0 - visualDarkness)).toInt().clamp(0, 255);
     int b = (flashC.blue * (1.0 - visualDarkness)).toInt().clamp(0, 255);
-    Color finalColor = gameRef.playerCombatStats.currentPhase == CombatPhase.entering ? Palette.preto : Color.fromARGB(flashC.alpha, r, g, b);
+    Color finalColor = (gameRef.playerCombatStats.currentPhase == CombatPhase.entering || ritualTmr>0) ? Palette.preto : Color.fromARGB(flashC.alpha, r, g, b);
     
     final tintPaint = Paint()..colorFilter = ColorFilter.mode(finalColor, BlendMode.modulate);
 
@@ -2571,7 +2573,7 @@ class MagoEnemy extends Enemy {
   bool isSummoning = false;
   double summonTmr = 5;
 
-  MagoEnemy() : super(name:'mago',
+  MagoEnemy() : super(name:'necromante',
     type: EnemyType.boss3, color: Palette.roxo, hp: 300, maxHp: 300, dropEssence: 10, width: 192, height: 192, speed: 0.4,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0, damage: 25,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 8,
@@ -2889,7 +2891,7 @@ class AberraCultistaEnemy extends Enemy {
   AberraCultistaEnemy() : super(name:'cultista aberrante',
     type: EnemyType.aberraCult, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
     hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: []
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 35, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: []
   );
 
   @override 
@@ -2934,6 +2936,7 @@ class AberraCultistaEnemy extends Enemy {
       if (dir == 0) dir = 1.0;
       strafePosition += dir * speed * dt;
     } else {
+      
       if (distanceToPlayer > 0.01) {
         double dir = (player.strafePosition - strafePosition).sign;
         strafePosition += dir * speed * dt;
@@ -3077,5 +3080,261 @@ class AberraOvoEnemy extends Enemy {
     }
     
     super._updatePhase(dt); 
+  }
+}
+
+class AntigoEnemy extends Enemy {
+  double moveTimer = 0.0;
+  double currentDir = 1.0;
+
+  double flightHeight = 0.65; 
+  double attackHeight = 0.5;  
+
+  int tipoAtaque = 0;
+
+  bool invocado = false;
+  bool terminouRitual = false;
+
+  AntigoEnemy() : super(name:'o antigo',
+    type: EnemyType.boss4, color: Palette.roxo, hp: 500, maxHp: 500, dropEssence: 10, width: 192, height: 192, speed: 0.4,
+    hurtboxWidth: 140, hurtboxHeight: 140, hurtboxOffsetY: 0, damage: 25,
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 6,
+    drop: []
+  ){
+    ritualTmr = 20;
+  }
+
+  bool get _temCultistas {
+    return gameRef.combatOverlay.enemies.any((e) => e is AberraCultistaEnemy && e.isAlive);
+  }
+
+  bool get _temTentaculos {
+    return gameRef.combatOverlay.enemies.any((e) => e is TentaculoEnemy && e.isAlive);
+  }
+
+  @override
+  bool get isVulnerable => invocado;
+
+  @override
+  bool get canChangeRow {
+    return !_temTentaculos && invocado;
+  }
+
+  void _spawnTentaculo() {
+    var tent1 = TentaculoEnemy()
+      ..isFrontRow = true
+      ..strafePosition = -0.3;
+    gameRef.combatOverlay.enemies.add(tent1);
+    parent?.add(tent1);
+
+    if(terminouRitual){
+      var tent2 = TentaculoEnemy()
+          ..isFrontRow = true
+          ..isFlipped = true
+          ..strafePosition = 0.3;
+      gameRef.combatOverlay.enemies.add(tent2);
+      parent?.add(tent2);
+    }
+  }
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    if(ritualTmr>0){
+      return;
+    }
+    moveTimer -= dt;
+    if (moveTimer <= 0) {
+      currentDir = (Random().nextInt(3) - 1).toDouble();
+      moveTimer = 1.0 + Random().nextDouble() * 1.5;
+
+      if(Random().nextBool()){
+        targetY = flightHeight;
+      }else{
+        targetY = attackHeight;
+      }
+    }
+    
+    strafePosition += currentDir * speed * dt;
+    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 0.8; 
+      attackCooldown = maxAttackCooldown;
+      tipoAtaque = Random().nextInt(4);
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); 
+
+    if(!_temTentaculos) attackHeight = 0.7;
+
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+
+    if(!_temCultistas){
+      ritualTmr = 0;
+      if(!invocado){
+        invocado = true;
+        _spawnTentaculo();
+      }
+    }
+
+    if(ritualTmr>0){
+      ritualTmr -= dt;
+      return;
+    }else{
+      if(!invocado){
+        invocado = true;
+        terminouRitual = true;
+        _spawnTentaculo();
+      }
+    }
+
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true;
+      
+      if(tipoAtaque == 0){
+        _shootfirePillar();
+      } else if(tipoAtaque == 1){
+        _shootPoisonCloud();
+      }else if(tipoAtaque == 2){
+        double startY = 0.63;
+        List<double> posX = [0.4, 0, -0.4];
+        posX.shuffle();
+        _spawnLightningPillar(posX[0], startY);
+      }
+      else {
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 0, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset - 0.2 , 0.0, -0.2, this, waitTmr: 0.5, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, waitTmr: 1.5 ,isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+        gameRef.combatOverlay.add(ArcProjectile(
+          strafePosition, yPosition + visualYOffset- 0.2, 0.0, -0.2, this, waitTmr: 2, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+        ));
+      }
+    }
+  }
+
+  Future<void> _shootfirePillar() async {
+    double startY = 0.63;
+    double startX = 0.8;
+    if(gameRef.playerCombatStats.strafePosition > 0) startX = -0.8;
+    final ui.Image img = await game.images.load('effects/firePillar.png');
+    gameRef.combatOverlay.add(FirePillar(startX, startY, 0.0,0, this, img:img));
+  }
+
+  Future<void> _shootPoisonCloud() async {
+    double startY = yPosition + visualYOffset - 0.05;
+    final ui.Image img = await game.images.load('effects/poison.png');
+    gameRef.combatOverlay.add(PoisonCloud(strafePosition, startY, 0.0,0, this, img:img));
+  }
+
+  Future<void> _spawnLightningPillar(double startX, double startY) async {
+    final ui.Image img = await game.images.load('effects/raio.png');
+    gameRef.combatOverlay.add(FirePillar(startX, startY, 0.0, 0, this, img: img, tmr: 0.5));
+  }
+}
+
+class TentaculoEnemy extends Enemy {
+  double currentDir = 1.0;
+  
+  final double flightHeight = 0.5; 
+  final double attackHeight = 0.75;   
+  double targetStrafe = 0;
+
+  TentaculoEnemy() : super(
+    type: EnemyType.tentaculo, name: 'tentaculo',
+    color: Palette.roxo,  damage: 15,
+    hp: 200, maxHp: 200, dropEssence: 10, width: 192, height: 192, speed: 0.5,
+    hurtboxWidth: 120, hurtboxHeight: 90, hurtboxOffsetX: 0, hurtboxOffsetY: 0, maxAttackCooldown: 3,
+    hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 60,drop: []
+  ) {
+    yPosition = flightHeight; 
+    targetY = flightHeight;
+    naoInterrompe = true;
+  }
+
+  @override
+  bool get canChangeRow => false;
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    if (currentPhase == CombatPhase.idle) {
+      targetY = flightHeight; 
+
+      if ((yPosition - flightHeight).abs() < 0.05) {
+        strafePosition += currentDir * speed * dt;
+        
+        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
+        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+      }
+    }
+  }
+
+  @override 
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    attackCooldown -= dt;
+   
+    if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
+      currentPhase = CombatPhase.windup; 
+      animTimer = 1.0; 
+      targetY = attackHeight; 
+      attackCooldown = maxAttackCooldown * (0.8 + Random().nextDouble() * 0.4); 
+      targetStrafe = gameRef.playerCombatStats.strafePosition;
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    if (currentPhase == CombatPhase.windup) {
+      priority = 15;
+      targetY = attackHeight;
+
+      double dx = targetStrafe - strafePosition;
+      double dy = targetY - yPosition;
+      double distance = sqrt(dx * dx + dy * dy);
+
+      if (distance > 0.01) {
+        double diveSpeed = speed*3; 
+        double moveStep = diveSpeed * dt;
+
+        if (moveStep > distance) moveStep = distance;
+
+        strafePosition += (dx / distance) * moveStep;
+        yPosition += (dy / distance) * moveStep;
+      }
+
+    } else {
+      if(isDying) return;
+      if ((yPosition - targetY).abs() > 0.01) {
+        double verticalSpeed = speed*2; 
+        yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
+      }
+
+      if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
+        targetY = attackHeight; 
+      } else if (currentPhase == CombatPhase.idle) {
+        targetY = flightHeight; 
+        priority = isFrontRow ? 10 : 0;
+      }
+    }
   }
 }

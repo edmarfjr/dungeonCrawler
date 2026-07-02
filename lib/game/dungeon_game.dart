@@ -71,6 +71,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double explorationMoveCooldown = 0.0;
   double explorationMoveCooldownTime = 0.3;
 
+  bool godMode = false; 
+
   double leftTapTimer = 0.0;  // Janela de tempo para o clique duplo (Esquerda)
   double rightTapTimer = 0.0; // Janela de tempo para o clique duplo (Direita)
   double dashTimer = 0.0;     // Duração do Dash na tela
@@ -515,6 +517,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.aberraArv: await images.load('actors/aberraFixo.png'),
       EnemyType.aberraCult: await images.load('actors/aberraCultista.png'),
       EnemyType.aberraOvo: await images.load('actors/aberraOvo.png'),
+      EnemyType.boss4: await images.load('actors/boss4.png'),
+      EnemyType.tentaculo: await images.load('actors/tentaculo.png'),
     };
     playerSheet = await images.load('actors/player.png');
 
@@ -527,7 +531,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     enemySlashSprites = {
       EnemyType.slime: await images.load('effects/golpe.png'), 
       EnemyType.goblin: await images.load('effects/golpe.png'),
-      EnemyType.orc: await images.load('effects/golpe.png'),
+      EnemyType.orc: await images.load('effects/golpe2.png'),
       EnemyType.boss1: await images.load('effects/golpe.png'),
       EnemyType.spider: await images.load('effects/bite.png'), 
       EnemyType.mimic: await images.load('effects/coin.png'),
@@ -543,13 +547,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.mao: await images.load('effects/bola.png'), 
       EnemyType.naga: await images.load('effects/golpe.png'), 
       EnemyType.doll: await images.load('effects/golpe.png'), 
-      EnemyType.goblinShop: await images.load('effects/golpe.png'), 
+      EnemyType.goblinShop: await images.load('effects/golpe2.png'), 
       EnemyType.boss3: await images.load('effects/soco2.png'), 
       EnemyType.aberraBruto: await images.load('effects/porrada.png'), 
       EnemyType.aberraVoa: await images.load('effects/spore.png'), 
       EnemyType.aberraBesta: await images.load('effects/bite2.png'), 
       EnemyType.aberraArv: await images.load('effects/porrada.png'), 
-      EnemyType.aberraCult: await images.load('effects/porrada.png'), 
+      EnemyType.aberraCult: await images.load('effects/golpe2.png'), 
+      EnemyType.boss4: await images.load('effects/bola.png'), 
+      EnemyType.tentaculo: await images.load('effects/golpe2.png'), 
     };
 
     dungeon = DungeonMap(width: mapSize, height: mapSize);
@@ -1086,6 +1092,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           case 9:
             _triggerSpecificEncounter(EnemyType.boss3);
             break;
+          case 12:
+            _triggerSpecificEncounter(EnemyType.boss3);
+            break;
         }
         
       }
@@ -1163,11 +1172,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         for (var enemy in combatOverlay.enemies) {
           if (!enemy.isFrontRow && !weaponHasReach) continue;
           if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(size))){
+
             double damage = playerCombatStats.str.toDouble();
+
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
             if (playerCombatStats.isHeavyAttack) {
               damage *= 2.0;
             }
+            if(godMode) damage *= 5;
+
             if(enemy.isVulnerable || playerCombatStats.isHeavyAttack){
               playerCombatStats.reflex = false;
               bool isCrit = Random().nextDouble() * 100 < playerCombatStats.critChance;
@@ -1314,7 +1327,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyV) {
         if(currentState == GameState.exploration){
           //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.aberraOvo);
+          _triggerSpecificEncounter(EnemyType.boss4);
         }
       }
 
@@ -1374,7 +1387,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double dmg = max(1, enemy.damage - defense);
     bool unblockable = enemy.isHeavyAttack;
     
-    if(dashTimer>0 || playerCombatStats.invencibleTmr > 0)return;
+    if(dashTimer>0 || playerCombatStats.invencibleTmr > 0 || godMode)return;
 
     if (playerCombatStats.isGuarding && !unblockable) {
       FlameAudio.play('sfx/block.wav');
@@ -1615,6 +1628,37 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         case EnemyType.aberraArv: newEnemy = AberraArvEnemy(); break;  
         case EnemyType.aberraCult: newEnemy = AberraCultistaEnemy(); break;  
         case EnemyType.aberraOvo: newEnemy = AberraOvoEnemy(); break;  
+        case EnemyType.boss4:
+
+          isBoss = true;
+          /*
+          var tent1 = TentaculoEnemy()
+              ..strafePosition = 0.4
+              ..isFrontRow = true;
+
+          var tent2 = TentaculoEnemy()
+              ..strafePosition = -0.4
+              ..isFrontRow = true
+              ..isFlipped = true;
+          */
+          var cult1 = AberraCultistaEnemy()
+              ..strafePosition = 0.4
+              ..isFrontRow = true;
+
+          var cult2 = AberraCultistaEnemy()
+              ..strafePosition = -0.4
+              ..isFrontRow = true
+              ..isFlipped = true;
+
+          var ant = AntigoEnemy()
+            ..strafePosition = 0.0
+            ..isFrontRow = false;
+          
+          combatOverlay.startEncounter([cult1, cult2, ant]);
+          playerCombatStats.currentPhase = CombatPhase.entering; 
+          playerCombatStats.animTimer = 1;
+          return;
+        
         default: newEnemy = SlimeEnemy(); break;
       }
     newEnemy.strafePosition = 0.0; 
@@ -1830,6 +1874,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           quitToMainMenu(); // VOLTAR
         } else if (pauseMenuCursor.value == 2) {
           showHitboxes = !showHitboxes; // DEBUG
+          godMode = !godMode;
         }
       }
       return;

@@ -358,6 +358,11 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   @override
   void renderTree(Canvas canvas) {
+    if (gameRef.currentState == GameState.combat) {
+      if(gameRef.isBoss && gameRef.dungeon.level == 12){//12
+        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black);
+      }
+    }
     super.renderTree(canvas);
 
     if (gameRef.currentState == GameState.combat) {
