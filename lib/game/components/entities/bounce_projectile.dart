@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
 
+import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
@@ -95,7 +96,7 @@ class BounceProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
 
       if (bounced) {
         bounceCount++;
-        FlameAudio.play('sfx/hit.wav');
+        AudioManager.playSfx('sfx/hit.wav');
       }
 
       // 4. COLISÃO COM INIMIGOS
@@ -132,7 +133,7 @@ class BounceProjectile extends PositionComponent with HasGameRef<DungeonCrawlerG
           }
 
           bounceCount++;
-          FlameAudio.play('sfx/hit.wav');
+          AudioManager.playSfx('sfx/hit.wav');
           break;
         }
       }

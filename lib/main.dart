@@ -1,15 +1,21 @@
 import 'package:dungeon_crawler/game/components/core/palette.dart';
+import 'package:dungeon_crawler/game/components/core/settings_manager.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:dungeon_crawler/game/overlays/gameover_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/main_menu_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/manual_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/pause_menu_overlay.dart';
+import 'package:dungeon_crawler/game/overlays/settings_menu_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/vitory_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); 
+
+  await SettingsManager.init();
+  
   runApp(const DungeonApp());
 }
 
@@ -62,6 +68,7 @@ class _GameScreenState extends State<GameScreen> {
                     'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
                     'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
                     'Vitory': (context, game) => VitoryOverlay(game: game as DungeonCrawlerGame),
+                    'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
                   },
                   // Define qual menu aparece primeiro quando abre o app
                   initialActiveOverlays: const ['MainMenu'],

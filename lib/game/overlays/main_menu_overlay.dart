@@ -1,3 +1,4 @@
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flutter/material.dart';
@@ -31,33 +32,45 @@ class MainMenuOverlay extends StatelessWidget {
                 const SizedBox(height: 60),
                 if (game.hasSavedGame) ...[
                   _buildMenuOption(
-                    title: "CONTINUAR JOGO",
+                    title: I18n.t('menu_continue'),
                     index: 0,
                     currentIndex: cursorIndex,
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: "INICIAR NOVO JOGO",
+                    title: I18n.t('menu_new'),
                     index: 1,
                     currentIndex: cursorIndex,
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: "MANUAL DE INSTRUÇÕES",
+                    title: I18n.t('menu_manual'),
                     index: 2,
+                    currentIndex: cursorIndex,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMenuOption(
+                    title: I18n.t('menu_settings'),
+                    index: 3,
                     currentIndex: cursorIndex,
                   ),
                 ] else ...[
                   // Modo sem save (Original)
                   _buildMenuOption(
-                    title: "INICIAR NOVO JOGO",
+                    title: I18n.t('menu_new'),
                     index: 0,
                     currentIndex: cursorIndex,
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: "MANUAL DE INSTRUÇÕES",
+                    title: I18n.t('menu_manual'),
                     index: 1,
+                    currentIndex: cursorIndex,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildMenuOption(
+                    title: I18n.t('menu_settings'),
+                    index: 2,
                     currentIndex: cursorIndex,
                   ),
                 ],

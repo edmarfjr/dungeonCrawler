@@ -1,3 +1,4 @@
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flutter/material.dart';
@@ -19,8 +20,8 @@ class GameOverOverlay extends StatelessWidget {
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
-                  "VOCÊ MORREU", 
+                 Text(
+                  I18n.t('game_over'), 
                   style: TextStyle(
                     fontFamily: 'pixelFont', 
                     color: Palette.branco, 
@@ -32,7 +33,7 @@ class GameOverOverlay extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'TEMPO: $tempoAtual',
+                  I18n.t('time') + tempoAtual,
                   style: const TextStyle(
                     fontFamily: 'pixelFont',
                     color: Palette.branco,
@@ -41,13 +42,13 @@ class GameOverOverlay extends StatelessWidget {
                 ),
                 const SizedBox(height: 60),
                 _buildMenuOption(
-                    title: "TENTAR NOVAMENTE",
+                    title: I18n.t('try_again'),
                     index: 0,
                     currentIndex: cursorIndex,
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: "MENU PRINCIPAL",
+                    title: I18n.t('main_menu'),
                     index: 1,
                     currentIndex: cursorIndex,
                   ),

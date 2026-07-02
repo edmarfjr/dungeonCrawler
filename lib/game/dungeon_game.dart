@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/minimap_renderer.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/core/player_state.dart';
@@ -19,7 +21,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
-enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, vitory }
+enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, vitory, settings }
 enum ShopPhase { main, buy, sell, confirmSell, steal }
 
 ShopPhase currentShopPhase = ShopPhase.main;
@@ -37,6 +39,7 @@ class GameMessage {
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   GameState currentState = GameState.mainMenu;
   GameState previousState = GameState.mainMenu;
+  GameState previousState2 = GameState.mainMenu;
 
   bool hasSavedGame = false;
   late DungeonMap dungeon;
@@ -117,6 +120,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   final ValueNotifier<int> mainMenuCursor = ValueNotifier<int>(0);
   final ValueNotifier<int> pauseMenuCursor = ValueNotifier<int>(0);
+  ValueNotifier<int> settingsCursor = ValueNotifier<int>(0);
+  ValueNotifier<bool> settingsRefresh = ValueNotifier<bool>(false);
 
   double shakeTimer = 0.0;
   double shakeIntensity = 0.0;
@@ -632,14 +637,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       TextPaint normalPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
       TextPaint selectPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
 
-      titlePaint.render(canvas, "LOJA", Vector2(20, 20));
-      normalPaint.render(canvas, "Moedas: ${_getPlayerCoins()}", Vector2(20, 50));
+      titlePaint.render(canvas, I18n.t('loja'), Vector2(20, 20));
+      normalPaint.render(canvas, "${I18n.t('moedas')}${_getPlayerCoins()}", Vector2(20, 50));
 
       double startY = 90;
 
       // DESENHA O MENU PRINCIPAL
       if (currentShopPhase == ShopPhase.main) {
-        List<String> options = ["COMPRAR", "VENDER", "ROUBAR", "SAIR"];
+        List<String> options = [I18n.t('comprar'), I18n.t('vender'), I18n.t('roubar'), I18n.t('sair')];
         for (int i = 0; i < options.length; i++) {
           
           // Opcional: Pinta a palavra "ROUBAR" de vermelho para destacar o perigo
@@ -655,7 +660,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       // DESENHA O MENU DE COMPRA
       else if (currentShopPhase == ShopPhase.buy) {
-        titlePaint.render(canvas, "COMPRAR", Vector2(20, startY - 15));
+        titlePaint.render(canvas, I18n.t('comprar'), Vector2(20, startY - 15));
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
           String texto = "${item.name} - \$${item.value}";
@@ -665,16 +670,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       // DESENHA O MENU DE VENDA (Seu inventário)
       else if (currentShopPhase == ShopPhase.sell) {
-        titlePaint.render(canvas, "VENDER", Vector2(20, startY - 15));
+        titlePaint.render(canvas, I18n.t('vender'), Vector2(20, startY - 15));
         for (int i = 0; i < playerCombatStats.inventory.length; i++) {
           Item item = playerCombatStats.inventory[i];
           int valorVenda = (item.value * 0.5).floor(); // Metade do preço
           if (valorVenda < 1) valorVenda = 1;
           
           bool isEquipped = (item == playerCombatStats.equippedWeapon || item == playerCombatStats.equippedArmor || item == playerCombatStats.equippedShield);
-          String sufixo = isEquipped ? " (Equipado)" : "";
+          String sufixo = isEquipped ? " ${I18n.t('equipado')}" : "";
           
-          String texto = "${item.name} (x${item.quantity})$sufixo - Vender por: \$$valorVenda";
+          String texto = "${item.name} (x${item.quantity})$sufixo - ${I18n.t('vender_por')}\$$valorVenda";
           
           TextPaint paintToUse = normalPaint;
           if (i == shopCursor) {
@@ -691,9 +696,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         int valorVenda = (itemToSell!.value * 0.5).floor();
         if (valorVenda < 1) valorVenda = 1;
 
-        titlePaint.render(canvas, "Vender ${itemToSell!.name} por \$$valorVenda?", Vector2(20, startY));
+        titlePaint.render(canvas, "${I18n.t('vender')} ${itemToSell!.name} por \$$valorVenda?", Vector2(20, startY));
         
-        List<String> options = ["VENDER", "SAIR"];
+        List<String> options = [I18n.t('vender'), I18n.t('sair')];
         for (int i = 0; i < options.length; i++) {
           (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + 40 + (i * 30)));
         }
@@ -702,11 +707,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else if (currentShopPhase == ShopPhase.steal) {
         // Título intimidador
         TextPaint dangerTitle = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 24, fontFamily: 'pixelFont'));
-        dangerTitle.render(canvas, "ROUBAR?", Vector2(20, startY - 15));
+        dangerTitle.render(canvas, I18n.t('roubar'), Vector2(20, startY - 15));
         
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
-          String texto = "${item.name} (Grátis!)";
+          String texto = item.name;
           (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + 15 +(i * 30)));
         }
       }
@@ -722,16 +727,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       canvas.drawRect(promptRect, Paint()..color = Palette.preto);
       canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
-      final titleSpan = const TextSpan(
-        text: "Passar o turno?",
-        style: TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
+      final titleSpan = TextSpan(
+        text: I18n.t('pass_turn'),
+        style: const TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
       );
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
       titlePainter.paint(canvas, Offset(promptX, promptY + 15));
 
 
-      final optionsSpan = const TextSpan(
-        text: "[A] Sim   [B] Não",
+      final optionsSpan =  TextSpan(
+        text: I18n.t('optsA_B'),
         style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'pixelFont')
       );
       final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
@@ -750,25 +755,25 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       final borderPaint = Paint()..color = Palette.roxo..style = PaintingStyle.stroke..strokeWidth = 3;
       canvas.drawRect(overlayRect.deflate(15), borderPaint);
 
-      final titleSpan = const TextSpan(
-        text: "Distribua seus Pontos",
+      final titleSpan =  TextSpan(
+        text: I18n.t('distr_pontos'),
         style: TextStyle(color: Palette.roxo, fontSize: 22, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
       );
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: size.x);
       titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 40));
 
       final ptSpan = TextSpan(
-        text: "Pontos Disponíveis: $pointsToDistribute",
+        text: "${I18n.t('pontos_disponiveis')}: $pointsToDistribute",
         style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: 18, fontFamily: 'pixelFont')
       );
       final ptPainter = TextPainter(text: ptSpan, textDirection: TextDirection.ltr)..layout();
       ptPainter.paint(canvas, Offset((size.x - ptPainter.width) / 2, 100));
 
       List<String> labels = [
-        "FORÇA (STR) : ${playerCombatStats.str.toInt()} (+ $tempStr)",
-        "CONSTITUIÇÃO (CON) : ${playerCombatStats.con.toInt()} (+ $tempCon)",
-        "SABEDORIA (WIS) : ${playerCombatStats.wis.toInt()} (+ $tempWis)",
-        "== CONFIRMAR MELHORIAS =="
+        "${I18n.t('forca')}: ${playerCombatStats.str.toInt()} (+ $tempStr)",
+        "${I18n.t('constituicao')}: ${playerCombatStats.con.toInt()} (+ $tempCon)",
+        "${I18n.t('sabedoria')}: ${playerCombatStats.wis.toInt()} (+ $tempWis)",
+        "== ${I18n.t('confirmar_melhorias')} =="
       ];
 
       for (int i = 0; i < labels.length; i++) {
@@ -786,8 +791,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         labelPainter.paint(canvas, Offset(40, 160 + (i * 45)));
       }
 
-      final helpSpan = const TextSpan(
-        text: "[▲▼] Mudar Linha [◄►] Alterar Pontos [A] Confirmar",
+      final helpSpan =  TextSpan(
+        text: I18n.t('pontos_legenda'),
         style: TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'pixelFont')
       );
       final helpPainter = TextPainter(text: helpSpan, textDirection: TextDirection.ltr)..layout();
@@ -801,7 +806,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
       canvas.drawRect(rect, Paint()..color = Palette.preto);
       canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      final textSpan = TextSpan(text: '$activeMessage\n\n[A] Continuar', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+      final textSpan = TextSpan(text: '$activeMessage\n\n${I18n.t('a_continuar')}', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
       textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
       textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
@@ -811,14 +816,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _drawInventoryScreen(Canvas canvas) {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-    final titlePainter = TextPainter(text: TextSpan(text: "INVENTÁRIO", style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+    final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
 
     double startY = 80;
     for (int i = 0; i < playerCombatStats.inventory.length; i++) {
       Item item = playerCombatStats.inventory[i];
       Color textColor = i == inventoryCursor ? Palette.branco : Palette.cinzaCla;
-      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " [Equipado]" : "";
+      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
       String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
       
       //canvas.drawRect(Rect.fromLTWH(20, startY + (i * 50), size.x - 40, 50), 
@@ -856,7 +861,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (isActionMenuOpen) {
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      TextPainter(text: const TextSpan(text: "A - Confirmar\nB - Cancelar", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
+      TextPainter(text:  TextSpan(text: "${I18n.t('a_confirma')}\n${I18n.t('b_cancelar')}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
     }
     if (isItemActionMenuOpen) {
       double menuWidth = 200;
@@ -868,7 +873,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       canvas.drawRect(menuRect, Paint()..color = Palette.preto);
       canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
-      List<String> options = ["Equipar/Usar", "Descartar", "Cancelar"];
+      List<String> options = [I18n.t('eqpUse'), I18n.t('eqpDescarte'), I18n.t('cancel')];
       
       for (int i = 0; i < options.length; i++) {
         Color textColor = (i == itemActionCursor) ? Palette.amarelo : Palette.branco;
@@ -914,10 +919,36 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     overlays.add('ManualMenu');   
   }
 
+  void openSettings() {
+    if(currentState == GameState.paused){
+      overlays.remove('PauseMenu');
+    }
+    if(currentState == GameState.mainMenu){
+      overlays.remove('MainMenu');
+    }
+    previousState2 = currentState;
+    currentState = GameState.settings;
+    overlays.add('settings');   
+  }
+
   void closeManual() {
     currentState = GameState.mainMenu;
     overlays.remove('ManualMenu'); 
     overlays.add('MainMenu');      
+  }
+
+  void closeSettings() {
+    if(previousState2 == GameState.mainMenu){
+      overlays.add('MainMenu');
+    }
+    if(previousState2 == GameState.paused){
+      overlays.add('PauseMenu');
+    }
+    currentState = previousState2;
+    overlays.remove('settings'); 
+
+    print('Current State: $currentState');
+          
   }
 
   void resetGame() {
@@ -1075,7 +1106,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (dungeon.keyPosition != null && player.x == dungeon.keyPosition!.x && player.y == dungeon.keyPosition!.y) {
         player.hasKey = true;
         dungeon.keyPosition = null;
-        showMessage("Você encontrou a Chave da Masmorra!");
+        showMessage(I18n.t('encontrou_key'));
       }
 
       TileType playerTile = dungeon.getTile(player.x, player.y);
@@ -1197,17 +1228,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               enemy.applyHitStun(stun);
               if(weaponHasPoison || shieldHasPoison) enemy.isPoison = true;
               playerCombatStats.recoverMana();
-              FlameAudio.play('sfx/hit.wav');
+              AudioManager.playSfx('sfx/hit.wav');
             }else{
               enemy.applyHitGuard(0.3);
               playerCombatStats.stamina -= 4;
               playerCombatStats.stamina = max(playerCombatStats.stamina - playerCombatStats.staminaCost,0);
               combatOverlay.addFloatingText("BLOCK!", enemy.getHurtbox(size), Palette.cinzaCla);
-              FlameAudio.play('sfx/block.wav');
+              AudioManager.playSfx('sfx/block.wav');
             }
             
             if (enemy.hp <= 0) {
-              FlameAudio.play('sfx/enemy_die.wav');
+              AudioManager.playSfx('sfx/enemy_die.wav');
               enemy.hp = 0;
               enemy.isDying = true; 
               encounterEssence += enemy.dropEssence; 
@@ -1233,8 +1264,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             receiveItem(drop); 
           }
         }
-
-        showMessage("Vitória! Você obteve +${encounterEssence.toInt()} Essências!", onDismiss: () {
+//I18n.t('encontrou_key')
+        showMessage(I18n.t('vitoria_essencias').replaceAll('{essencias}', encounterEssence.toInt().toString()), onDismiss: () {
           _endEncounter();
         });
       }
@@ -1380,7 +1411,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   Future<void> projetil() async {
     final ui.Image img = await images.load('effects/magia.png');
     double damage = playerCombatStats.equippedWeapon?.power ?? 5; 
-    FlameAudio.play('sfx/fire.wav');
+    AudioManager.playSfx('sfx/fire.wav');
      combatOverlay.add(PlayerProjectile(
        playerCombatStats.strafePosition, 0.75, 1.5, damage * playerCombatStats.wis * 0.5 , Palette.azulCla, width: 48, height: 48
        ,img : img
@@ -1395,7 +1426,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(dashTimer>0 || playerCombatStats.invencibleTmr > 0 || godMode)return;
 
     if (playerCombatStats.isGuarding && !unblockable) {
-      FlameAudio.play('sfx/block.wav');
+      AudioManager.playSfx('sfx/block.wav');
       if (playerCombatStats.stamina >= 0) {
         if (playerCombatStats.staminaInfiniteTmr <= 0){
           playerCombatStats.stamina -= (8 - playerCombatStats.equippedShield!.power); 
@@ -1414,7 +1445,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.weaponHitTicker.reset();
       }*/
     } else { 
-      FlameAudio.play('sfx/hit.wav');
+      AudioManager.playSfx('sfx/hit.wav');
       playerCombatStats.hp -= dmg; 
       playerCombatStats.applyHitStun(0.3); 
       combatOverlay.playerHitTicker.reset(); 
@@ -1439,7 +1470,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void triggerEncounter() {
-    FlameAudio.play('sfx/encounter.wav');
+    AudioManager.playSfx('sfx/encounter.wav');
     maxHp = playerCombatStats.hp;
     encounterEssence = 0;         
     encounterDrop.clear();
@@ -1677,15 +1708,51 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void startInput(GameInput input) {
     if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
+    if (currentState == GameState.settings) { // Certifique-se que tem este GameState!
+      if (input == GameInput.up) {
+        AudioManager.playSfx('sfx/hover.wav');
+        settingsCursor.value = (settingsCursor.value - 1 + 3) % 3; // 3 opções
+      }
+      if (input == GameInput.down) {
+        AudioManager.playSfx('sfx/hover.wav');
+        settingsCursor.value = (settingsCursor.value + 1) % 3;
+      }
+      
+      if (input == GameInput.buttonA) {
+        AudioManager.playSfx('sfx/confirm.wav');
+        
+        if (settingsCursor.value == 0) {
+          AudioManager.toggleMusic();
+          settingsRefresh.value = !settingsRefresh.value; // Força a tela a atualizar o texto
+        } 
+        else if (settingsCursor.value == 1) {
+          AudioManager.toggleSfx();
+          settingsRefresh.value = !settingsRefresh.value; // Força a tela a atualizar o texto
+        } 
+        else if (settingsCursor.value == 2) {
+          I18n.toggleLanguage();
+          settingsRefresh.value = !settingsRefresh.value; 
+        }
+        else if (settingsCursor.value == 3) {
+          closeSettings();
+        }
+      }
+
+      // Opcional: Pressionar B também sai do menu
+      if (input == GameInput.buttonB) {
+        closeSettings();
+      }
+      return; 
+    }
     if (currentState == GameState.shop) {
       // Movimentação do Cursor
       if (input == GameInput.up) {
         shopCursor--;
-        FlameAudio.play('sfx/hover.wav'); 
+        AudioManager.playSfx('sfx/hover.wav'); 
       }
       if (input == GameInput.down) {
         shopCursor++;
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
       }
 
       // --- LIMITES DO CURSOR ---
@@ -1714,7 +1781,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         
         // FASE 1: MENU PRINCIPAL DA LOJA
         if (currentShopPhase == ShopPhase.main) {
-          FlameAudio.play('sfx/confirm.wav');
+          AudioManager.playSfx('sfx/confirm.wav');
           if (shopCursor == 0) { currentShopPhase = ShopPhase.buy; shopCursor = 0; } 
           else if (shopCursor == 1) { currentShopPhase = ShopPhase.sell; shopCursor = 0; } 
           else if (shopCursor == 2) { currentShopPhase = ShopPhase.steal; shopCursor = 0; } 
@@ -1756,10 +1823,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
                 shopCursor = 0;
               }
             }
-            FlameAudio.play('sfx/confirm.wav'); // Som de caixa registradora
+            AudioManager.playSfx('sfx/confirm.wav'); // Som de caixa registradora
             //showMessage("Comprado: ${itemToBuy.name}");
           } else {
-            FlameAudio.play('sfx/denied.wav');
+            AudioManager.playSfx('sfx/denied.wav');
             //showMessage("Moedas insuficientes!");
           }
         }
@@ -1770,29 +1837,29 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           itemToSell = playerCombatStats.inventory[shopCursor];
           
           if (itemToSell!.name == "moeda") {
-            FlameAudio.play('sfx/denied.wav');
+            AudioManager.playSfx('sfx/denied.wav');
             showMessage("Você não pode vender dinheiro!");
             return;
           }
 
           if (itemToSell == playerCombatStats.equippedWeapon) { 
-            FlameAudio.play('sfx/denied.wav');
+            AudioManager.playSfx('sfx/denied.wav');
             showMessage("Desequipa o item antes de o vender!");
             return; // Bloqueia o avanço para a tela de confirmação
           }
 
           if (itemToSell == playerCombatStats.equippedArmor) { 
-            FlameAudio.play('sfx/denied.wav');
+            AudioManager.playSfx('sfx/denied.wav');
             showMessage("Desequipa o item antes de o vender!");
             return; // Bloqueia o avanço para a tela de confirmação
           }
 
           if (itemToSell == playerCombatStats.equippedShield) { 
-            FlameAudio.play('sfx/denied.wav');
+            AudioManager.playSfx('sfx/denied.wav');
             showMessage("Desequipa o item antes de o vender!");
             return; // Bloqueia o avanço para a tela de confirmação
           }
-          FlameAudio.play('sfx/confirm.wav');
+          AudioManager.playSfx('sfx/confirm.wav');
           currentShopPhase = ShopPhase.confirmSell;
           shopCursor = 0;
         }
@@ -1809,7 +1876,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             if (itemToSell!.quantity <= 0) {
               playerCombatStats.inventory.remove(itemToSell);
             }
-            FlameAudio.play('sfx/use_item.wav');
+            AudioManager.playSfx('sfx/use_item.wav');
             currentShopPhase = ShopPhase.sell; // Volta pra lista de venda
             shopCursor = 0;
             itemToSell = null;
@@ -1837,7 +1904,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             }
 
             // 2. Toca um som de alarme/erro
-            // FlameAudio.play('sfx/alarm.wav'); 
+            // AudioManager.playSfx('sfx/alarm.wav'); 
 
             // 3. Deleta a loja do mapa
              int nx = player.x; int ny = player.y;
@@ -1857,7 +1924,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (currentState == GameState.manual) {
       if (input == GameInput.buttonB) {
-        FlameAudio.play('sfx/decline.wav');
+        AudioManager.playSfx('sfx/decline.wav');
         closeManual();
       }
       return;
@@ -1866,43 +1933,43 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (currentState == GameState.paused) {
       if (input == GameInput.up) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         // Sobe o cursor (0, 1, 2)
         pauseMenuCursor.value = (pauseMenuCursor.value - 1 + 3) % 3;
       }
       if (input == GameInput.down) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         // Desce o cursor
         pauseMenuCursor.value = (pauseMenuCursor.value + 1) % 3;
       }
       if (input == GameInput.buttonA) {
-        FlameAudio.play('sfx/confirm.wav');
+        AudioManager.playSfx('sfx/confirm.wav');
         if (pauseMenuCursor.value == 0) {
           togglePause(); // CONTINUAR
         } else if (pauseMenuCursor.value == 1) {
           quitToMainMenu(); // VOLTAR
         } else if (pauseMenuCursor.value == 2) {
-          showHitboxes = !showHitboxes; // DEBUG
-          godMode = !godMode;
+          //showHitboxes = !showHitboxes; // DEBUG
+          //godMode = !godMode;
+          openSettings(); 
         }
       }
       return;
     }
 
     if (currentState == GameState.mainMenu) {
-      // Se tiver jogo salvo, temos 3 botões. Se não, apenas 2.
-      int maxOptions = hasSavedGame ? 3 : 2; 
+      int maxOptions = hasSavedGame ? 4 : 3; 
 
       if (input == GameInput.up) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions;
       }
       if (input == GameInput.down) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions;
       }
       if (input == GameInput.buttonA) {
-        FlameAudio.play('sfx/confirm.wav');
+        AudioManager.playSfx('sfx/confirm.wav');
         
         if (hasSavedGame) {
           if (mainMenuCursor.value == 0) {
@@ -1915,11 +1982,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
              startGame(); // Substitui o save (Novo Jogo)
           } else if (mainMenuCursor.value == 2) {
              openManual();
+          } else if (mainMenuCursor.value == 3) {
+             openSettings();
           }
         } else {
           // Sem save game
           if (mainMenuCursor.value == 0) startGame();
           else if (mainMenuCursor.value == 1) openManual();
+          else if (mainMenuCursor.value == 2) openSettings();
         }
       }
       return; 
@@ -1930,15 +2000,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       int maxOptions = 2; 
 
       if (input == GameInput.up) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions;
       }
       if (input == GameInput.down) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions;
       }
       if (input == GameInput.buttonA) {
-        FlameAudio.play('sfx/confirm.wav');
+        AudioManager.playSfx('sfx/confirm.wav');
 
         if (mainMenuCursor.value == 0) startGame();
         else if (mainMenuCursor.value == 1) quitToMainMenu();
@@ -1948,7 +2018,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     if (currentState == GameState.levelUp) {
-      FlameAudio.play('sfx/hover.wav');
+      AudioManager.playSfx('sfx/hover.wav');
       if (input == GameInput.up) {
         levelUpCursor = (levelUpCursor - 1 + 4) % 4; 
       }
@@ -1957,7 +2027,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
       
       if (input == GameInput.right || (input == GameInput.buttonA && levelUpCursor < 3)) {
-        FlameAudio.play('sfx/hover.wav');
+        AudioManager.playSfx('sfx/hover.wav');
         if (pointsToDistribute > 0 && levelUpCursor < 3) {
           pointsToDistribute--;
           if (levelUpCursor == 0) tempStr++;
@@ -1984,10 +2054,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           playerCombatStats.recalculateMaxHp();
           
           dungeon.grid[player.y][player.x] = TileType.floor;
-          showMessage("Atributos Melhorados! O Altar desmorona...");
+          showMessage(I18n.t('atrib_melhorados'));
           currentState = GameState.exploration;
         } else {
-          showMessage("Distribua todos os 3 pontos antes de confirmar!");
+          showMessage(I18n.t('atrib_distri'));
         }
       }
       return;
@@ -2000,13 +2070,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       if (isItemActionMenuOpen) {
         if (input == GameInput.up) {
-          FlameAudio.play('sfx/hover.wav');
+          AudioManager.playSfx('sfx/hover.wav');
           itemActionCursor = (itemActionCursor - 1 + 3) % 3;
         } else if (input == GameInput.down) {
-          FlameAudio.play('sfx/hover.wav');
+          AudioManager.playSfx('sfx/hover.wav');
           itemActionCursor = (itemActionCursor + 1) % 3;
         } else if (input == GameInput.buttonA) {
-          FlameAudio.play('sfx/confirm.wav');
+          AudioManager.playSfx('sfx/confirm.wav');
           if (itemActionCursor == 0) {
             Item item = playerCombatStats.inventory[inventoryCursor];
             _useOrEquipItem(item); 
@@ -2021,27 +2091,27 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             isItemActionMenuOpen = false;
           }
         } else if (input == GameInput.buttonB || input == GameInput.pause) {
-          FlameAudio.play('sfx/decline.wav');
+          AudioManager.playSfx('sfx/decline.wav');
           isItemActionMenuOpen = false; 
         }
       } 
       else {
         if (input == GameInput.up) {
-          FlameAudio.play('sfx/hover.wav');
+          AudioManager.playSfx('sfx/hover.wav');
           //inventoryCursor = max(0, inventoryCursor - 1);
           inventoryCursor -= 1;
           if(inventoryCursor<0) inventoryCursor = playerCombatStats.inventory.length - 1;
         } else if (input == GameInput.down) {
-          FlameAudio.play('sfx/hover.wav');
+          AudioManager.playSfx('sfx/hover.wav');
           //inventoryCursor = min(playerCombatStats.inventory.length - 1, inventoryCursor + 1);
           inventoryCursor += 1;
           if(inventoryCursor>playerCombatStats.inventory.length - 1) inventoryCursor = 0;
         } else if (input == GameInput.buttonA && playerCombatStats.inventory.isNotEmpty) {
-          FlameAudio.play('sfx/confirm.wav');
+          AudioManager.playSfx('sfx/confirm.wav');
           isItemActionMenuOpen = true;
           itemActionCursor = 0;
         } else if (input == GameInput.buttonB || input == GameInput.pause) {
-          FlameAudio.play('sfx/decline.wav');
+          AudioManager.playSfx('sfx/decline.wav');
           currentState = GameState.exploration; 
         }
       }
@@ -2063,28 +2133,28 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (input == GameInput.up) { 
         if (player.move(true, dungeon)){
           _onPlayerStepped(); 
-          FlameAudio.play('sfx/step.wav');
+          AudioManager.playSfx('sfx/step.wav');
         } else {
           renderer.triggerWallBump(forward: true);
-          FlameAudio.play('sfx/landing.wav');
+          AudioManager.playSfx('sfx/landing.wav');
         } 
       }
       if (input == GameInput.down) { 
         if (player.move(false, dungeon)){
           _onPlayerStepped(); 
-          FlameAudio.play('sfx/step.wav');
+          AudioManager.playSfx('sfx/step.wav');
         } else {
           renderer.triggerWallBump(forward: true);
-          FlameAudio.play('sfx/landing.wav');
+          AudioManager.playSfx('sfx/landing.wav');
         } 
       }
       if (input == GameInput.left){ 
         player.turn(false);
-        FlameAudio.play('sfx/step.wav');
+        AudioManager.playSfx('sfx/step.wav');
       }
       if (input == GameInput.right) { 
         player.turn(true);
-        FlameAudio.play('sfx/step.wav');
+        AudioManager.playSfx('sfx/step.wav');
       }
       if (input == GameInput.buttonA) {
         Point<int> currentPos = Point(player.x, player.y);
@@ -2096,7 +2166,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             dungeon.droppedItems[currentPos]!.removeAt(0); 
             receiveItem(itemToPick); 
           } else {
-            showMessage("Inventário Cheio! Não consegue pegar ${itemToPick.name}.");
+            showMessage("$I18n.t('inv_cheio') ${itemToPick.name}.");
           }
           return; 
         }
@@ -2105,7 +2175,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       if (input == GameInput.buttonB) { 
         // /*
-        FlameAudio.play('sfx/confirm.wav');
+        AudioManager.playSfx('sfx/confirm.wav');
         currentState = GameState.inventory; 
         inventoryCursor = 0; 
         isActionMenuOpen = false; 
@@ -2227,8 +2297,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (item.type == ItemType.weapon) { 
       if (item.str > playerCombatStats.str){
-        FlameAudio.play('sfx/denied.wav');
-        showMessage("você precisa de ${item.str.toString()} de força para equipar");
+        AudioManager.playSfx('sfx/denied.wav');
+        showMessage(I18n.t('precisa_str').replaceAll('{str}', item.str.toString()));
       }else{
         playerCombatStats.equippedWeapon = item; 
         if (item.onUse != null) item.onUse!(item, this);
@@ -2254,11 +2324,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
     else if (item.type == ItemType.consumable) { 
       if (item.onUse != null) item.onUse!(item, this);
-      FlameAudio.play('sfx/use_item.wav');
+      AudioManager.playSfx('sfx/use_item.wav');
       _consumeItem(item);
     }
     else if (item.type == ItemType.coin) { 
-      showMessage("Guarde isso para usar durante as batalhas!");
+      showMessage(I18n.t('guarda_batalha'));
     }
   }
 
@@ -2266,14 +2336,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (item.type == ItemType.consumable) {
       if (item.onUse != null) item.onUse!(item, this);
       _consumeItem(item); 
-      FlameAudio.play('sfx/use_item.wav');
+      AudioManager.playSfx('sfx/use_item.wav');
     } 
     else if (item.type == ItemType.spell) {
       if (playerCombatStats.mana >= item.manaCost) {
         playerCombatStats.mana -= item.manaCost; 
         if (item.onUse != null) item.onUse!(item, this);
       } else {
-        combatOverlay.addFloatingText("Mana insuficiente!", playerCombatStats.getHurtbox(size), Palette.cinzaCla);
+        combatOverlay.addFloatingText(I18n.t('no_mana'), playerCombatStats.getHurtbox(size), Palette.cinzaCla);
       }
     }
   }
@@ -2297,7 +2367,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.hp -= 5; 
       shakeScreen(0.3, 10.0);
       playerCombatStats.applyHitStun(0.3); 
-      showMessage("Você pisou em uma armadilha de espinhos!");
+      showMessage(I18n.t('trap1'));
       if (playerCombatStats.hp <= 0) handlePlayerDeath();
     }
 
@@ -2305,7 +2375,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.poisonTmr = 10; 
       shakeScreen(0.3, 10.0);
       playerCombatStats.applyHitStun(0.3); 
-      showMessage("Você pisou em uma armadilha de veneno!");
+      showMessage(I18n.t('trap2'));
     }
 
     if (dungeon.getTile(player.x, player.y) == TileType.teleport && (dungeon.teleportState == 3 || dungeon.teleportState == 4)) {
@@ -2343,13 +2413,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         // =========================================================
         
         // Mostra a mensagem no HUD
-        showMessage("Você pisou numa armadilha de Teleporte!");
+        showMessage(I18n.t('trap3'));
         
         // Treme a tela para dar a sensação de desorientação (usando a função que criamos antes!)
         shakeScreen(0.3, 10.0);
         
         // Toca o som (se você tiver um)
-        // FlameAudio.play('sfx/teleport.wav');
+        // AudioManager.playSfx('sfx/teleport.wav');
         
         // (Opcional) Muda a direção do jogador aleatoriamente para desorientar ainda mais!
         List<Direction> dirs = [Direction.north, Direction.east, Direction.south, Direction.west];
@@ -2361,7 +2431,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.poisonTmr --;
       if(playerCombatStats.hp > 1)playerCombatStats.hp -= 1;   
       playerCombatStats.applyEffect(0.3,Palette.verde);
-      if (playerCombatStats.poisonTmr == 0)showMessage("Você se sente melhor!");
+      if (playerCombatStats.poisonTmr == 0)showMessage(I18n.t('sente_bem'));
     }
     dungeon.moveEnemies(Point(player.x, player.y));
 
@@ -2395,14 +2465,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       playerCombatStats.mana = playerCombatStats.wis*3;
       playerCombatStats.vfxTimer = 0.5;
       playerCombatStats.vfxColor = Palette.vermelho;
-      showMessage("Você se sente revigorado!");
+      showMessage(I18n.t('font_healed'));
     }
 
     if (playerTile == TileType.fontPoison) {
       playerCombatStats.poisonTmr = 10; 
       playerCombatStats.vfxTimer = 0.5;
       playerCombatStats.vfxColor = Palette.verde;
-      showMessage("Você se sente mal!");
+      showMessage(I18n.t('font_poisoned'));
     }
 
     if (playerTile == TileType.shrine) {
@@ -2413,14 +2483,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         levelUpCursor = 0;
         currentState = GameState.levelUp; 
       } else {
-        showMessage("Altar Antigo: Exige $cost Essências (Você tem: ${playerCombatStats.essence.toInt()})");
+        showMessage(I18n.t('shrine_cost').replaceAll('{cost}', cost.toString()).replaceAll('{essence}', playerCombatStats.essence.toInt().toString()));
       }
       return;
     }
 
     if (playerTile == TileType.door) {
       if (player.hasKey) {
-        showMessage("A porta se abre. Descendo para o Andar ${dungeon.level + 1}...", onDismiss: () async {
+        showMessage(I18n.t('open_door').replaceAll('{level}', (dungeon.level + 1).toString()), onDismiss: () async {
           //player.floorLevel++;
           player.hasKey = false;
           dungeon.width += 5; 
@@ -2508,7 +2578,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           }
         });
       } else {
-        showMessage("A porta está trancada. Encontre a chave.");
+        showMessage(I18n.t('door_locked'));
       }
     } 
     else if (playerTile == TileType.chest) {
@@ -2516,12 +2586,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       if (chance < 45) { 
         dungeon.grid[player.y][player.x] = TileType.floor; 
-        showMessage("O baú era um MÍMICO!!", onDismiss: () { _triggerSpecificEncounter(EnemyType.mimic); }); 
+        showMessage(I18n.t('mimico_found'), onDismiss: () { _triggerSpecificEncounter(EnemyType.mimic); }); 
       
       } else if (chance < 60) { 
         dungeon.grid[player.y][player.x] = TileType.openChest; 
         int loot = Random().nextInt(30) + 10; 
-        showMessage("Você achou $loot Essências!", onDismiss: () { playerCombatStats.essence += loot; }); 
+        showMessage(I18n.t('found_essences').replaceAll('{loot}', loot.toString()), onDismiss: () { playerCombatStats.essence += loot; }); 
       
       } else {
         dungeon.grid[player.y][player.x] = TileType.openChest; 
@@ -2556,7 +2626,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         Item newEquipment = unownedEquipments.first;
         newEquipment.quantity = 1; 
 
-        showMessage("Você encontrou um item: ${newEquipment.name}!", onDismiss: () {
+        showMessage(I18n.t('item_found').replaceAll('{item}', newEquipment.name), onDismiss: () {
           receiveItem(newEquipment);
         });
 
@@ -2603,7 +2673,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       dungeon.grid[player.y][player.x] = TileType.floor; 
       
       if (chance < 40) { 
-        showMessage("Caixa vazia!"); 
+        showMessage(I18n.t('caixa_vazia')); 
       } else {
         List<Item> allConsumables = [
             ItemDatabase.healthPotion,
@@ -2622,7 +2692,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         Item droppedItem = allConsumables[randomIndex];
         droppedItem.quantity = 1;
 
-        showMessage("Você encontrou um item: ${droppedItem.name}!", onDismiss: () {
+        showMessage(I18n.t('item_found').replaceAll('{item}', droppedItem.name), onDismiss: () {
           var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
           if (existingItems.isNotEmpty) {
             existingItems.first.quantity += droppedItem.quantity; 

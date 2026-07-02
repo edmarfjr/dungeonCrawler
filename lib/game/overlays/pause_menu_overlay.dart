@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flutter/material.dart';
@@ -72,7 +73,7 @@ class PauseMenuOverlay extends StatelessWidget {
                 return Column(
                   children: [
                     _buildMenuOption(
-                      title: "CONTINUAR",
+                      title: I18n.t('pause_continue'),
                       index: 0,
                       currentIndex: cursorIndex,
                       color: Palette.branco,
@@ -80,7 +81,7 @@ class PauseMenuOverlay extends StatelessWidget {
                     const SizedBox(height: 15),
                     
                     _buildMenuOption(
-                      title: "VOLTAR AO MENU PRINCIPAL",
+                      title: I18n.t('pause_main_menu'),
                       index: 1,
                       currentIndex: cursorIndex,
                       color: Palette.branco,
@@ -88,10 +89,10 @@ class PauseMenuOverlay extends StatelessWidget {
                     const SizedBox(height: 15),
                     
                     _buildMenuOption(
-                      title: "DEBUG (Hitboxes)",
+                      title: I18n.t('menu_settings'),
                       index: 2,
                       currentIndex: cursorIndex,
-                      color: Palette.vermelho,
+                      color: Palette.branco,
                     ),
                   ],
                 );

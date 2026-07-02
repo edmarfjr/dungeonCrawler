@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/Effects/healing_cloud_effect.dart';
+import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
@@ -307,7 +308,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
       animTimer -= dt;
       if (animTimer <= 0) {
-        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; AudioManager.playSfx('sfx/claw.wav'); }
         else if (currentPhase == CombatPhase.active) { currentPhase = CombatPhase.recovery; animTimer = 0.6; } 
         else { currentPhase = CombatPhase.idle; }
       }
@@ -1026,7 +1027,7 @@ class OrcChefe extends Enemy {
     if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
       animTimer -= dt;
       if (animTimer <= 0) {
-        if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false;AudioManager.playSfx('sfx/claw.wav'); }
         else if (currentPhase == CombatPhase.active2) { currentPhase = CombatPhase.recovery2; animTimer = 0.4; } 
         else { currentPhase = CombatPhase.idle; }
       }
@@ -2147,7 +2148,7 @@ class NagaEnemy extends Enemy {
     if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
       animTimer -= dt;
       if (animTimer <= 0) {
-        if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        if (currentPhase == CombatPhase.windup2) { currentPhase = CombatPhase.active2; animTimer = 0.15; attackHit = false;AudioManager.playSfx('sfx/claw.wav'); }
         else if (currentPhase == CombatPhase.active2) { currentPhase = CombatPhase.recovery2; animTimer = 1.0; } 
         else { currentPhase = CombatPhase.idle; }
       }
@@ -2877,7 +2878,7 @@ class AberraArvEnemy extends Enemy {
     if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery) {
       animTimer -= dt;
       if (animTimer <= 0) {
-        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; FlameAudio.play('sfx/claw.wav'); }
+        if (currentPhase == CombatPhase.windup) { currentPhase = CombatPhase.active; animTimer = 0.15; attackHit = false; AudioManager.playSfx('sfx/claw.wav'); }
         else if (currentPhase == CombatPhase.active) { currentPhase = CombatPhase.recovery; animTimer = 1.5; } 
         else { currentPhase = CombatPhase.idle; }
       }
