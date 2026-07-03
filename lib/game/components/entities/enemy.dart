@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/Effects/healing_cloud_effect.dart';
 import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
@@ -11,7 +12,7 @@ import 'package:dungeon_crawler/game/components/entities/poison_cloud.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
-import 'package:flame_audio/flame_audio.dart';
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
@@ -125,7 +126,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
   @override
   void update(double dt) {
-    if(gameRef.currentState == GameState.paused)return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
     super.update(dt);
     priority = isFrontRow ? 10 : 0;
 
@@ -509,7 +510,7 @@ class SlimeEnemy extends Enemy {
   double moveTimer = 0.0;
   double currentDir = 1.0;
 
-  SlimeEnemy() : super(name:'slime',
+  SlimeEnemy() : super(name: 'slime',
     type: EnemyType.slime, color: Palette.verdeCla, hp: 50, maxHp: 50, dropEssence: 10, width: 144, height: 144, speed: 0.4,
     hurtboxWidth: 130, hurtboxHeight: 70, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30,
@@ -534,7 +535,7 @@ class SlimeEnemy extends Enemy {
 
 class GoblinEnemy extends Enemy {
   bool isFleeing = false;
-  GoblinEnemy() : super(name:'goblin',
+  GoblinEnemy() : super(name: 'goblin',
     type: EnemyType.goblin, color: Palette.verde, hp: 60, maxHp: 60, dropEssence: 15, width: 144, height: 144, speed: 0.6, damage: 5,
     hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: [ItemDatabase.faca]
@@ -593,7 +594,7 @@ class SpiderEnemy extends Enemy {
   double landTmr = 0.0;
   double speedIni = 0.4;
 
-  SpiderEnemy() : super(name:'aranha',
+  SpiderEnemy() : super(name: 'aranha',
     type: EnemyType.spider, color: Palette.marromCla, hp: 30, maxHp: 30, dropEssence: 10, width: 144, height: 144, yPosition: 0.2, targetY: 0.2,
     hurtboxWidth: 60, hurtboxHeight: 70, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, drop: [ItemDatabase.web]
@@ -648,7 +649,7 @@ class MimicEnemy extends Enemy {
   double currentDir = 1.0;
   bool _spawnedProjectiles = false;
 
-  MimicEnemy() : super(name:'mimico',
+  MimicEnemy() : super(name: 'mimico',
     type: EnemyType.mimic, color: Palette.amarelo, hp: 60, maxHp: 60, dropEssence: 40, width: 144, height: 144, speed: 0.5, damage: 10,
     hurtboxWidth: 90, hurtboxHeight: 90, hurtboxOffsetY: 10,
     hitboxWidth: 0, hitboxHeight: 0, isMelee: false, drop: []
@@ -796,7 +797,7 @@ class BatEnemy extends Enemy {
   double targetStrafe = 0;
 
   BatEnemy() : super(
-    type: EnemyType.bat, name: 'morcego',
+    type: EnemyType.bat, name: 'bat',
     color: Palette.roxo, 
     hp: 40, maxHp: 40, dropEssence: 10, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0, damage: 5,
@@ -891,7 +892,7 @@ class OrcChefe extends Enemy {
   bool isFleeing = false;
 
   OrcChefe() : super(
-    name: 'orc chefe',isBoss: true,
+    name: 'orcChefe',isBoss: true,
     type: EnemyType.boss1, 
     color: Palette.vermelhoEsc, 
     hp: 300, maxHp: 300, dropEssence: 100, 
@@ -1282,7 +1283,7 @@ class FungoEnemy extends Enemy {
 
   @override
   void update(double dt) {
-    if (gameRef.currentState == GameState.paused) return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
     if (!isAlive) return;
 
     floatTimer += dt;
@@ -1400,9 +1401,7 @@ class Fungo2Enemy extends Enemy {
 
   @override
   void update(double dt) {
-    if (gameRef.currentState == GameState.paused) return;
-    if (!isAlive) return;
-
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
     floatTimer += dt;
 
     flightOffset = -0.25 + (sin(floatTimer * speed) * 0.25);
@@ -1650,7 +1649,7 @@ class GarraRainhaEnemy extends Enemy {
 
 class RainhaInsetoEnemy extends Enemy {
   RainhaInsetoEnemy() : super(
-    name: 'rainha',
+    name: 'queen',
     type: EnemyType.boss2,
     color: Palette.roxo,
     hp: 300, maxHp: 300, dropEssence: 100, width: 192, height: 192, speed: 0.3,
@@ -1987,7 +1986,7 @@ class JesterEnemy extends Enemy {
   void update(double dt) {
     super.update(dt);
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     // 3. LÓGICA DE ATAQUE (Disparo do Projétil)
     // Usamos o update principal porque a classe base desativa o updateBehavior enquanto ataca!
@@ -2182,7 +2181,7 @@ class HandEnemy extends Enemy {
   int _nextAttackType = 1; // 1 = Tiro Direto, 2 = Chuva de Pedras
 
   HandEnemy() : super(
-    name: 'Mão',
+    name: 'mao',
     type: EnemyType.mao,
     color: Palette.cinzaEsc, 
     hp: 150, maxHp: 150, dropEssence: 40, 
@@ -2273,7 +2272,7 @@ class HandEnemy extends Enemy {
   void update(double dt) {
     super.update(dt);
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     // =========================================================================
     // NOVO: RELÓGIO CUSTOMIZADO PARA AS FASES SECUNDÁRIAS
@@ -2333,7 +2332,7 @@ class DollEnemy extends Enemy {
   double targetStrafe = 0;
 
   DollEnemy() : super(
-    type: EnemyType.doll, name: 'boneco',
+    type: EnemyType.doll, name: 'doll',
     color: Palette.roxo,  damage: 15,
     hp: 70, maxHp: 70, dropEssence: 10, width: 144, height: 144, speed: 0.5,
     hurtboxWidth: 40, hurtboxHeight: 120, hurtboxOffsetX: 0, hurtboxOffsetY: 0,
@@ -2574,7 +2573,7 @@ class MagoEnemy extends Enemy {
   bool isSummoning = false;
   double summonTmr = 5;
 
-  MagoEnemy() : super(name:'necromante',
+  MagoEnemy() : super(name: 'necro',
     type: EnemyType.boss3, color: Palette.roxo, hp: 300, maxHp: 300, dropEssence: 10, width: 192, height: 192, speed: 0.4,
     hurtboxWidth: 100, hurtboxHeight: 160, hurtboxOffsetY: 0, damage: 25,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 8,
@@ -2657,7 +2656,7 @@ class MagoEnemy extends Enemy {
 
     if(hp <= maxHp/2 && !podeInvocar) podeInvocar = true;
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true;
@@ -2701,7 +2700,7 @@ class MagoEnemy extends Enemy {
 class AberraBrutoEnemy extends Enemy {
   bool isFleeing = false;
   
-  AberraBrutoEnemy() : super(name:'Bruto Aberrante',
+  AberraBrutoEnemy() : super(name: 'aberraBruto',
     type: EnemyType.aberraBruto, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144
     , speed: 0.6, damage: 30,hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 3.0,drop: []
@@ -2751,7 +2750,7 @@ class AberraVoaEnemy extends Enemy {
   final double attackHeight = 0.7;  
 
 
-  AberraVoaEnemy() : super(name:'Aberração Matraqueante',
+  AberraVoaEnemy() : super(name: 'aberraVoa',
     type: EnemyType.aberraVoa, color: Palette.vermelhoEsc, hp: 80, maxHp: 80, dropEssence: 15, width: 144, height: 144, speed: 0.4,
     hurtboxWidth: 100, hurtboxHeight: 100, hurtboxOffsetY: 0, damage: 20,
     hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0, isMelee: false,maxAttackCooldown: 4,
@@ -2791,7 +2790,7 @@ class AberraVoaEnemy extends Enemy {
   void update(double dt) {
     super.update(dt); 
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true;
@@ -2804,7 +2803,7 @@ class AberraVoaEnemy extends Enemy {
 
 class AberraBestaEnemy extends Enemy {
   bool isFleeing = false;
-  AberraBestaEnemy() : super(name:'besta aberrante',
+  AberraBestaEnemy() : super(name: 'aberraBesta',
     type: EnemyType.aberraBesta, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
     hurtboxWidth: 100, hurtboxHeight: 100, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: []
@@ -2849,7 +2848,7 @@ class AberraBestaEnemy extends Enemy {
 
 class AberraArvEnemy extends Enemy {
   
-  AberraArvEnemy() : super(name:'Arvore Aberrante',
+  AberraArvEnemy() : super(name: 'aberraArv',
     type: EnemyType.aberraArv, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 192, height: 192
     , speed: 0, damage: 30,hurtboxWidth: 120, hurtboxHeight: 180, hurtboxOffsetY: 0,
     hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 50, hitboxOffsetX: -10, maxAttackCooldown: 2.0,drop: []
@@ -2889,7 +2888,7 @@ class AberraArvEnemy extends Enemy {
 class AberraCultistaEnemy extends Enemy {
   bool isFleeing = false;
   bool isHealingAttack = false;
-  AberraCultistaEnemy() : super(name:'cultista aberrante',
+  AberraCultistaEnemy() : super(name: 'aberraCult',
     type: EnemyType.aberraCult, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
     hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 35, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: []
@@ -3011,7 +3010,7 @@ class AberraCultistaEnemy extends Enemy {
 }
 
 class AberraOvoEnemy extends Enemy {
-  AberraOvoEnemy() : super(name: 'ovo aberrante',
+  AberraOvoEnemy() : super(name: 'aberraOvo',
     type: EnemyType.aberraOvo, 
     color: Palette.cinza,
     hp: 100, maxHp: 100, dropEssence: 15, width: 144, height: 144, speed: 0.6,
@@ -3105,7 +3104,7 @@ class AntigoEnemy extends Enemy {
   bool invocado = false;
   bool terminouRitual = false;
 
-  AntigoEnemy() : super(name:'o antigo',
+  AntigoEnemy() : super(name:'antigo',
     type: EnemyType.boss4, color: Palette.roxo, hp: 500, maxHp: 500, dropEssence: 10, width: 192, height: 192, speed: 0.4,
     hurtboxWidth: 140, hurtboxHeight: 140, hurtboxOffsetY: 0, damage: 25,
     hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 30, isMelee: false, isBoss: true,maxAttackCooldown: 6,
@@ -3170,7 +3169,7 @@ class AntigoEnemy extends Enemy {
 
     if(!_temTentaculos) attackHeight = 0.7;
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused) return;
+    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     if(!_temCultistas){
       ritualTmr = 0;

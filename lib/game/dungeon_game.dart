@@ -205,18 +205,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       var existing = playerCombatStats.inventory.where((i) => i.name == newItem.name).toList();
       if (existing.isNotEmpty) {
         existing.first.quantity += newItem.quantity;
-        showMessage("Obteve mais ${newItem.quantity}x ${newItem.name}!");
+        showMessage(I18n.t('obteve_mais').replaceAll('[quant]', newItem.quantity.toString()).replaceAll('[item]', newItem.name));
         return;
       }
     }
 
     if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
       playerCombatStats.inventory.add(newItem);
-      showMessage("Você pegou: ${newItem.name}!");
+      showMessage(I18n.t('pegou_item').replaceAll('[item]', newItem.name));
     } else {
       Point<int> pos = Point(player.x, player.y);
       dungeon.droppedItems.putIfAbsent(pos, () => []).add(newItem);
-      showMessage("Inventário Cheio! ${newItem.name} ficou no chão.");
+      showMessage(I18n.t('inv_chao').replaceAll('[item]', newItem.name));
     }
   }
 
@@ -227,7 +227,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (playerCombatStats.equippedWeapon == item || 
         playerCombatStats.equippedArmor == item || 
         playerCombatStats.equippedShield == item) {
-      showMessage("Não pode descartar um item Equipado!");
+      showMessage(I18n.t('desc_item_eqp'));
       return;
     }
 
@@ -235,7 +235,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     dungeon.droppedItems.putIfAbsent(pos, () => []).add(item);
     
     playerCombatStats.inventory.removeAt(cursorIndex);
-    showMessage("${item.name} foi deixado no chão.");
+    showMessage(I18n.t('inv_chao').replaceAll('[item]', item.name));
   }
 
   void _initializeInventory() {
@@ -946,14 +946,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
     currentState = previousState2;
     overlays.remove('settings'); 
-
-    print('Current State: $currentState');
-          
   }
 
   void resetGame() {
     if (!FlameAudio.bgm.isPlaying) {
-      FlameAudio.bgm.play('music/8-bit-dungeon.mp3', volume: 0.2);
+      AudioManager.playBgm('music/8-bit-dungeon.mp3', volume: 0.2);
     }
     runTime=0;
     for (var enemy in combatOverlay.enemies) {
@@ -1006,16 +1003,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (currentState == GameState.exploration || currentState == GameState.combat) {
       previousState = currentState;
       currentState = GameState.paused;
-      FlameAudio.bgm.pause();
+      AudioManager.pauseBgm();
       overlays.add('PauseMenu');
     } else if (currentState == GameState.paused) {
       currentState = previousState;
-      FlameAudio.bgm.resume();
+      AudioManager.resumeBgm();
       overlays.remove('PauseMenu');
     }
   }
 
   void quitToMainMenu() {
+    AudioManager.stopBgm();
     overlays.remove('PauseMenu');
     overlays.remove('GameOver');
     currentState = GameState.mainMenu;
@@ -1708,14 +1706,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void startInput(GameInput input) {
     if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
-    if (currentState == GameState.settings) { // Certifique-se que tem este GameState!
+    if (currentState == GameState.settings) {
       if (input == GameInput.up) {
         AudioManager.playSfx('sfx/hover.wav');
-        settingsCursor.value = (settingsCursor.value - 1 + 3) % 3; // 3 opções
+        settingsCursor.value = (settingsCursor.value - 1 + 4) % 4;
       }
       if (input == GameInput.down) {
         AudioManager.playSfx('sfx/hover.wav');
-        settingsCursor.value = (settingsCursor.value + 1) % 3;
+        settingsCursor.value = (settingsCursor.value + 1) % 4;
       }
       
       if (input == GameInput.buttonA) {
@@ -1723,11 +1721,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         
         if (settingsCursor.value == 0) {
           AudioManager.toggleMusic();
-          settingsRefresh.value = !settingsRefresh.value; // Força a tela a atualizar o texto
+          settingsRefresh.value = !settingsRefresh.value; 
         } 
         else if (settingsCursor.value == 1) {
           AudioManager.toggleSfx();
-          settingsRefresh.value = !settingsRefresh.value; // Força a tela a atualizar o texto
+          settingsRefresh.value = !settingsRefresh.value; 
         } 
         else if (settingsCursor.value == 2) {
           I18n.toggleLanguage();
@@ -1738,7 +1736,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         }
       }
 
-      // Opcional: Pressionar B também sai do menu
       if (input == GameInput.buttonB) {
         closeSettings();
       }

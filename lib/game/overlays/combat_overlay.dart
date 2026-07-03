@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'package:dungeon_crawler/game/components/Effects/buff_particles.dart';
 import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
 import 'package:dungeon_crawler/game/components/Effects/floating_text.dart';
@@ -661,7 +662,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       // 4. Desenha o Texto
       final textPainter = TextPainter(
         text: TextSpan(
-          text: enemies[i].name.toUpperCase(), 
+          text: I18n.t(enemies[i].name).toUpperCase(),
           style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 14, fontWeight: FontWeight.bold)
         ),
         textDirection: TextDirection.ltr,
