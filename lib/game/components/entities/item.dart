@@ -218,6 +218,10 @@ class ItemDatabase {
 
   });
 
+  static Item get chainMail => Item('chainMail', ItemType.armor, 'itens/chainMail.png',7,value:10, peso:2, cor: Colors.white, onUse: (item, game) {
+
+  });
+
   static Item get armaduraBug => Item('armCarap', ItemType.armor, 'itens/armorBug.png',8,value:10, peso:2,hasPoisonAttack:true, hasRegen:true, easyDash: true, cor: Colors.white, onUse: (item, game) {
 
   });
@@ -238,11 +242,11 @@ class ItemDatabase {
     //game.playerCombatStats.moveSpeedPenalty = 0.5;
   });
 
-  static Item get braceleteNaga => Item('braceleteNaga', ItemType.shield, 'itens/bracerNaga.png', 5, value:6, walkFast: true, easyDash: true ,noShield: true, hasChargeAttack: true, cor: Colors.white, onUse: (item, game) {
+  static Item get braceleteNaga => Item('bracNaga', ItemType.shield, 'itens/bracerNaga.png', 5, value:6, walkFast: true, easyDash: true ,noShield: true, hasChargeAttack: true, cor: Colors.white, onUse: (item, game) {
 
   });
 
-  static Item get braceleteFung => Item('braceleteFung', ItemType.shield, 'itens/bracerFung.png', 5, value:6, walkFast: true, easyDash: true, noShield: true, hasPoisonAttack: true, cor: Colors.white, onUse: (item, game) {
+  static Item get braceleteFung => Item('bracFung', ItemType.shield, 'itens/bracerFung.png', 5, value:6, walkFast: true, easyDash: true, noShield: true, hasPoisonAttack: true, cor: Colors.white, onUse: (item, game) {
 
   });
 

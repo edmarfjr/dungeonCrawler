@@ -1,5 +1,13 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'package:dungeon_crawler/game/components/core/encounter_manager.dart';
+import 'package:dungeon_crawler/game/components/core/save_manager.dart';
+import 'package:flame/game.dart';
+import 'package:flame/input.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flame_audio/flame_audio.dart' hide PlayerState;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
 import 'package:dungeon_crawler/game/components/core/i18n.dart';
@@ -12,24 +20,11 @@ import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
 import 'package:dungeon_crawler/game/overlays/combat_overlay.dart';
-import 'package:flame/game.dart';
-import 'package:flame/input.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flame_audio/flame_audio.dart' hide PlayerState;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
 enum GameState { mainMenu, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, vitory, settings }
 enum ShopPhase { main, buy, sell, confirmSell, steal }
 
-ShopPhase currentShopPhase = ShopPhase.main;
-int shopCursor = 0;
-Item? itemToSell;
-List<Item> shopInventory = [];
-
-// --- CLASSE AUXILIAR PARA A FILA DE MENSAGENS ---
 class GameMessage {
   final String text;
   final VoidCallback? onDismiss;
@@ -37,10 +32,11 @@ class GameMessage {
 }
 
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
+  // --- ESTADOS E MANAGERS ---
   GameState currentState = GameState.mainMenu;
   GameState previousState = GameState.mainMenu;
   GameState previousState2 = GameState.mainMenu;
-
+  
   bool hasSavedGame = false;
   late DungeonMap dungeon;
   late PlayerState player;
@@ -48,100 +44,61 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late MinimapRenderer minimap;
   late PlayerCombatStats playerCombatStats;
   late CombatOverlay combatOverlay;
+
+  // --- DICIONÁRIOS DE ASSETS ---
   late Map<EnemyType, ui.Image> enemySheets;
-  late ui.Image playerSheet; 
-  late ui.Image playerSlashSprite1;
-  late ui.Image playerSlashSprite2;
   late Map<EnemyType, ui.Image> enemySlashSprites;
-  late ui.Image weaponSheet;
-  late ui.Image armorSheet;
-  late ui.Image shieldSheet;
+  late ui.Image playerSheet, playerSlashSprite1, playerSlashSprite2;
+  late ui.Image weaponSheet, armorSheet, shieldSheet;
+  late ui.Image keySprite, doorTexture, doorTexture2, chestSprite, crateSprite, openChestSprite;
+  late ui.Image trapImage, trapImage2, trapImage3, roamerSprite, bossSprite, shrineSprite;
 
-  late ui.Image keySprite;
-  late ui.Image doorTexture;
-  late ui.Image doorTexture2;
-  late ui.Image chestSprite;
-  late ui.Image crateSprite;
-  late ui.Image openChestSprite;
-  late ui.Image trapImage;
-  late ui.Image trapImage2;
-  late ui.Image trapImage3;
-  late ui.Image roamerSprite;
-  late ui.Image bossSprite;
-  late ui.Image shrineSprite;
-
-  bool leftPressed = false, rightPressed = false, downPressed = false, showHitboxes = false, upPressed = false;
-  double explorationMoveCooldown = 0.0;
-  double explorationMoveCooldownTime = 0.3;
-
-  bool godMode = false; 
-
-  double leftTapTimer = 0.0;  // Janela de tempo para o clique duplo (Esquerda)
-  double rightTapTimer = 0.0; // Janela de tempo para o clique duplo (Direita)
-  double dashTimer = 0.0;     // Duração do Dash na tela
-  double dashDur = 0.1;
-  double dashVel = 7.0;
-  double dashDirection = 0.0;
-  double dashCusto = 14;
-
-  double maxHp = 0;
-  double regenTmr = 2;
-
-  // REFACTOR: Substituído showVictoryMessage por um controle de fluxo de fim de turno
-  bool _victoryProcessed = true;
-  double encounterEssence = 0;
-
-  List<Item> encounterDrop = [];
-  bool isMimic = false;
-  bool isBoss = false;
-
-  // REFACTOR: O sistema agora usa uma lista interna agindo como fila (Queue)
+  // --- FILA DE MENSAGENS ---
   final List<GameMessage> _messageQueue = []; 
-
-  // O getter reativo garante que a interface renderize sempre o texto que está no topo da fila
   String? get activeMessage => _messageQueue.isNotEmpty ? _messageQueue.first.text : null;
   
+  // --- LOJA E INVENTÁRIO ---
+  ShopPhase currentShopPhase = ShopPhase.main;
+  int shopCursor = 0, inventoryCursor = 0, itemActionCursor = 0, levelUpCursor = 0;
+  int selectedConsumableIndex = 0, pointsToDistribute = 0;
+  int tempStr = 0, tempCon = 0, tempWis = 0;
+  Item? itemToSell;
+  List<Item> shopInventory = [];
+  bool isActionMenuOpen = false, isItemActionMenuOpen = false, isPassTurnPromptOpen = false;
+
+  // --- CONTROLES DE COMBATE E EXPLORAÇÃO ---
+  bool leftPressed = false, rightPressed = false, downPressed = false, upPressed = false, showHitboxes = false;
+  double explorationMoveCooldown = 0.0, explorationMoveCooldownTime = 0.3;
+  double leftTapTimer = 0.0, rightTapTimer = 0.0, dashTimer = 0.0;
+  double dashDur = 0.1, dashVel = 7.0, dashDirection = 0.0, dashCusto = 14;
+  double shakeTimer = 0.0, shakeIntensity = 0.0, runTime = 0.0;
+  double maxHp = 0, regenTmr = 2;
+  bool godMode = false, victoryProcessed = true, isBoss = false, isMimic = false;
+  double encounterEssence = 0;
   int mapSize = 30;
+  List<Item> encounterDrop = [];
 
-  // --- VARIÁVEIS DE INVENTÁRIO ---
-  int inventoryCursor = 0;
-  bool isActionMenuOpen = false;
-  int selectedConsumableIndex = 0;
-  bool isItemActionMenuOpen = false;
-  int itemActionCursor = 0;
-
-  int levelUpCursor = 0;       // 0: STR, 1: CON, 2: WIS, 3: Confirmar
-  int pointsToDistribute = 0;  // Começa com 3 pontos ganhos
-  int tempStr = 0, tempCon = 0, tempWis = 0; // Guardam a distribuição temporária
-
-  bool isPassTurnPromptOpen = false;
-
+  // --- MENUS ---
   ScrollController? manualScrollController;
-
   final ValueNotifier<int> mainMenuCursor = ValueNotifier<int>(0);
   final ValueNotifier<int> pauseMenuCursor = ValueNotifier<int>(0);
   ValueNotifier<int> settingsCursor = ValueNotifier<int>(0);
   ValueNotifier<bool> settingsRefresh = ValueNotifier<bool>(false);
 
-  double shakeTimer = 0.0;
-  double shakeIntensity = 0.0;
+  // --- HELPERS DA UI PRÉ-COMPILADOS (Otimização) ---
+  late final TextPaint _normalTextPaint;
+  late final TextPaint _titleTextPaint;
+  late final TextPaint _selectTextPaint;
+  late final TextPaint _dangerTextPaint;
 
-  void shakeScreen(double duration, double intensity) {
-    shakeTimer = duration;
-    shakeIntensity = intensity;
-  }
-
-  double runTime = 0.0;
-
+  // ===========================================================================
+  // GETTERS AUXILIARES
+  // ===========================================================================
   String getFormattedRunTime() {
     int totalSeconds = runTime.toInt();
     int minutes = totalSeconds ~/ 60;
     int seconds = totalSeconds % 60; 
-
-    String minStr = minutes.toString().padLeft(2, '0');
-    String secStr = seconds.toString().padLeft(2, '0');
-
-    return "$minStr:$secStr";
+    return "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
   }
   
   int get levelUpCost {
@@ -150,11 +107,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   int _getPlayerCoins() {
-    try {
-      return playerCombatStats.inventory.firstWhere((i) => i.name == "moeda").quantity;
-    } catch (e) {
-      return 0; // Não achou a moeda
-    }
+    try { return playerCombatStats.inventory.firstWhere((i) => i.name == "moeda").quantity; } 
+    catch (e) { return 0; }
   }
 
   void _addCoins(int amount) {
@@ -172,302 +126,59 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     try {
       var coin = playerCombatStats.inventory.firstWhere((i) => i.name == "moeda");
       coin.quantity -= amount;
-      if (coin.quantity <= 0) {
-        playerCombatStats.inventory.remove(coin);
-      }
+      if (coin.quantity <= 0) playerCombatStats.inventory.remove(coin);
     } catch (e) {}
   }
 
-  void openShop() {
-    currentState = GameState.shop;
-    currentShopPhase = ShopPhase.main; // Força a loja a abrir no menu inicial
-    shopCursor = 0;                    // Coloca o cursor na opção "COMPRAR"
-    itemToSell = null;                 // Limpa qualquer item que tenha ficado na memória
-  }
-
-  // REFACTOR: showMessage agora empilha novas mensagens no fim da fila
   void showMessage(String text, {VoidCallback? onDismiss}) {
     _messageQueue.add(GameMessage(text, onDismiss: onDismiss));
   }
 
-  // REFACTOR: dismissMessage agora remove o topo da fila e ativa o seu callback individual
   void dismissMessage() {
     if (_messageQueue.isNotEmpty) {
       final dismissedMessage = _messageQueue.removeAt(0);
-      if (dismissedMessage.onDismiss != null) {
-        dismissedMessage.onDismiss!(); 
-      }
+      if (dismissedMessage.onDismiss != null) dismissedMessage.onDismiss!(); 
     }
   }
 
-  void receiveItem(Item newItem) {
-    if (newItem.type == ItemType.consumable) {
-      var existing = playerCombatStats.inventory.where((i) => i.name == newItem.name).toList();
-      if (existing.isNotEmpty) {
-        existing.first.quantity += newItem.quantity;
-        showMessage(I18n.t('obteve_mais').replaceAll('[quant]', newItem.quantity.toString()).replaceAll('[item]', I18n.t(newItem.name)));
-        return;
-      }
-    }
-
-    if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
-      playerCombatStats.inventory.add(newItem);
-      showMessage(I18n.t('pegou_item').replaceAll('[item]', I18n.t(newItem.name)));
-    } else {
-      Point<int> pos = Point(player.x, player.y);
-      dungeon.droppedItems.putIfAbsent(pos, () => []).add(newItem);
-      showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(newItem.name)));
-    }
+  void shakeScreen(double duration, double intensity) {
+    shakeTimer = duration;
+    shakeIntensity = intensity;
   }
 
-  void dropSelectedItem(int cursorIndex) {
-    if (playerCombatStats.inventory.isEmpty) return;
-    Item item = playerCombatStats.inventory[cursorIndex];
-
-    if (playerCombatStats.equippedWeapon == item || 
-        playerCombatStats.equippedArmor == item || 
-        playerCombatStats.equippedShield == item) {
-      showMessage(I18n.t('desc_item_eqp'));
-      return;
-    }
-
-    Point<int> pos = Point(player.x, player.y);
-    dungeon.droppedItems.putIfAbsent(pos, () => []).add(item);
-    
-    playerCombatStats.inventory.removeAt(cursorIndex);
-    showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(item.name)));
-  }
-
-  void _initializeInventory() {
-    playerCombatStats.inventory = [
-      ItemDatabase.adaga,
-      ItemDatabase.tanga,
-      ItemDatabase.bloquel,
-      ItemDatabase.healthPotion,
-    ];
-    playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
-    playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
-    playerCombatStats.equippedShield = playerCombatStats.inventory[2];
-    selectedConsumableIndex = 0;
-  }
-
-  Future<void> saveGame() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // 1. Salva o Mapa Procedural
-    List<List<int>> gridJson = dungeon.grid.map((row) => row.map((tile) => tile.index).toList()).toList();
-    List<List<bool>> exploredJson = dungeon.explored.map((row) => row.toList()).toList();
-    
-    // 2. Salva o Inventário
-    List<Map<String, dynamic>> invJson = playerCombatStats.inventory.map((item) => {
-      'name': item.name,
-      'quantity': item.quantity,
-    }).toList();
-
-    // 3. Empacota tudo num Grande JSON
-    Map<String, dynamic> saveData = {
-      'dungeon': {
-        'width': dungeon.width,
-        'height': dungeon.height,
-        'grid': gridJson,
-        'explored': exploredJson,
-        'spikeState': dungeon.spikeState,
-        'poisonState': dungeon.poisonState,
-        'teleportState': dungeon.teleportState,
-      },
-      'player': {
-        'x': player.x,
-        'y': player.y,
-        'facing': player.facing.index,
-        'floorLevel': dungeon.level,
-        'hasKey': player.hasKey,
-      },
-      'stats': {
-        'str': playerCombatStats.str,
-        'con': playerCombatStats.con,
-        'wis': playerCombatStats.wis,
-        'hp': playerCombatStats.hp,
-        'essence': playerCombatStats.essence,
-        'inventory': invJson,
-        'equippedWeapon': playerCombatStats.equippedWeapon?.name,
-        'equippedArmor': playerCombatStats.equippedArmor?.name,
-        'equippedShield': playerCombatStats.equippedShield?.name,
-      }
-    };
-
-    await prefs.setString('save_game', jsonEncode(saveData));
-    hasSavedGame = true;
-    debugPrint("Jogo Salvo com Sucesso!");
-  }
-
-  Future<void> loadGame() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? saveDataStr = prefs.getString('save_game');
-    if (saveDataStr == null) return;
-
-    Map<String, dynamic> data = jsonDecode(saveDataStr);
-    
-    // 1. Reconstrói o Labirinto
-    var dData = data['dungeon'];
-    dungeon = DungeonMap(width: dData['width'], height: dData['height']);
-    dungeon.spikeState = dData['spikeState'] ?? 0;
-    dungeon.poisonState = dData['poisonState'] ?? 0;
-    dungeon.teleportState = dData['teleportState'] ?? 0;
-    
-    List<dynamic> gridDyn = dData['grid'];
-    List<dynamic> expDyn = dData['explored'];
-    for(int y = 0; y < dungeon.height; y++) {
-      for(int x = 0; x < dungeon.width; x++) {
-        dungeon.grid[y][x] = TileType.values[gridDyn[y][x]];
-        dungeon.explored[y][x] = expDyn[y][x];
-      }
-    }
-
-    // 2. Reconstrói o Jogador
-    var pData = data['player'];
-    player.x = pData['x'];
-    player.y = pData['y'];
-    player.facing = Direction.values[pData['facing']];
-    dungeon.level = pData['floorLevel'];
-    player.hasKey = pData['hasKey'];
-
-    // 3. Reconstrói os Status
-    var sData = data['stats'];
-    playerCombatStats.str = sData['str'];
-    playerCombatStats.con = sData['con'];
-    playerCombatStats.wis = sData['wis'];
-    playerCombatStats.hp = sData['hp'];
-    playerCombatStats.essence = sData['essence'];
-    playerCombatStats.recalculateMaxHp();
-
-    // 4. Reconstrói o Inventário
-    playerCombatStats.inventory.clear();
-    List<dynamic> invDyn = sData['inventory'];
-    
-    // Lista mestra para buscar as instâncias reais dos itens pelo nome
-    List<Item> allGameItems = [
-      //armas
-      ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
-      ItemDatabase.espadaOrc, ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.clavaOrc,ItemDatabase.warhammer,
-      ItemDatabase.varinha,ItemDatabase.zweihander,
-      //armaduras
-      ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug,ItemDatabase.armaduraAco,
-      ItemDatabase.armaduraBronze, ItemDatabase.gambeson,
-      //escudos
-      ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.braceleteFung, 
-      ItemDatabase.braceleteNaga, ItemDatabase.escudoTorre,
-      //pocoes
-      ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
-      //itens
-      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
-      ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin,
-      //magias
-      ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
-    ]; // IMPORTANTE: Mantenha essa lista atualizada se criar itens novos!
-
-    for(var itemData in invDyn) {
-      try {
-        Item baseItem = allGameItems.firstWhere((i) => i.name == itemData['name']);
-        baseItem.quantity = itemData['quantity'];
-        playerCombatStats.inventory.add(baseItem);
-      } catch (e) {
-        debugPrint("Item não encontrado no database: ${itemData['name']}");
-      }
-    }
-
-    // 5. Re-equipa os itens visualmente
-    String? wName = sData['equippedWeapon'];
-    if(wName != null) {
-      playerCombatStats.equippedWeapon = playerCombatStats.inventory.firstWhere((i) => i.name == wName);
-      await changeWeaponSprite('actors/${playerCombatStats.equippedWeapon!.imagePath.split('/').last}');
-    }
-    
-    String? aName = sData['equippedArmor'];
-    if(aName != null) {
-      playerCombatStats.equippedArmor = playerCombatStats.inventory.firstWhere((i) => i.name == aName);
-      await changeArmorSprite('actors/${playerCombatStats.equippedArmor!.imagePath.split('/').last}');
-    }
-    
-    String? sName = sData['equippedShield'];
-    if(sName != null) {
-      playerCombatStats.equippedShield = playerCombatStats.inventory.firstWhere((i) => i.name == sName);
-      await changeShieldSprite('actors/${playerCombatStats.equippedShield!.imagePath.split('/').last}');
-    }
-
-    // Limpa a tela para exploração
-    combatOverlay.enemies.clear();
-    dungeon.roamingEnemies.clear(); 
-
-    renderer.map = dungeon;
-    renderer.player = player;
-  }
-
+  // ===========================================================================
+  // INICIALIZAÇÃO (ONLOAD)
+  // ===========================================================================
   @override
   Future<void> onLoad() async {
     final prefs = await SharedPreferences.getInstance();
     hasSavedGame = prefs.containsKey('save_game');
 
+    _normalTextPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
+    _titleTextPaint = TextPaint(style: const TextStyle(color: Palette.amarelo, fontSize: 24, fontFamily: 'pixelFont'));
+    _selectTextPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
+    _dangerTextPaint = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
+
     await FlameAudio.audioCache.loadAll([
-      'sfx/hit.wav',
-      'sfx/block.wav',
-      'sfx/encounter.wav',
-      'sfx/attack.wav',
-      'sfx/enemy_die.wav',
-      'sfx/use_item.wav',
-      'sfx/fire.wav',
-      'sfx/charge.wav',
-      'sfx/poison.wav',
-      'sfx/confirm.wav',
-      'sfx/hover.wav',
-      'sfx/step.wav',
-      'sfx/landing.wav',
-      'sfx/denied.wav',
+      'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
+      'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
+      'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
+      'sfx/landing.wav', 'sfx/denied.wav',
     ]);
     
     await images.loadAll([
-      'itens/dagger.png',
-      'itens/armor.png',
-      'itens/potion.png',
-      'itens/potionVermelha.png',
-      'itens/potionVerde.png',
-      'itens/potionAzul.png',
-      'itens/potionAmarela.png',
-      'itens/tanga.png',
-      'itens/sword.png',
-      'itens/longSword.png',
-      'itens/lanca.png',
-      'itens/axe.png',
-      'itens/bomb.png',
-      'itens/leatherArmor.png',
-      'itens/scroll.png',
-      'itens/woodShield.png',
-      'itens/ironShield.png',
-      'itens/buckler.png',
-      'itens/slime_eye.png',
-      'itens/club.png',
-      'itens/clubOrc.png',
-      'itens/web.png',
-      'itens/meat.png',
-      'itens/faca.png',
-      'itens/fire.png',
-      'itens/poison.png',
-      'itens/piercing.png',
-      'itens/organ.png',
-      'itens/orcSword.png',
-      'itens/bracerNaga.png',
-      'itens/bracerFung.png',
-      'itens/armorBug.png',
-      'itens/bola.png',
-      'itens/coin.png',
-      'itens/claymore.png',
-      'itens/warhammer.png',
-      'itens/steelArmor.png',
-      'itens/bronzeArmor.png',
-      'itens/towerShield.png',
-      'itens/gambeson.png',
-      'itens/varinha.png',
-      'itens/zweihander.png',
+      'itens/dagger.png', 'itens/armor.png', 'itens/potion.png', 'itens/potionVermelha.png',
+      'itens/potionVerde.png', 'itens/potionAzul.png', 'itens/potionAmarela.png', 'itens/tanga.png',
+      'itens/sword.png', 'itens/longSword.png', 'itens/lanca.png', 'itens/axe.png', 'itens/bomb.png',
+      'itens/leatherArmor.png', 'itens/scroll.png', 'itens/woodShield.png', 'itens/ironShield.png',
+      'itens/buckler.png', 'itens/slime_eye.png', 'itens/club.png', 'itens/clubOrc.png', 'itens/web.png',
+      'itens/meat.png', 'itens/faca.png', 'itens/fire.png', 'itens/poison.png', 'itens/piercing.png',
+      'itens/organ.png', 'itens/orcSword.png', 'itens/bracerNaga.png', 'itens/bracerFung.png',
+      'itens/armorBug.png', 'itens/bola.png', 'itens/coin.png', 'itens/claymore.png', 'itens/warhammer.png',
+      'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
+      'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png',
     ]);
+
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
     final ui.Image wallImg2 = await images.load('tilesets/wall2.png');
@@ -476,14 +187,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final ui.Image floorImg3 = await images.load('tilesets/floor1.png');
     final ui.Image wallImg4 = await images.load('tilesets/tile4.png');
     final ui.Image floorImg4 = await images.load('tilesets/tile4.png');
-
     final ui.Image shopImg = await images.load('tilesets/shop.png');
     final ui.Image fontImg = await images.load('tilesets/fonte.png');
 
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
     shrineSprite = await images.load('tilesets/altar.png');
-
     keySprite = await images.load('itens/key.png');     
     doorTexture = await images.load('tilesets/trapdoor.png');
     doorTexture2 = await images.load('tilesets/trapdoor2.png');
@@ -493,6 +202,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     trapImage = await images.load('tilesets/trap.png');
     trapImage2 = await images.load('tilesets/trap2.png');
     trapImage3 = await images.load('tilesets/trap3.png');
+    
     enemySheets = {
       EnemyType.slime: await images.load('actors/slime.png'),
       EnemyType.goblin: await images.load('actors/goblin.png'),
@@ -525,8 +235,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.boss4: await images.load('actors/boss4.png'),
       EnemyType.tentaculo: await images.load('actors/tentaculo.png'),
     };
+    
     playerSheet = await images.load('actors/player.png');
-
     weaponSheet = await images.load('actors/dagger.png');
     armorSheet = await images.load('actors/tanga.png');
     shieldSheet = await images.load('actors/buckler.png');
@@ -567,22 +277,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     player = PlayerState(x: dungeon.playerSpawn.x, y: dungeon.playerSpawn.y, facing: Direction.north);
 
     renderer = MazeRenderer(
-      map: dungeon, 
-      player: player, 
-      wallImage: [wallImg,wallImg2,wallImg3,wallImg4], 
-      floorImage: [floorImg,floorImg2,floorImg3,floorImg4],
-      doorImage: doorTexture, 
-      doorImage2: doorTexture2, 
-      keyImage: keySprite, 
-      chestImage: chestSprite,
-      trapImage: [trapImage,trapImage2,trapImage3],
-      roamerImage: roamerSprite,
-      bossImage: bossSprite,
-      shrineImage: shrineSprite,
-      openChestImage: openChestSprite,
-      crateImage: crateSprite,
-      shopImage: shopImg,
-      fontImage: fontImg,
+      map: dungeon, player: player, 
+      wallImage: [wallImg,wallImg2,wallImg3,wallImg4], floorImage: [floorImg,floorImg2,floorImg3,floorImg4],
+      doorImage: doorTexture, doorImage2: doorTexture2, keyImage: keySprite, chestImage: chestSprite,
+      trapImage: [trapImage,trapImage2,trapImage3], roamerImage: roamerSprite, bossImage: bossSprite,
+      shrineImage: shrineSprite, openChestImage: openChestSprite, crateImage: crateSprite,
+      shopImage: shopImg, fontImage: fontImg,
     );
     renderer.size = size; 
     add(renderer);
@@ -590,14 +290,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats = PlayerCombatStats();
     _initializeInventory();
     combatOverlay = CombatOverlay(
-      playerStats: playerCombatStats, 
-      playerSheetImage: playerSheet, 
-      weaponSheetImage: weaponSheet,
-      armorSheetImage: armorSheet,
-      shieldSheetImage: shieldSheet,
-      enemySheets: enemySheets,
-      playerSlashImage: [playerSlashSprite1,playerSlashSprite2], 
-      enemySlashImages: enemySlashSprites,
+      playerStats: playerCombatStats, playerSheetImage: playerSheet, 
+      weaponSheetImage: weaponSheet, armorSheetImage: armorSheet, shieldSheetImage: shieldSheet,
+      enemySheets: enemySheets, playerSlashImage: [playerSlashSprite1,playerSlashSprite2], enemySlashImages: enemySlashSprites,
     );
     combatOverlay.add(EnemyShadowsRenderer());
     combatOverlay.size = size; add(combatOverlay);
@@ -610,342 +305,82 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   @override
-  void render(Canvas canvas) {
-    if (shakeTimer > 0) {
-      canvas.save(); // Salva a posição normal
-      
-      // Sorteia números entre -0.5 e 0.5, multiplicados pela intensidade
-      double dx = (Random().nextDouble() - 0.5) * shakeIntensity;
-      double dy = (Random().nextDouble() - 0.5) * shakeIntensity;
-      
-      canvas.translate(dx, dy); // Arremessa a tela inteira fora do lugar!
-      
-      super.render(canvas); // Desenha TUDO (Combate, Masmorra, etc)
-      
-      canvas.restore(); // Puxa a tela de volta pro lugar
+  void onGameResize(Vector2 gameSize) {
+    super.onGameResize(gameSize);
+    if (isLoaded) { renderer.size = gameSize; combatOverlay.size = gameSize; }
+  }
+
+  // ===========================================================================
+  // FUNÇÕES AUXILIARES DE INVENTÁRIO E SAVE
+  // ===========================================================================
+  void _initializeInventory() {
+    playerCombatStats.inventory = [
+      ItemDatabase.adaga, 
+      ItemDatabase.tanga, 
+      ItemDatabase.bloquel, 
+      ItemDatabase.healthPotion,
+    ];
+    playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
+    playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
+    playerCombatStats.equippedShield = playerCombatStats.inventory[2];
+    selectedConsumableIndex = 0;
+  }
+
+  void receiveItem(Item newItem) {
+    if (newItem.type == ItemType.consumable) {
+      var existing = playerCombatStats.inventory.where((i) => i.name == newItem.name).toList();
+      if (existing.isNotEmpty) {
+        existing.first.quantity += newItem.quantity;
+        showMessage(I18n.t('obteve_mais').replaceAll('[quant]', newItem.quantity.toString()).replaceAll('[item]', I18n.t(newItem.name)));
+        return;
+      }
+    }
+
+    if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
+      playerCombatStats.inventory.add(newItem);
+      showMessage(I18n.t('pegou_item').replaceAll('[item]', I18n.t(newItem.name)));
     } else {
-      // Se não tem terremoto, desenha normal
-      super.render(canvas);
-    }
-
-    if (currentState == GameState.shop) {
-      // Fundo escuro transparente
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-
-      TextPaint titlePaint = TextPaint(style: const TextStyle(color: Palette.amarelo, fontSize: 24, fontFamily: 'pixelFont'));
-      TextPaint normalPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
-      TextPaint selectPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
-
-      titlePaint.render(canvas, I18n.t('loja'), Vector2(20, 20));
-      normalPaint.render(canvas, "${I18n.t('moedas')}${_getPlayerCoins()}", Vector2(20, 50));
-
-      double startY = 90;
-
-      // DESENHA O MENU PRINCIPAL
-      if (currentShopPhase == ShopPhase.main) {
-        List<String> options = [I18n.t('comprar'), I18n.t('vender'), I18n.t('roubar'), I18n.t('sair')];
-        for (int i = 0; i < options.length; i++) {
-          
-          // Opcional: Pinta a palavra "ROUBAR" de vermelho para destacar o perigo
-          TextPaint paintToUse = normalPaint;
-          if (i == shopCursor){
-             paintToUse = selectPaint;
-          }else if (i == 2) {
-            paintToUse = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
-          }
-          paintToUse.render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + (i * 30)));
-        }
-      }
-      
-      // DESENHA O MENU DE COMPRA
-      else if (currentShopPhase == ShopPhase.buy) {
-        titlePaint.render(canvas, I18n.t('comprar'), Vector2(20, startY - 15));
-        for (int i = 0; i < shopInventory.length; i++) {
-          Item item = shopInventory[i];
-          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
-          String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
-          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
-          
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
-          textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
-
-          TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
-          try {
-            ui.Image itemImg = images.fromCache(item.imagePath);
-            Color tint = item.cor; 
-            final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
-            
-            canvas.drawImageRect(
-              itemImg,
-              Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
-              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-              tintPaint 
-            );
-          } catch (e) {
-            debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
-            canvas.drawRect(
-              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-              Paint()..color = Colors.pinkAccent
-            );
-          }
-
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
-        }
-      }
-
-      // DESENHA O MENU DE VENDA (Seu inventário)
-      else if (currentShopPhase == ShopPhase.sell) {
-        titlePaint.render(canvas, I18n.t('vender'), Vector2(20, startY - 15));
-        for (int i = 0; i < playerCombatStats.inventory.length; i++) {
-          Item item = playerCombatStats.inventory[i];
-          bool itEqp = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item);
-          Color textColor = i == shopCursor ? Palette.branco : itEqp? Palette.cinzaEsc:Palette.cinzaCla;
-          String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
-          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
-          
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
-          textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
-
-          TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
-          try {
-            ui.Image itemImg = images.fromCache(item.imagePath);
-            Color tint = item.cor; 
-            final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
-            
-            canvas.drawImageRect(
-              itemImg,
-              Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
-              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-              tintPaint 
-            );
-          } catch (e) {
-            debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
-            canvas.drawRect(
-              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-              Paint()..color = Colors.pinkAccent
-            );
-          }
-
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
-        
-        }
-      }
-
-      // DESENHA A CONFIRMAÇÃO DE VENDA
-      else if (currentShopPhase == ShopPhase.confirmSell && itemToSell != null) {
-        int valorVenda = (itemToSell!.value * 0.5).floor();
-        if (valorVenda < 1) valorVenda = 1;
-
-        titlePaint.render(canvas, "${I18n.t('vender')} ${itemToSell!.name} por \$$valorVenda?", Vector2(20, startY));
-        
-        List<String> options = [I18n.t('vender'), I18n.t('sair')];
-        for (int i = 0; i < options.length; i++) {
-          (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + 40 + (i * 30)));
-        }
-      }
-
-      else if (currentShopPhase == ShopPhase.steal) {
-        // Título intimidador
-        TextPaint dangerTitle = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 24, fontFamily: 'pixelFont'));
-        dangerTitle.render(canvas, I18n.t('roubar'), Vector2(20, startY - 15));
-        
-        for (int i = 0; i < shopInventory.length; i++) {
-          Item item = shopInventory[i];
-          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
-          
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
-          textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
-
-          TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
-          try {
-            ui.Image itemImg = images.fromCache(item.imagePath);
-            Color tint = item.cor; 
-            final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
-            
-            canvas.drawImageRect(
-              itemImg,
-              Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
-              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-              tintPaint 
-            );
-          } catch (e) {
-            debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
-            canvas.drawRect(
-              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-              Paint()..color = Colors.pinkAccent
-            );
-          }
-
-          TextPainter(text: TextSpan(text: I18n.t(item.name), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
-        
-        }
-      }
-    }
-
-    if (currentState == GameState.exploration && isPassTurnPromptOpen) {
-      double promptWidth = size.x * 0.8;
-      double promptHeight = 100;
-      double promptX = (size.x - promptWidth) / 2;
-      double promptY = (size.y - promptHeight) / 2;
-
-      final promptRect = Rect.fromLTWH(promptX, promptY, promptWidth, promptHeight);
-      canvas.drawRect(promptRect, Paint()..color = Palette.preto);
-      canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-
-      final titleSpan = TextSpan(
-        text: I18n.t('pass_turn'),
-        style: const TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
-      );
-      final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
-      titlePainter.paint(canvas, Offset(promptX, promptY + 15));
-
-
-      final optionsSpan =  TextSpan(
-        text: I18n.t('optsA_B'),
-        style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'pixelFont')
-      );
-      final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
-      optionsPainter.paint(canvas, Offset(promptX, promptY + 45));
-
-    }
-
-    if (currentState == GameState.inventory) {
-      _drawInventoryScreen(canvas);
-    }
-    
-    if (currentState == GameState.levelUp) {
-      final overlayRect = Rect.fromLTWH(0, 0, size.x, size.y * 0.66);
-      canvas.drawRect(overlayRect, Paint()..color = Palette.preto);
-
-      final borderPaint = Paint()..color = Palette.roxo..style = PaintingStyle.stroke..strokeWidth = 3;
-      canvas.drawRect(overlayRect.deflate(15), borderPaint);
-
-      final titleSpan =  TextSpan(
-        text: I18n.t('distr_pontos'),
-        style: TextStyle(color: Palette.roxo, fontSize: 22, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
-      );
-      final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: size.x);
-      titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 40));
-
-      final ptSpan = TextSpan(
-        text: "${I18n.t('pontos_disponiveis')}: $pointsToDistribute",
-        style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: 18, fontFamily: 'pixelFont')
-      );
-      final ptPainter = TextPainter(text: ptSpan, textDirection: TextDirection.ltr)..layout();
-      ptPainter.paint(canvas, Offset((size.x - ptPainter.width) / 2, 100));
-
-      List<String> labels = [
-        "${I18n.t('forca')}: ${playerCombatStats.str.toInt()} (+ $tempStr)",
-        "${I18n.t('constituicao')}: ${playerCombatStats.con.toInt()} (+ $tempCon)",
-        "${I18n.t('sabedoria')}: ${playerCombatStats.wis.toInt()} (+ $tempWis)",
-        "== ${I18n.t('confirmar_melhorias')} =="
-      ];
-
-      for (int i = 0; i < labels.length; i++) {
-        bool isSelected = (i == levelUpCursor);
-        Color textColor = isSelected ? Colors.yellow : Colors.white;
-        if (i == 3) textColor = isSelected ? Colors.greenAccent : Colors.purpleAccent;
-        
-        String prefix = isSelected ? "> " : "  ";
-
-        final labelSpan = TextSpan(
-          text: "$prefix${labels[i]}",
-          style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)
-        );
-        final labelPainter = TextPainter(text: labelSpan, textDirection: TextDirection.ltr)..layout();
-        labelPainter.paint(canvas, Offset(40, 160 + (i * 45)));
-      }
-
-      final helpSpan =  TextSpan(
-        text: I18n.t('pontos_legenda'),
-        style: TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'pixelFont')
-      );
-      final helpPainter = TextPainter(text: helpSpan, textDirection: TextDirection.ltr)..layout();
-      helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
-    }
-
-    
-    if (activeMessage != null) {
-      double boxWidth = size.x * 0.8; double boxHeight = 100;
-      double boxX = (size.x - boxWidth) / 2; double boxY = size.y - boxHeight - 80; 
-      final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
-      canvas.drawRect(rect, Paint()..color = Palette.preto);
-      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      final textSpan = TextSpan(text: '$activeMessage\n\n${I18n.t('a_continuar')}', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
-      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center);
-      textPainter.layout(minWidth: boxWidth, maxWidth: boxWidth);
-      textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
+      Point<int> pos = Point(player.x, player.y);
+      dungeon.droppedItems.putIfAbsent(pos, () => []).add(newItem);
+      showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(newItem.name)));
     }
   }
 
-  void _drawInventoryScreen(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-    final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
-    titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
+  void dropSelectedItem(int cursorIndex) {
+    if (playerCombatStats.inventory.isEmpty) return;
+    Item item = playerCombatStats.inventory[cursorIndex];
 
-    double startY = 80;
-    for (int i = 0; i < playerCombatStats.inventory.length; i++) {
-      Item item = playerCombatStats.inventory[i];
-      Color textColor = i == inventoryCursor ? Palette.branco : Palette.cinzaCla;
-      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
-      String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
-      
-      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
-      textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
-
-      TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
-      try {
-        ui.Image itemImg = images.fromCache(item.imagePath);
-        Color tint = item.cor; 
-        final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
-        
-        canvas.drawImageRect(
-          itemImg,
-          Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
-          Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-          tintPaint 
-        );
-      } catch (e) {
-        debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
-        canvas.drawRect(
-          Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
-          Paint()..color = Colors.pinkAccent
-        );
-      }
-
-      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+    if (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) {
+      showMessage(I18n.t('desc_item_eqp'));
+      return;
     }
 
-    if (isActionMenuOpen) {
-      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      TextPainter(text:  TextSpan(text: "${I18n.t('a_confirma')}\n${I18n.t('b_cancelar')}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
-    }
-    if (isItemActionMenuOpen) {
-      double menuWidth = 200;
-      double menuHeight = 130;
-      double menuX = (size.x - menuWidth) / 2 + 50; 
-      double menuY = (size.y - menuHeight) / 2;
+    Point<int> pos = Point(player.x, player.y);
+    dungeon.droppedItems.putIfAbsent(pos, () => []).add(item);
+    
+    playerCombatStats.inventory.removeAt(cursorIndex);
+    showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(item.name)));
+  }
 
-      final menuRect = Rect.fromLTWH(menuX, menuY, menuWidth, menuHeight);
-      canvas.drawRect(menuRect, Paint()..color = Palette.preto);
-      canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+  Future<void> equipSavedItem(String itemName, ItemType type) async {
+    try {
+      var item = playerCombatStats.inventory.firstWhere((i) => i.name == itemName);
+      String fileName = item.imagePath.split('/').last;
 
-      List<String> options = [I18n.t('eqpUse'), I18n.t('eqpDescarte'), I18n.t('cancel')];
-      
-      for (int i = 0; i < options.length; i++) {
-        Color textColor = (i == itemActionCursor) ? Palette.amarelo : Palette.branco;
-        String prefix = (i == itemActionCursor) ? "> " : "  ";
-        
-        final optSpan = TextSpan(
-          text: "$prefix${options[i]}", 
-          style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
-        );
-        final optPainter = TextPainter(text: optSpan, textDirection: TextDirection.ltr)..layout();
-        optPainter.paint(canvas, Offset(menuX + 15, menuY + 20 + (i * 35)));
+      if (type == ItemType.weapon) { 
+        playerCombatStats.equippedWeapon = item; 
+        await changeWeaponSprite('actors/$fileName'); 
       }
+      else if (type == ItemType.armor) { 
+        playerCombatStats.equippedArmor = item; 
+        await changeArmorSprite('actors/$fileName'); 
+      }
+      else if (type == ItemType.shield) { 
+        playerCombatStats.equippedShield = item; 
+        await changeShieldSprite('actors/$fileName'); 
+      }
+    } catch (e) {
+      debugPrint("Erro ao reequipar item salvo: $itemName");
     }
   }
 
@@ -967,139 +402,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     combatOverlay.equipNewShield(shieldSheet);
   }
 
-  @override
-  void onGameResize(Vector2 gameSize) {
-    super.onGameResize(gameSize);
-    if (isLoaded) { renderer.size = gameSize; combatOverlay.size = gameSize; }
-  }
-
-  void openManual() {
-    currentState = GameState.manual;
-    overlays.remove('MainMenu');
-    overlays.add('ManualMenu');   
-  }
-
-  void openSettings() {
-    if(currentState == GameState.paused){
-      overlays.remove('PauseMenu');
-    }
-    if(currentState == GameState.mainMenu){
-      overlays.remove('MainMenu');
-    }
-    previousState2 = currentState;
-    currentState = GameState.settings;
-    overlays.add('settings');   
-  }
-
-  void closeManual() {
-    currentState = GameState.mainMenu;
-    overlays.remove('ManualMenu'); 
-    overlays.add('MainMenu');      
-  }
-
-  void closeSettings() {
-    if(previousState2 == GameState.mainMenu){
-      overlays.add('MainMenu');
-    }
-    if(previousState2 == GameState.paused){
-      overlays.add('PauseMenu');
-    }
-    currentState = previousState2;
-    overlays.remove('settings'); 
-  }
-
-  void resetGame() {
-    if (!FlameAudio.bgm.isPlaying) {
-      AudioManager.playBgm('music/8-bit-dungeon.mp3', volume: 0.2);
-    }
-    runTime=0;
-    for (var enemy in combatOverlay.enemies) {
-      enemy.removeFromParent(); 
-    }
-    combatOverlay.enemies.clear();
-    _messageQueue.clear(); 
-
-    playerCombatStats.str = 5;
-    playerCombatStats.con = 5;
-    playerCombatStats.wis = 5;
-    playerCombatStats.hp = playerCombatStats.maxHp;
-    playerCombatStats.stamina = playerCombatStats.con*3;
-    playerCombatStats.mana = playerCombatStats.wis*3;
-    playerCombatStats.currentPhase = CombatPhase.idle;
-
-    _initializeInventory();
-    
-    dungeon.level = 1;
-    player.hasKey = false;
-
-    dungeon.width = mapSize;
-    dungeon.height = mapSize;
-    dungeon.generateProceduralMap();
-    player.x = dungeon.playerSpawn.x;
-    player.y = dungeon.playerSpawn.y;
-    player.facing = Direction.north;
-
-    shopInventory = [
-      ItemDatabase.clava,
-      ItemDatabase.gambeson,
-      ItemDatabase.escudoFerro,
-      ItemDatabase.staminaPotion
-    ];
-
-    combatOverlay.enemies.clear();
-
-    combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
-  }
-
-  void startGame() {
-    resetGame();
-    currentState = GameState.exploration;
-    overlays.remove('GameOver');
-    overlays.remove('MainMenu');
-  }
-
-  void togglePause() {
-    if(currentState == GameState.mainMenu || currentState == GameState.gameOver) return;
-    if (currentState == GameState.exploration || currentState == GameState.combat) {
-      previousState = currentState;
-      currentState = GameState.paused;
-      AudioManager.pauseBgm();
-      overlays.add('PauseMenu');
-    } else if (currentState == GameState.paused) {
-      currentState = previousState;
-      AudioManager.resumeBgm();
-      overlays.remove('PauseMenu');
-    }
-  }
-
-  void quitToMainMenu() {
-    AudioManager.stopBgm();
-    overlays.remove('PauseMenu');
-    overlays.remove('GameOver');
-    currentState = GameState.mainMenu;
-    overlays.add('MainMenu');
-    
-  }
-
-  void handlePlayerDeath() async { 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('save_game');
-    hasSavedGame = false;
-    for (var e in combatOverlay.enemies){
-      e.isAlive = false;
-    }
-    currentState = GameState.gameOver;
-    overlays.add('GameOver');
-  }
-
+  // ===========================================================================
+  // GAME LOOP (UPDATE)
+  // ===========================================================================
   @override
   void update(double dt) {
     super.update(dt);
 
-    if (shakeTimer > 0) {
-      shakeTimer -= dt;
-    }
-
+    if (shakeTimer > 0) shakeTimer -= dt;
     if (leftTapTimer > 0) leftTapTimer -= dt;
     if (rightTapTimer > 0) rightTapTimer -= dt;
     
@@ -1110,91 +420,66 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     if (currentState == GameState.manual) {
-      double scrollSpeed = 450.0; // Velocidade da rolagem em pixels por segundo
-      if (upPressed) {
-        if (manualScrollController != null && manualScrollController!.hasClients) {
-          manualScrollController!.jumpTo(
-            (manualScrollController!.offset - scrollSpeed * dt).clamp(0.0, manualScrollController!.position.maxScrollExtent),
-          );
-        }
-      } else if (downPressed) {
-        if (manualScrollController != null && manualScrollController!.hasClients) {
-          manualScrollController!.jumpTo(
-            (manualScrollController!.offset + scrollSpeed * dt).clamp(0.0, manualScrollController!.position.maxScrollExtent),
-          );
-        }
+      double scrollSpeed = 450.0; 
+      if (upPressed && manualScrollController != null && manualScrollController!.hasClients) {
+        manualScrollController!.jumpTo((manualScrollController!.offset - scrollSpeed * dt).clamp(0.0, manualScrollController!.position.maxScrollExtent));
+      } else if (downPressed && manualScrollController != null && manualScrollController!.hasClients) {
+        manualScrollController!.jumpTo((manualScrollController!.offset + scrollSpeed * dt).clamp(0.0, manualScrollController!.position.maxScrollExtent));
       }
-      return; // Garante o congelamento do labirinto em segundo plano
+      return; 
     }
 
-    if (currentState == GameState.exploration) {
-      if (activeMessage != null) return;
+    switch (currentState) {
+      case GameState.exploration: _updateExploration(dt); break;
+      case GameState.combat: _updateCombat(dt); break;
+      default: break;
+    }
+  }
+
+  void _updateExploration(double dt) {
+    if (activeMessage != null) return;
       
-      for (int dy = -2; dy <= 2; dy++) {
-        for (int dx = -2; dx <= 2; dx++) {
-          dungeon.markExplored(player.x + dx, player.y + dy);
-        }
+    for (int dy = -2; dy <= 2; dy++) {
+      for (int dx = -2; dx <= 2; dx++) {
+        dungeon.markExplored(player.x + dx, player.y + dy);
       }
-
-      if (explorationMoveCooldown > 0) {
-        explorationMoveCooldown -= dt;
-      }
-
-      if (activeMessage == null && !isPassTurnPromptOpen) {
-        if (explorationMoveCooldown <= 0) {
-          if (upPressed) {
-            startInput(GameInput.up);
-            explorationMoveCooldown = explorationMoveCooldownTime;
-          } 
-          else if (downPressed) {
-            startInput(GameInput.down);
-            explorationMoveCooldown = explorationMoveCooldownTime;
-          } 
-          else if (leftPressed) {
-            startInput(GameInput.left);
-            explorationMoveCooldown = explorationMoveCooldownTime;
-          } 
-          else if (rightPressed) {
-            startInput(GameInput.right);
-            explorationMoveCooldown = explorationMoveCooldownTime;
-          }
-        }
-      }
-      
-      if (dungeon.keyPosition != null && player.x == dungeon.keyPosition!.x && player.y == dungeon.keyPosition!.y) {
-        player.hasKey = true;
-        dungeon.keyPosition = null;
-        showMessage(I18n.t('encontrou_key'));
-      }
-
-      TileType playerTile = dungeon.getTile(player.x, player.y);
-
-      if (playerTile == TileType.boss){
-        dungeon.grid[player.y][player.x] = TileType.floor; 
-        switch(dungeon.level){
-          case 3:
-            _triggerSpecificEncounter(EnemyType.boss1);
-            break;
-          case 6:
-            _triggerSpecificEncounter(EnemyType.boss2);
-            break;
-          case 9:
-            _triggerSpecificEncounter(EnemyType.boss3);
-            break;
-          case 12:
-            _triggerSpecificEncounter(EnemyType.boss3);
-            break;
-        }
-        
-      }
-
-      while (dungeon.roamingEnemies.length < 3) {
-        dungeon.spawnEnemyAwayFrom(Point(player.x, player.y), 7);
-      }
-
-      return;
     }
 
+    if (explorationMoveCooldown > 0) explorationMoveCooldown -= dt;
+
+    if (activeMessage == null && !isPassTurnPromptOpen) {
+      if (explorationMoveCooldown <= 0) {
+        if (upPressed) { startInput(GameInput.up); explorationMoveCooldown = explorationMoveCooldownTime; } 
+        else if (downPressed) { startInput(GameInput.down); explorationMoveCooldown = explorationMoveCooldownTime; } 
+        else if (leftPressed) { startInput(GameInput.left); explorationMoveCooldown = explorationMoveCooldownTime; } 
+        else if (rightPressed) { startInput(GameInput.right); explorationMoveCooldown = explorationMoveCooldownTime; }
+      }
+    }
+    
+    if (dungeon.keyPosition != null && player.x == dungeon.keyPosition!.x && player.y == dungeon.keyPosition!.y) {
+      player.hasKey = true;
+      dungeon.keyPosition = null;
+      showMessage(I18n.t('encontrou_key'));
+    }
+
+    TileType playerTile = dungeon.getTile(player.x, player.y);
+
+    if (playerTile == TileType.boss){
+      dungeon.grid[player.y][player.x] = TileType.floor; 
+      switch(dungeon.level){
+        case 3: EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1); break;
+        case 6: EncounterManager.triggerSpecificEncounter(this, EnemyType.boss2); break;
+        case 9: EncounterManager.triggerSpecificEncounter(this, EnemyType.boss3); break;
+        case 12: EncounterManager.triggerSpecificEncounter(this, EnemyType.boss4); break;
+      }
+    }
+
+    while (dungeon.roamingEnemies.length < 3) {
+      dungeon.spawnEnemyAwayFrom(Point(player.x, player.y), 7);
+    }
+  }
+
+  void _updateCombat(double dt) {
     if (playerCombatStats.currentPhase == CombatPhase.exiting && playerCombatStats.animTimer <= 0) {
       currentState = GameState.exploration;
       combatOverlay.enemies.clear();
@@ -1204,20 +489,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
     
     if (playerCombatStats.currentPhase == CombatPhase.entering || playerCombatStats.currentPhase == CombatPhase.exiting) return;
-
-    if (activeMessage != null) {
-      return; 
-    }
+    if (activeMessage != null) return; 
 
     if (currentState == GameState.combat && playerCombatStats.isCharging) {
-
       bool hasHeavyAttackShield = playerCombatStats.equippedShield?.hasChargeAttack ?? false;  
       bool hasHeavyAttackWeapon = playerCombatStats.equippedWeapon?.hasChargeAttack ?? false;  
 
       if (hasHeavyAttackShield || hasHeavyAttackWeapon) {
         playerCombatStats.chargeTimer += dt;
-        playerCombatStats.animTimer = 0.5; // Força a pose de Windup
-        
+        playerCombatStats.animTimer = 0.5; 
         if (playerCombatStats.chargeTimer >= 1.0 && (playerCombatStats.chargeTimer - dt) < 1.0) {
           playerCombatStats.applyEffect(0.1, Palette.vermelhoCla);
         }
@@ -1226,18 +506,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     bool hasRegen = playerCombatStats.equippedArmor?.hasRegen ?? false; 
-
     if(hasRegen){
       regenTmr -= dt;
       if(regenTmr<=0){
         regenTmr = 2;
-        if(playerCombatStats.hp < maxHp){
-          playerCombatStats.hp += 2;
-        }
+        if(playerCombatStats.hp < maxHp) playerCombatStats.hp += 2;
       }
     }
 
-    // --- 1. ATUALIZA A IA E COLISÃO ---
+    // IA E COLISÃO
     if (combatOverlay.enemies.isNotEmpty) {
       Rect pHitbox = playerCombatStats.getHitbox(size);
       bool weaponHasReach = playerCombatStats.equippedWeapon?.hasReach ?? false;
@@ -1247,15 +524,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       if (playerCombatStats.currentPhase == CombatPhase.active && !playerCombatStats.attackHit) {
         playerCombatStats.attackHit = true;
-
         bool projAtk = playerCombatStats.equippedWeapon?.projetil ?? false;
 
-        if(projAtk){
-          if(playerCombatStats.mana >= 3){
-            playerCombatStats.mana -= 3;
-            projetil();
-          }
-        }else{
+        if(projAtk && playerCombatStats.mana >= 3){
+          playerCombatStats.mana -= 3;
+          projetil();
         }
 
         for (var enemy in combatOverlay.enemies) {
@@ -1263,11 +536,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(size))){
 
             double damage = playerCombatStats.str.toDouble();
-
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
-            if (playerCombatStats.isHeavyAttack) {
-              damage *= 2.0;
-            }
+            if (playerCombatStats.isHeavyAttack) damage *= 2.0;
             if(godMode) damage *= 5;
 
             if(enemy.isVulnerable || playerCombatStats.isHeavyAttack){
@@ -1297,8 +567,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             
             if (enemy.hp <= 0) {
               AudioManager.playSfx('sfx/enemy_die.wav');
-              enemy.hp = 0;
-              enemy.isDying = true; 
+              enemy.hp = 0; enemy.isDying = true; 
               encounterEssence += enemy.dropEssence; 
               encounterDrop.addAll(enemy.drop);
             }
@@ -1309,27 +578,23 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     combatOverlay.enemies.removeWhere((e) => !e.isAlive);
 
-    if (combatOverlay.enemies.isEmpty && !_victoryProcessed && playerCombatStats.currentPhase != CombatPhase.exiting) {
+    if (combatOverlay.enemies.isEmpty && !victoryProcessed && playerCombatStats.currentPhase != CombatPhase.exiting) {
       if (playerCombatStats.currentPhase == CombatPhase.idle) {
-        _victoryProcessed = true;
+        victoryProcessed = true;
         playerCombatStats.essence += encounterEssence; 
         playerCombatStats.isGuarding = false; 
 
-        //showMessage("Vitória! Você purificou a área e obteve +${encounterEssence.toInt()} Essências!");
         int dropChance = isMimic? 100 : isBoss? 50: 10;
         for (var drop in encounterDrop){
-          if(Random().nextInt(100) <= dropChance) {
-            receiveItem(drop); 
-          }
+          if(Random().nextInt(100) <= dropChance) receiveItem(drop); 
         }
-//I18n.t('encontrou_key')
+
         showMessage(I18n.t('vitoria_essencias').replaceAll('{essencias}', encounterEssence.toInt().toString()), onDismiss: () {
           _endEncounter();
         });
       }
     }
 
-    // --- 2. MOVIMENTAÇÃO DO JOGADOR ---
     bool isFreeToMove = activeMessage == null && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk || playerCombatStats.currentPhase == CombatPhase.guard);
 
     if (isFreeToMove) {
@@ -1342,7 +607,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       if(shieldWalkSlow || armorWalkSlow) moveSpeedPenalty = 1;
       if(shieldWalkFast) moveSpeedPenalty = -1;
-
       moveSpeedPenalty += peso*0.2;
 
       if (downPressed && !playerCombatStats.cansado && !noShield) {
@@ -1365,103 +629,816 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
-  void _endEncounter() { 
-    playerCombatStats.currentPhase = CombatPhase.exiting; 
-    playerCombatStats.animTimer = 1; 
+  // ===========================================================================
+  // RENDERIZAÇÃO
+  // ===========================================================================
+  @override
+  void render(Canvas canvas) {
+    if (shakeTimer > 0) {
+      canvas.save();
+      canvas.translate((Random().nextDouble() - 0.5) * shakeIntensity, (Random().nextDouble() - 0.5) * shakeIntensity);
+      super.render(canvas); 
+      canvas.restore();
+    } else {
+      super.render(canvas);
+    }
+
+    switch (currentState) {
+      case GameState.shop: _renderShop(canvas); break;
+      case GameState.inventory: _renderInventory(canvas); break;
+      case GameState.levelUp: _renderLevelUp(canvas); break;
+      default: break;
+    }
+
+    if (currentState == GameState.exploration && isPassTurnPromptOpen) _renderPassTurnPrompt(canvas);
+    if (activeMessage != null) _renderMessageQueue(canvas);
   }
 
+  void _renderShop(Canvas canvas) {
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+
+      _titleTextPaint.render(canvas, I18n.t('loja'), Vector2(20, 20));
+      _normalTextPaint.render(canvas, "${I18n.t('moedas')}${_getPlayerCoins()}", Vector2(20, 50));
+
+      double startY = 90;
+
+      if (currentShopPhase == ShopPhase.main) {
+        List<String> options = [I18n.t('comprar'), I18n.t('vender'), I18n.t('roubar'), I18n.t('sair')];
+        for (int i = 0; i < options.length; i++) {
+          TextPaint paintToUse = _normalTextPaint;
+          if (i == shopCursor){ paintToUse = _selectTextPaint; }
+          else if (i == 2) { paintToUse = _dangerTextPaint; }
+          paintToUse.render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + (i * 30)));
+        }
+      }
+      else if (currentShopPhase == ShopPhase.buy) {
+        _titleTextPaint.render(canvas, I18n.t('comprar'), Vector2(20, startY - 15));
+        for (int i = 0; i < shopInventory.length; i++) {
+          Item item = shopInventory[i];
+          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
+          String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
+          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+          
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+          try {
+            ui.Image itemImg = images.fromCache(item.imagePath);
+            final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint);
+          } catch (e) {
+            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+          }
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+        }
+      }
+      else if (currentShopPhase == ShopPhase.sell) {
+        _titleTextPaint.render(canvas, I18n.t('vender'), Vector2(20, startY - 15));
+        for (int i = 0; i < playerCombatStats.inventory.length; i++) {
+          Item item = playerCombatStats.inventory[i];
+          bool itEqp = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item);
+          Color textColor = i == shopCursor ? Palette.branco : itEqp? Palette.cinzaEsc:Palette.cinzaCla;
+          String equipTag = itEqp ? " ${I18n.t('equipado')}" : "";
+          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+          
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+          try {
+            ui.Image itemImg = images.fromCache(item.imagePath);
+            final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint);
+          } catch (e) {
+            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+          }
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+        }
+      }
+      else if (currentShopPhase == ShopPhase.confirmSell && itemToSell != null) {
+        int valorVenda = (itemToSell!.value * 0.5).floor();
+        if (valorVenda < 1) valorVenda = 1;
+
+        _titleTextPaint.render(canvas, "${I18n.t('vender')} ${itemToSell!.name} por \$$valorVenda?", Vector2(20, startY));
+        List<String> options = [I18n.t('vender'), I18n.t('sair')];
+        for (int i = 0; i < options.length; i++) {
+          (i == shopCursor ? _selectTextPaint : _normalTextPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + 40 + (i * 30)));
+        }
+      }
+      else if (currentShopPhase == ShopPhase.steal) {
+        _dangerTextPaint.render(canvas, I18n.t('roubar'), Vector2(20, startY - 15));
+        for (int i = 0; i < shopInventory.length; i++) {
+          Item item = shopInventory[i];
+          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+          try {
+            ui.Image itemImg = images.fromCache(item.imagePath);
+            final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint);
+          } catch (e) {
+            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+          }
+          TextPainter(text: TextSpan(text: I18n.t(item.name), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+        }
+      }
+  }
+
+  void _renderPassTurnPrompt(Canvas canvas) {
+      double promptWidth = size.x * 0.8;
+      double promptHeight = 100;
+      double promptX = (size.x - promptWidth) / 2;
+      double promptY = (size.y - promptHeight) / 2;
+      final promptRect = Rect.fromLTWH(promptX, promptY, promptWidth, promptHeight);
+      
+      canvas.drawRect(promptRect, Paint()..color = Palette.preto);
+      canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+
+      final titleSpan = TextSpan(text: I18n.t('pass_turn'), style: const TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+      final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
+      titlePainter.paint(canvas, Offset(promptX, promptY + 15));
+
+      final optionsSpan =  TextSpan(text: I18n.t('optsA_B'), style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'pixelFont'));
+      final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
+      optionsPainter.paint(canvas, Offset(promptX, promptY + 45));
+  }
+
+  void _renderInventory(Canvas canvas) {
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+    titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
+
+    double startY = 80;
+    for (int i = 0; i < playerCombatStats.inventory.length; i++) {
+      Item item = playerCombatStats.inventory[i];
+      Color textColor = i == inventoryCursor ? Palette.branco : Palette.cinzaCla;
+      String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
+      String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+      
+      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+      try {
+        ui.Image itemImg = images.fromCache(item.imagePath);
+        final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint );
+      } catch (e) {
+        canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+      }
+      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+    }
+
+    if (isActionMenuOpen) {
+      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      TextPainter(text:  TextSpan(text: "${I18n.t('a_confirma')}\n${I18n.t('b_cancelar')}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
+    }
+    if (isItemActionMenuOpen) {
+      double menuWidth = 200, menuHeight = 130;
+      double menuX = (size.x - menuWidth) / 2 + 50, menuY = (size.y - menuHeight) / 2;
+      final menuRect = Rect.fromLTWH(menuX, menuY, menuWidth, menuHeight);
+      canvas.drawRect(menuRect, Paint()..color = Palette.preto);
+      canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+
+      List<String> options = [I18n.t('eqpUse'), I18n.t('eqpDescarte'), I18n.t('cancel')];
+      for (int i = 0; i < options.length; i++) {
+        Color textColor = (i == itemActionCursor) ? Palette.amarelo : Palette.branco;
+        String prefix = (i == itemActionCursor) ? "> " : "  ";
+        final optSpan = TextSpan(text: "$prefix${options[i]}", style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+        final optPainter = TextPainter(text: optSpan, textDirection: TextDirection.ltr)..layout();
+        optPainter.paint(canvas, Offset(menuX + 15, menuY + 20 + (i * 35)));
+      }
+    }
+  }
+
+  void _renderLevelUp(Canvas canvas) {
+      final overlayRect = Rect.fromLTWH(0, 0, size.x, size.y * 0.66);
+      canvas.drawRect(overlayRect, Paint()..color = Palette.preto);
+      canvas.drawRect(overlayRect.deflate(15), Paint()..color = Palette.roxo..style = PaintingStyle.stroke..strokeWidth = 3);
+
+      final titlePainter = TextPainter(text: TextSpan(text: I18n.t('distr_pontos'), style: TextStyle(color: Palette.roxo, fontSize: 22, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: size.x);
+      titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 40));
+
+      final ptPainter = TextPainter(text: TextSpan(text: "${I18n.t('pontos_disponiveis')}: $pointsToDistribute", style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: 18, fontFamily: 'pixelFont')), textDirection: TextDirection.ltr)..layout();
+      ptPainter.paint(canvas, Offset((size.x - ptPainter.width) / 2, 100));
+
+      List<String> labels = [
+        "${I18n.t('forca')}: ${playerCombatStats.str.toInt()} (+ $tempStr)",
+        "${I18n.t('constituicao')}: ${playerCombatStats.con.toInt()} (+ $tempCon)",
+        "${I18n.t('sabedoria')}: ${playerCombatStats.wis.toInt()} (+ $tempWis)",
+        "== ${I18n.t('confirmar_melhorias')} =="
+      ];
+
+      for (int i = 0; i < labels.length; i++) {
+        bool isSelected = (i == levelUpCursor);
+        Color textColor = isSelected ? Colors.yellow : Colors.white;
+        if (i == 3) textColor = isSelected ? Colors.greenAccent : Colors.purpleAccent;
+        String prefix = isSelected ? "> " : "  ";
+        final labelPainter = TextPainter(text: TextSpan(text: "$prefix${labels[i]}", style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)), textDirection: TextDirection.ltr)..layout();
+        labelPainter.paint(canvas, Offset(40, 160 + (i * 45)));
+      }
+
+      final helpPainter = TextPainter(text: TextSpan(text: I18n.t('pontos_legenda'), style: TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'pixelFont')), textDirection: TextDirection.ltr)..layout();
+      helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
+  }
+
+  void _renderMessageQueue(Canvas canvas) {
+      double boxWidth = size.x * 0.8, boxHeight = 100;
+      double boxX = (size.x - boxWidth) / 2, boxY = size.y - boxHeight - 80; 
+      final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
+      canvas.drawRect(rect, Paint()..color = Palette.preto);
+      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      final textSpan = TextSpan(text: '$activeMessage\n\n${I18n.t('a_continuar')}', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: boxWidth, maxWidth: boxWidth);
+      textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
+  }
+
+  // ===========================================================================
+  // NAVEGAÇÃO DE MENUS GLOBAIS
+  // ===========================================================================
+  void openManual() { currentState = GameState.manual; overlays.remove('MainMenu'); overlays.add('ManualMenu'); }
+  void closeManual() { currentState = GameState.mainMenu; overlays.remove('ManualMenu'); overlays.add('MainMenu'); }
+  void openSettings() {
+    if(currentState == GameState.paused) overlays.remove('PauseMenu');
+    if(currentState == GameState.mainMenu) overlays.remove('MainMenu');
+    previousState2 = currentState; currentState = GameState.settings; overlays.add('settings');   
+  }
+  void closeSettings() {
+    if(previousState2 == GameState.mainMenu) overlays.add('MainMenu');
+    if(previousState2 == GameState.paused) overlays.add('PauseMenu');
+    currentState = previousState2; overlays.remove('settings'); 
+  }
+  void openShop() {
+    currentState = GameState.shop; currentShopPhase = ShopPhase.main;
+    shopCursor = 0; itemToSell = null;
+  }
+  void togglePause() {
+    if(currentState == GameState.mainMenu || currentState == GameState.gameOver) return;
+    if (currentState == GameState.exploration || currentState == GameState.combat) {
+      previousState = currentState; currentState = GameState.paused; AudioManager.pauseBgm(); overlays.add('PauseMenu');
+    } else if (currentState == GameState.paused) {
+      currentState = previousState; AudioManager.resumeBgm(); overlays.remove('PauseMenu');
+    }
+  }
+  void quitToMainMenu() {
+    AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver');
+    currentState = GameState.mainMenu; overlays.add('MainMenu');
+  }
+
+  // ===========================================================================
+  // GERENCIAMENTO DE INPUTS (KEYBOARD)
+  // ===========================================================================
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
-    // Mantém a leitura dos direcionais fluida (Isso já funciona perfeitamente)
     leftPressed = keysPressed.contains(LogicalKeyboardKey.arrowLeft);
     rightPressed = keysPressed.contains(LogicalKeyboardKey.arrowRight); 
     downPressed = keysPressed.contains(LogicalKeyboardKey.arrowDown);
     upPressed = keysPressed.contains(LogicalKeyboardKey.arrowUp);
     
-    // =========================================================================
-    // 1. TRATAMENTO DE SEGURAR E SOLTAR (Ataque Carregado)
-    // =========================================================================
-    
-    // Botão A (Tecla Z) - Ataque / Interação
     if (event.logicalKey == LogicalKeyboardKey.keyZ) {
-      if (event is KeyDownEvent) {
-        startInput(GameInput.buttonA); // Inicia o Windup e a Carga
-      } else if (event is KeyUpEvent) {
-        stopInput(GameInput.buttonA);  // Executa o Ataque (Forte ou Fraco)
-      }
+      if (event is KeyDownEvent) startInput(GameInput.buttonA);
+      else if (event is KeyUpEvent) stopInput(GameInput.buttonA); 
     }
 
-   /* // Botão B (Tecla X) - Inventário / Uso de Item
-    if (event.logicalKey == LogicalKeyboardKey.keyX) {
-      if (event is KeyDownEvent) {
-        startInput(GameInput.buttonB);
-      } else if (event is KeyUpEvent) {
-        stopInput(GameInput.buttonB); 
-      }
-    }
-  */
-    // =========================================================================
-    // 2. TRATAMENTO DE TOQUE SIMPLES (Só importa quando afunda a tecla)
-    // =========================================================================
     if (event is KeyDownEvent) {
-      
-      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape) {
-        togglePause();
-      }
-
-      if (event.logicalKey == LogicalKeyboardKey.keyC) {
-        showHitboxes = !showHitboxes;
-      }
-
+      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape) togglePause();
+      if (event.logicalKey == LogicalKeyboardKey.keyC) showHitboxes = !showHitboxes;
       if (event.logicalKey == LogicalKeyboardKey.keyG) {
         godMode = !godMode;
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
       }
+      if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration) EncounterManager.triggerSpecificEncounter(this, EnemyType.boss4);
+      if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
 
-      if (event.logicalKey == LogicalKeyboardKey.keyV) {
-        if(currentState == GameState.exploration){
-          //triggerEncounter();
-          _triggerSpecificEncounter(EnemyType.boss4);
-        }
-      }
-
-      if (event.logicalKey == LogicalKeyboardKey.keyX) {
-        startInput(GameInput.buttonB);
-      }
-
-      // Navegação de Menus e Nivelamento
       if (currentState == GameState.levelUp && activeMessage == null) {
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
         if (event.logicalKey == LogicalKeyboardKey.arrowLeft) startInput(GameInput.left);
         if (event.logicalKey == LogicalKeyboardKey.arrowRight) startInput(GameInput.right);
       } 
-      else if (currentState == GameState.inventory || currentState == GameState.combat || currentState == GameState.shop 
-       || currentState == GameState.manual || currentState == GameState.mainMenu || currentState == GameState.paused) {
+      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
         if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
         if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
       }
     }
-    
     return KeyEventResult.handled;
+  }
+
+  void onTouchStart(GameInput input) {
+    if (input == GameInput.up) upPressed = true;
+    if (input == GameInput.down) downPressed = true;
+    if (input == GameInput.left) leftPressed = true;
+    if (input == GameInput.right) rightPressed = true;
+    explorationMoveCooldown = explorationMoveCooldownTime;
+  }
+
+  void startInput(GameInput input) {
+    if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
+
+    switch (currentState) {
+      case GameState.exploration: _handleExplorationInput(input); break;
+      case GameState.combat: _handleCombatInput(input); break;
+      case GameState.shop: _handleShopInput(input); break;
+      case GameState.inventory: _handleInventoryInput(input); break;
+      case GameState.settings: _handleSettingsInput(input); break;
+      case GameState.levelUp: _handleLevelUpInput(input); break;
+      case GameState.paused: _handlePauseInput(input); break;
+      case GameState.mainMenu: _handleMainMenuInput(input); break;
+      case GameState.gameOver: 
+      case GameState.vitory: _handleGameOverInput(input); break;
+      case GameState.manual: 
+        if (input == GameInput.buttonB) { AudioManager.playSfx('sfx/decline.wav'); closeManual(); }
+        break;
+      //default: break;
+    }
+    if(input == GameInput.pause && !(currentState == GameState.settings || currentState == GameState.mainMenu || currentState == GameState.gameOver || currentState == GameState.vitory)) togglePause();
+  }
+
+  void stopInput(GameInput input) {
+    if (input == GameInput.left) leftPressed = false;
+    if (input == GameInput.right) rightPressed = false;
+    if (input == GameInput.down) downPressed = false;
+    if (input == GameInput.up) upPressed = false;
+
+    if (currentState == GameState.combat && input == GameInput.buttonA) {
+      if (playerCombatStats.isCharging) {
+        playerCombatStats.isCharging = false;
+        double custoStaminaBase = playerCombatStats.staminaCost;
+
+        if (playerCombatStats.chargeTimer >= 1.0) {
+          playerCombatStats.isHeavyAttack = true;
+          playerCombatStats.stamina = max(playerCombatStats.stamina - (custoStaminaBase * 1.5), 0.0);
+        } else {
+          playerCombatStats.isHeavyAttack = false;
+          playerCombatStats.stamina = max(playerCombatStats.stamina - custoStaminaBase, 0.0);
+        }
+
+        playerCombatStats.currentPhase = CombatPhase.active;
+        playerCombatStats.animTimer = 0.15; 
+        playerCombatStats.attackHit = false;
+      }
+    }
+  }
+
+  // ===========================================================================
+  // SUB-MÉTODOS DE INPUT (Isolados e Limpos)
+  // ===========================================================================
+  void _handleExplorationInput(GameInput input) {
+    if (isPassTurnPromptOpen) {
+      if (input == GameInput.buttonA) { isPassTurnPromptOpen = false; _onPlayerStepped(); } 
+      else if (input == GameInput.buttonB) { isPassTurnPromptOpen = false; }
+      return;
+    }
+
+    if (input == GameInput.up) { 
+      if (player.move(true, dungeon)){ _onPlayerStepped(); AudioManager.playSfx('sfx/step.wav'); } 
+      else { renderer.triggerWallBump(forward: true); AudioManager.playSfx('sfx/landing.wav'); } 
+    }
+    else if (input == GameInput.down) { 
+      if (player.move(false, dungeon)){ _onPlayerStepped(); AudioManager.playSfx('sfx/step.wav'); } 
+      else { renderer.triggerWallBump(forward: true); AudioManager.playSfx('sfx/landing.wav'); } 
+    }
+    else if (input == GameInput.left){ player.turn(false); AudioManager.playSfx('sfx/step.wav'); }
+    else if (input == GameInput.right) { player.turn(true); AudioManager.playSfx('sfx/step.wav'); }
+    else if (input == GameInput.buttonA) {
+      Point<int> currentPos = Point(player.x, player.y);
+      if (dungeon.droppedItems.containsKey(currentPos) && dungeon.droppedItems[currentPos]!.isNotEmpty) {
+        Item itemToPick = dungeon.droppedItems[currentPos]!.first;
+        if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
+          dungeon.droppedItems[currentPos]!.removeAt(0); receiveItem(itemToPick); 
+        } else { showMessage("$I18n.t('inv_cheio') ${itemToPick.name}."); }
+        return; 
+      }
+      _interact(); 
+    }
+    else if (input == GameInput.buttonB) { 
+      AudioManager.playSfx('sfx/confirm.wav');
+      currentState = GameState.inventory; inventoryCursor = 0; isActionMenuOpen = false; isItemActionMenuOpen = false; 
+    }
+  }
+
+  void _handleCombatInput(GameInput input) {
+    bool easyDashShield = playerCombatStats.equippedShield?.easyDash ?? false; 
+    bool easyDashArmor = playerCombatStats.equippedArmor?.easyDash ?? false; 
+    bool chargeAttackShield = playerCombatStats.equippedShield?.hasChargeAttack ?? false; 
+    bool chargeAttackWeapon = playerCombatStats.equippedWeapon?.hasChargeAttack ?? false; 
+    int peso = playerCombatStats.equippedArmor?.peso ?? 0; 
+
+    double dcusto = dashCusto + peso*2 ;
+    if (easyDashShield || easyDashArmor) dcusto = dashCusto/2;
+    
+    if (input == GameInput.left) {
+      leftPressed = true;
+      if (leftTapTimer > 0) { playerCombatStats.stamina -= dcusto; dashTimer = dashDur; dashDirection = -1.0; leftTapTimer = 0.0; } 
+      else { leftTapTimer = 0.25; }
+    }
+    if (input == GameInput.right) {
+      rightPressed = true;
+      if (rightTapTimer > 0) { playerCombatStats.stamina -= dashCusto; dashTimer = dashDur; dashDirection = 1.0; rightTapTimer = 0.0; } 
+      else { rightTapTimer = 0.25; }
+    }
+    if (input == GameInput.down) downPressed = true;
+    
+    if (input == GameInput.buttonA) {
+      if(chargeAttackShield || chargeAttackWeapon){
+        if (playerCombatStats.currentPhase == CombatPhase.idle) {
+          playerCombatStats.currentPhase = CombatPhase.windup; playerCombatStats.isCharging = true;
+          playerCombatStats.chargeTimer = 0.0; playerCombatStats.isHeavyAttack = false; playerCombatStats.animTimer = 0.5; 
+        }
+      }else{ _performAttack(); }
+    }
+    if (input == GameInput.up && playerCombatStats.consumables.isNotEmpty) {
+      selectedConsumableIndex++;
+      if (selectedConsumableIndex >= playerCombatStats.consumables.length) selectedConsumableIndex = 0;
+    }
+    if (input == GameInput.buttonB && playerCombatStats.consumables.isNotEmpty) {
+      _useCombatConsumable(playerCombatStats.consumables[selectedConsumableIndex]);
+    }
+  }
+
+  void _handleShopInput(GameInput input) {
+    if (input == GameInput.up) { shopCursor--; AudioManager.playSfx('sfx/hover.wav'); }
+    if (input == GameInput.down) { shopCursor++; AudioManager.playSfx('sfx/hover.wav'); }
+
+    int maxCursor = 0;
+    if (currentShopPhase == ShopPhase.main) maxCursor = 3; 
+    else if (currentShopPhase == ShopPhase.buy || currentShopPhase == ShopPhase.steal) maxCursor = max(0, shopInventory.length - 1);
+    else if (currentShopPhase == ShopPhase.sell) maxCursor = max(0, playerCombatStats.inventory.length - 1);
+    else if (currentShopPhase == ShopPhase.confirmSell) maxCursor = 1; 
+
+    if (shopCursor < 0) shopCursor = maxCursor;
+    if (shopCursor > maxCursor) shopCursor = 0;
+
+    if (input == GameInput.buttonB) {
+      if (currentShopPhase == ShopPhase.main) { currentState = GameState.exploration; } 
+      else { currentShopPhase = ShopPhase.main; shopCursor = 0; }
+    }
+
+    if (input == GameInput.buttonA) {
+      if (currentShopPhase == ShopPhase.main) {
+        AudioManager.playSfx('sfx/confirm.wav');
+        if (shopCursor == 0) { currentShopPhase = ShopPhase.buy; shopCursor = 0; } 
+        else if (shopCursor == 1) { currentShopPhase = ShopPhase.sell; shopCursor = 0; } 
+        else if (shopCursor == 2) { currentShopPhase = ShopPhase.steal; shopCursor = 0; } 
+        else if (shopCursor == 3) currentState = GameState.exploration; 
+      }
+      else if (currentShopPhase == ShopPhase.buy) {
+        if (shopInventory.isEmpty) return;
+        Item itemToBuy = shopInventory[shopCursor];
+        if (playerCombatStats.inventory.length >= playerCombatStats.maxInventory && !playerCombatStats.inventory.any((i) => i.name == itemToBuy.name)) {
+          showMessage("Inventário cheio!");
+        } else if (_getPlayerCoins() >= itemToBuy.value) {
+          _removeCoins(itemToBuy.value);
+          try { playerCombatStats.inventory.firstWhere((i) => i.name == itemToBuy.name).quantity++; } 
+          catch (e) { playerCombatStats.inventory.add(Item(itemToBuy.name, itemToBuy.type, itemToBuy.imagePath, itemToBuy.power, value: itemToBuy.value, quantity: 1, cor: itemToBuy.cor)); }
+          
+          itemToBuy.quantity--;
+          if (itemToBuy.quantity <= 0) {
+            shopInventory.remove(itemToBuy);
+            if (shopCursor >= shopInventory.length && shopCursor > 0) shopCursor--;
+            if (shopInventory.isEmpty) { currentShopPhase = ShopPhase.main; shopCursor = 0; }
+          }
+          AudioManager.playSfx('sfx/confirm.wav');
+        } else { AudioManager.playSfx('sfx/denied.wav'); }
+      }
+      else if (currentShopPhase == ShopPhase.sell) {
+        if (playerCombatStats.inventory.isEmpty) return;
+        itemToSell = playerCombatStats.inventory[shopCursor];
+        
+        if (itemToSell!.name == "moeda" || itemToSell == playerCombatStats.equippedWeapon || itemToSell == playerCombatStats.equippedArmor || itemToSell == playerCombatStats.equippedShield) {
+          AudioManager.playSfx('sfx/denied.wav');
+          showMessage("Você não pode vender dinheiro ou itens equipados!");
+          return;
+        }
+        AudioManager.playSfx('sfx/confirm.wav');
+        currentShopPhase = ShopPhase.confirmSell; shopCursor = 0;
+      }
+      else if (currentShopPhase == ShopPhase.confirmSell) {
+        if (shopCursor == 0 && itemToSell != null) {
+          int valorVenda = (itemToSell!.value * 0.25).ceil(); 
+          if (valorVenda < 1) valorVenda = 1;
+          _addCoins(valorVenda);
+          itemToSell!.quantity--;
+          if (itemToSell!.quantity <= 0) playerCombatStats.inventory.remove(itemToSell);
+          AudioManager.playSfx('sfx/use_item.wav');
+          currentShopPhase = ShopPhase.sell; shopCursor = 0; itemToSell = null;
+        } else {
+          currentShopPhase = ShopPhase.sell; shopCursor = 0;
+        }
+      }
+      else if (currentShopPhase == ShopPhase.steal) {
+        if (shopInventory.isEmpty) return;
+        Item itemToSteal = shopInventory[shopCursor];
+        if (playerCombatStats.inventory.length >= playerCombatStats.maxInventory && !playerCombatStats.inventory.any((i) => i.name == itemToSteal.name)) {
+          showMessage("Inventário cheio para roubar!");
+        } else {
+          try { playerCombatStats.inventory.firstWhere((i) => i.name == itemToSteal.name).quantity++; } 
+          catch (e) { playerCombatStats.inventory.add(Item(itemToSteal.name, itemToSteal.type, itemToSteal.imagePath, itemToSteal.power, value: itemToSteal.value, quantity: 1, cor: itemToSteal.cor)); }
+          
+          dungeon.grid[player.y][player.x] = TileType.floor;
+          showMessage("LADRÃO! VOCÊ PAGARÁ COM A VIDA!");
+          EncounterManager.triggerSpecificEncounter(this, EnemyType.goblinShop);
+        }
+      }
+    }
+  }
+
+  void _handleInventoryInput(GameInput input) {
+    if (playerCombatStats.inventory.isEmpty) isItemActionMenuOpen = false;
+
+    if (isItemActionMenuOpen) {
+      if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); itemActionCursor = (itemActionCursor - 1 + 3) % 3; } 
+      else if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); itemActionCursor = (itemActionCursor + 1) % 3; } 
+      else if (input == GameInput.buttonA) {
+        AudioManager.playSfx('sfx/confirm.wav');
+        if (itemActionCursor == 0) {
+          _useOrEquipItem(playerCombatStats.inventory[inventoryCursor]); 
+          isItemActionMenuOpen = false;
+        } else if (itemActionCursor == 1) {
+          dropSelectedItem(inventoryCursor);
+          isItemActionMenuOpen = false;
+          if (inventoryCursor >= playerCombatStats.inventory.length) inventoryCursor = max(0, playerCombatStats.inventory.length - 1);
+        } else if (itemActionCursor == 2) { isItemActionMenuOpen = false; }
+      } else if (input == GameInput.buttonB || input == GameInput.pause) {
+        AudioManager.playSfx('sfx/decline.wav'); isItemActionMenuOpen = false; 
+      }
+    } else {
+      if (input == GameInput.up) {
+        AudioManager.playSfx('sfx/hover.wav'); inventoryCursor -= 1;
+        if(inventoryCursor<0) inventoryCursor = playerCombatStats.inventory.length - 1;
+      } else if (input == GameInput.down) {
+        AudioManager.playSfx('sfx/hover.wav'); inventoryCursor += 1;
+        if(inventoryCursor>playerCombatStats.inventory.length - 1) inventoryCursor = 0;
+      } else if (input == GameInput.buttonA && playerCombatStats.inventory.isNotEmpty) {
+        AudioManager.playSfx('sfx/confirm.wav'); isItemActionMenuOpen = true; itemActionCursor = 0;
+      } else if (input == GameInput.buttonB || input == GameInput.pause) {
+        AudioManager.playSfx('sfx/decline.wav'); currentState = GameState.exploration; 
+      }
+    }
+  }
+
+  void _handleSettingsInput(GameInput input) {
+    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); settingsCursor.value = (settingsCursor.value - 1 + 4) % 4; }
+    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); settingsCursor.value = (settingsCursor.value + 1) % 4; }
+    if (input == GameInput.buttonA) {
+      AudioManager.playSfx('sfx/confirm.wav');
+      if (settingsCursor.value == 0) AudioManager.toggleMusic();
+      else if (settingsCursor.value == 1) AudioManager.toggleSfx();
+      else if (settingsCursor.value == 2) I18n.toggleLanguage();
+      else if (settingsCursor.value == 3) closeSettings();
+      settingsRefresh.value = !settingsRefresh.value; 
+    }
+    if (input == GameInput.buttonB) closeSettings();
+  }
+
+  void _handleLevelUpInput(GameInput input) {
+    AudioManager.playSfx('sfx/hover.wav');
+    if (input == GameInput.up) levelUpCursor = (levelUpCursor - 1 + 4) % 4; 
+    if (input == GameInput.down) levelUpCursor = (levelUpCursor + 1) % 4;
+    
+    if (input == GameInput.right || (input == GameInput.buttonA && levelUpCursor < 3)) {
+      if (pointsToDistribute > 0 && levelUpCursor < 3) {
+        pointsToDistribute--;
+        if (levelUpCursor == 0) tempStr++;
+        if (levelUpCursor == 1) tempCon++;
+        if (levelUpCursor == 2) tempWis++;
+      }
+    }
+    
+    if (input == GameInput.left || input == GameInput.buttonB) {
+      if (levelUpCursor == 0 && tempStr > 0) { tempStr--; pointsToDistribute++; }
+      if (levelUpCursor == 1 && tempCon > 0) { tempCon--; pointsToDistribute++; }
+      if (levelUpCursor == 2 && tempWis > 0) { tempWis--; pointsToDistribute++; }
+      if (levelUpCursor == 3 && input == GameInput.buttonB) currentState = GameState.exploration;
+    }
+
+    if (input == GameInput.buttonA && levelUpCursor == 3) {
+      if (pointsToDistribute == 0) {
+        playerCombatStats.essence -= levelUpCost;
+        playerCombatStats.str += tempStr; playerCombatStats.con += tempCon; playerCombatStats.wis += tempWis;
+        playerCombatStats.recalculateMaxHp();
+        dungeon.grid[player.y][player.x] = TileType.floor;
+        showMessage(I18n.t('atrib_melhorados'));
+        currentState = GameState.exploration;
+      } else {
+        showMessage(I18n.t('atrib_distri'));
+      }
+    }
+  }
+
+  void _handlePauseInput(GameInput input) {
+    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); pauseMenuCursor.value = (pauseMenuCursor.value - 1 + 3) % 3; }
+    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); pauseMenuCursor.value = (pauseMenuCursor.value + 1) % 3; }
+    if (input == GameInput.buttonA) {
+      AudioManager.playSfx('sfx/confirm.wav');
+      if (pauseMenuCursor.value == 0) togglePause();
+      else if (pauseMenuCursor.value == 1) quitToMainMenu();
+      else if (pauseMenuCursor.value == 2) openSettings(); 
+    }
+  }
+
+  void _handleMainMenuInput(GameInput input) {
+    int maxOptions = hasSavedGame ? 4 : 3; 
+    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
+    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
+    if (input == GameInput.buttonA) {
+      AudioManager.playSfx('sfx/confirm.wav');
+      if (hasSavedGame) {
+        if (mainMenuCursor.value == 0) { SaveManager.loadGame(this).then((_) { currentState = GameState.exploration; overlays.remove('MainMenu'); }); } 
+        else if (mainMenuCursor.value == 1) { startGame(); } 
+        else if (mainMenuCursor.value == 2) { openSettings(); } 
+        else if (mainMenuCursor.value == 3) { openManual(); }
+      } else {
+        if (mainMenuCursor.value == 0) { startGame(); } 
+        else if (mainMenuCursor.value == 1) { openSettings(); } 
+        else if (mainMenuCursor.value == 2) { openManual(); }
+      }
+    }
+  }
+
+  void _handleGameOverInput(GameInput input) {
+    int maxOptions = 2; 
+    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
+    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
+    if (input == GameInput.buttonA) {
+      AudioManager.playSfx('sfx/confirm.wav');
+      if (mainMenuCursor.value == 0) startGame();
+      else if (mainMenuCursor.value == 1) quitToMainMenu();
+    }
+  }
+
+  // ===========================================================================
+  // INTERAÇÕES E COMBATE
+  // ===========================================================================
+  void _onPlayerStepped() {
+    dungeon.advanceSpikes(); dungeon.advancePoison(); dungeon.advanceTeleport();
+    playerCombatStats.recoverMana();
+    
+    if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 3) {
+      playerCombatStats.hp -= 5; shakeScreen(0.3, 10.0); playerCombatStats.applyHitStun(0.3); 
+      showMessage(I18n.t('trap1'));
+      if (playerCombatStats.hp <= 0) handlePlayerDeath();
+    }
+
+    if (dungeon.getTile(player.x, player.y) == TileType.poison && (dungeon.poisonState == 3 || dungeon.poisonState == 4)) {
+      playerCombatStats.poisonTmr = 10; shakeScreen(0.3, 10.0); playerCombatStats.applyHitStun(0.3); 
+      showMessage(I18n.t('trap2'));
+    }
+
+    if (dungeon.getTile(player.x, player.y) == TileType.teleport && (dungeon.teleportState == 3 || dungeon.teleportState == 4)) {
+      List<Point<int>> safeTiles = [];
+      for (int y = 1; y < dungeon.height - 1; y++) {
+        for (int x = 1; x < dungeon.width - 1; x++) {
+          if (dungeon.grid[y][x] == TileType.floor && (x != player.x || y != player.y)) safeTiles.add(Point(x, y));
+        }
+      }
+      if (safeTiles.isNotEmpty) {
+        Point<int> randomDest = safeTiles[Random().nextInt(safeTiles.length)];
+        player.x = randomDest.x; player.y = randomDest.y;
+        dungeon.explored[player.y][player.x] = true;
+        showMessage(I18n.t('trap3'));
+        shakeScreen(0.3, 10.0);
+        List<Direction> dirs = [Direction.north, Direction.east, Direction.south, Direction.west];
+        player.facing = dirs[Random().nextInt(dirs.length)];
+      }
+    }
+
+    if (playerCombatStats.poisonTmr > 0){
+      playerCombatStats.poisonTmr --;
+      if(playerCombatStats.hp > 1) playerCombatStats.hp -= 1;   
+      playerCombatStats.applyEffect(0.3,Palette.verde);
+      if (playerCombatStats.poisonTmr == 0) showMessage(I18n.t('sente_bem'));
+    }
+    
+    dungeon.moveEnemies(Point(player.x, player.y));
+    for (int i = 0; i < dungeon.roamingEnemies.length; i++) {
+      if (dungeon.roamingEnemies[i].x == player.x && dungeon.roamingEnemies[i].y == player.y) {
+        dungeon.roamingEnemies.removeAt(i); 
+        EncounterManager.triggerRandomEncounter(this); // CHAMANDO O MANAGER
+        break; 
+      }
+    }
+  }
+
+  void _interact() {
+    TileType playerTile = dungeon.getTile(player.x, player.y);
+
+    if ([TileType.floor, TileType.entry, TileType.openChest, TileType.spike, TileType.poison, TileType.teleport].contains(playerTile)) {
+      Point<int> currentPos = Point(player.x, player.y);
+      if (!dungeon.droppedItems.containsKey(currentPos) || dungeon.droppedItems[currentPos]!.isEmpty) {
+        isPassTurnPromptOpen = true; return;
+      }
+    }
+
+    if (playerTile == TileType.shop) openShop();
+
+    if (playerTile == TileType.font) {
+      playerCombatStats.hp = playerCombatStats.maxHp; playerCombatStats.mana = playerCombatStats.wis*3;
+      playerCombatStats.vfxTimer = 0.5; playerCombatStats.vfxColor = Palette.vermelho;
+      showMessage(I18n.t('font_healed'));
+    }
+
+    if (playerTile == TileType.fontPoison) {
+      playerCombatStats.poisonTmr = 10; playerCombatStats.vfxTimer = 0.5; playerCombatStats.vfxColor = Palette.verde;
+      showMessage(I18n.t('font_poisoned'));
+    }
+
+    if (playerTile == TileType.shrine) {
+      int cost = levelUpCost;
+      if (playerCombatStats.essence >= cost) {
+        pointsToDistribute = 3; tempStr = 0; tempCon = 0; tempWis = 0; levelUpCursor = 0;
+        currentState = GameState.levelUp; 
+      } else { showMessage(I18n.t('shrine_cost').replaceAll('{cost}', cost.toString()).replaceAll('{essence}', playerCombatStats.essence.toInt().toString())); }
+      return;
+    }
+
+    if (playerTile == TileType.door) {
+      if (player.hasKey) {
+        showMessage(I18n.t('open_door').replaceAll('{level}', (dungeon.level + 1).toString()), onDismiss: () async {
+          player.hasKey = false;
+          dungeon.width += 5; dungeon.height += 5; dungeon.level ++;
+          dungeon.droppedItems.clear(); dungeon.generateProceduralMap(); 
+          player.x = dungeon.playerSpawn.x; player.y = dungeon.playerSpawn.y; player.facing = Direction.north;
+
+          List<Item> items = [
+            ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
+            ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.warhammer,ItemDatabase.varinha,ItemDatabase.zweihander,
+            ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco,
+            ItemDatabase.armaduraBronze, ItemDatabase.gambeson, ItemDatabase.chainMail,
+            ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.escudoTorre,
+            ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+          ];
+          List<Item> consumiveis = [
+            ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
+            ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
+            ItemDatabase.bugOrgan, ItemDatabase.bola,
+          ];
+
+          List<Item> unownedItens = items.where((equip) => !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name)).toList();
+          unownedItens.addAll(consumiveis); unownedItens.shuffle();
+          shopInventory = [unownedItens[0], unownedItens[1], unownedItens[2], unownedItens[3]];
+
+          await SaveManager.saveGame(this); // MANAGER AQUI
+          combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+
+          if(dungeon.level >= 13){ currentState = GameState.vitory; overlays.add('Vitory'); }
+        });
+      } else { showMessage(I18n.t('door_locked')); }
+    } 
+    else if (playerTile == TileType.chest) {
+      int chance = Random().nextInt(100);
+      if (chance < 45) { 
+        dungeon.grid[player.y][player.x] = TileType.floor; 
+        showMessage(I18n.t('mimico_found'), onDismiss: () { EncounterManager.triggerSpecificEncounter(this, EnemyType.mimic); }); 
+      } else if (chance < 60) { 
+        dungeon.grid[player.y][player.x] = TileType.openChest; 
+        int loot = Random().nextInt(30) + 10; 
+        showMessage(I18n.t('found_essences').replaceAll('{loot}', loot.toString()), onDismiss: () { playerCombatStats.essence += loot; }); 
+      } else {
+        dungeon.grid[player.y][player.x] = TileType.openChest; 
+        List<Item> allEquipments = [
+          ItemDatabase.espadaCurta, ItemDatabase.armaduraFerro, ItemDatabase.armaduraAco, ItemDatabase.armaduraBronze,
+          ItemDatabase.espadaLonga, ItemDatabase.zweihander, ItemDatabase.varinha, ItemDatabase.escudoTorre, ItemDatabase.warhammer,
+          ItemDatabase.clava, ItemDatabase.claymore, ItemDatabase.lanca, ItemDatabase.armaduraCouro, ItemDatabase.chainMail,
+          ItemDatabase.machado, ItemDatabase.firePillar, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro,
+          ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+        ];
+
+        List<Item> unownedEquipments = allEquipments.where((equip) => !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name)).toList();
+        unownedEquipments.shuffle(); 
+        Item newEquipment = unownedEquipments.first; newEquipment.quantity = 1; 
+
+        showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(newEquipment.name)), onDismiss: () { receiveItem(newEquipment); });
+      }
+    }
+    else if (playerTile == TileType.crate) {
+      int chance = Random().nextInt(100);
+      dungeon.grid[player.y][player.x] = TileType.floor; 
+      
+      if (chance < 40) { showMessage(I18n.t('caixa_vazia')); } 
+      else {
+        List<Item> allConsumables = [
+            ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.bomb, ItemDatabase.staminaPotion,
+            ItemDatabase.reflexPotion, ItemDatabase.meat, ItemDatabase.faca, ItemDatabase.bugOrgan,
+          ];
+        Item droppedItem = allConsumables[Random().nextInt(allConsumables.length)];
+        droppedItem.quantity = 1;
+
+        showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(droppedItem.name)), onDismiss: () {
+          var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
+          if (existingItems.isNotEmpty) existingItems.first.quantity += droppedItem.quantity; 
+          else receiveItem(droppedItem);
+        });
+      }
+    }
   }
 
   void _performAttack() {
     if (playerCombatStats.stamina >= 0 && !playerCombatStats.cansado && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk)) {
-      if (playerCombatStats.staminaInfiniteTmr <= 0) {
-        playerCombatStats.stamina -= playerCombatStats.staminaCost;
-      }
-      if(playerCombatStats.stamina <=0){
-        playerCombatStats.stamina = 0;
-        playerCombatStats.cansado = true; 
-      }
+      if (playerCombatStats.staminaInfiniteTmr <= 0) playerCombatStats.stamina -= playerCombatStats.staminaCost;
+      if(playerCombatStats.stamina <=0){ playerCombatStats.stamina = 0; playerCombatStats.cansado = true; }
       playerCombatStats.staminaTmr = playerCombatStats.staminaRegenDelay; 
-      playerCombatStats.currentPhase = CombatPhase.windup;
-      playerCombatStats.animTimer = playerCombatStats.windupTime;
-      combatOverlay.playerAttackWindupTicker.reset();
-      combatOverlay.weaponAttackWindupTicker.reset();
-      playerCombatStats.comboCount++;
-      if (playerCombatStats.comboCount > 3) playerCombatStats.comboCount = 1;
+      playerCombatStats.currentPhase = CombatPhase.windup; playerCombatStats.animTimer = playerCombatStats.windupTime;
+      combatOverlay.playerAttackWindupTicker.reset(); combatOverlay.weaponAttackWindupTicker.reset();
+      playerCombatStats.comboCount++; if (playerCombatStats.comboCount > 3) playerCombatStats.comboCount = 1;
       playerCombatStats.comboTimer = 1.0;
     }
   }
@@ -1470,10 +1447,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final ui.Image img = await images.load('effects/magia.png');
     double damage = playerCombatStats.equippedWeapon?.power ?? 5; 
     AudioManager.playSfx('sfx/fire.wav');
-     combatOverlay.add(PlayerProjectile(
-       playerCombatStats.strafePosition, 0.75, 1.5, damage * playerCombatStats.wis * 0.5 , Palette.azulCla, width: 48, height: 48
-       ,img : img
-    ));
+     combatOverlay.add(PlayerProjectile(playerCombatStats.strafePosition, 0.75, 1.5, damage * playerCombatStats.wis * 0.5 , Palette.azulCla, width: 48, height: 48, img : img));
   }
 
   void applyEnemyDamage(Enemy enemy) {
@@ -1486,925 +1460,48 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (playerCombatStats.isGuarding && !unblockable) {
       AudioManager.playSfx('sfx/block.wav');
       if (playerCombatStats.stamina >= 0) {
-        if (playerCombatStats.staminaInfiniteTmr <= 0){
-          playerCombatStats.stamina -= (8 - playerCombatStats.equippedShield!.power); 
-        } 
+        if (playerCombatStats.staminaInfiniteTmr <= 0) playerCombatStats.stamina -= (8 - playerCombatStats.equippedShield!.power); 
         playerCombatStats.stamina = playerCombatStats.stamina.clamp(0, playerCombatStats.con * 3);
-        if (playerCombatStats.stamina <= 0) {
-          playerCombatStats.cansado = true;
-        }
-        playerCombatStats.flashColor = Palette.cinza;
-        playerCombatStats.hitFlashTimer = 0.1; 
-      }/* else { 
-        playerCombatStats.stamina = 0; 
-        playerCombatStats.hp -= dmg; 
-        playerCombatStats.applyHitStun(0.3);
-        combatOverlay.playerHitTicker.reset(); 
-        combatOverlay.weaponHitTicker.reset();
-      }*/
+        if (playerCombatStats.stamina <= 0) playerCombatStats.cansado = true;
+        playerCombatStats.flashColor = Palette.cinza; playerCombatStats.hitFlashTimer = 0.1; 
+      }
     } else { 
       AudioManager.playSfx('sfx/hit.wav');
-      playerCombatStats.hp -= dmg; 
-      playerCombatStats.applyHitStun(0.3); 
-      combatOverlay.playerHitTicker.reset(); 
-      combatOverlay.weaponHitTicker.reset();
-      //conterPoison
-        bool counterPoison = playerCombatStats.equippedArmor?.hasPoisonAttack ?? false;
-        if(counterPoison){
-          
+      playerCombatStats.hp -= dmg; playerCombatStats.applyHitStun(0.3); 
+      combatOverlay.playerHitTicker.reset(); combatOverlay.weaponHitTicker.reset();
+        if(playerCombatStats.equippedArmor?.hasPoisonAttack ?? false){
           for (var enemy in combatOverlay.enemies) {
-            if (enemy.isAlive) {
-              
-              double distance = (enemy.strafePosition - playerCombatStats.strafePosition).abs();
-              
-              if (distance <= 0.2) {
-                enemy.isPoison = true;
-              }
-            }
+            if (enemy.isAlive && (enemy.strafePosition - playerCombatStats.strafePosition).abs() <= 0.2) enemy.isPoison = true;
           }
         }
     }
     if (playerCombatStats.hp < 0) playerCombatStats.hp = 0;
   }
 
-  void triggerEncounter() {
-    AudioManager.playSfx('sfx/encounter.wav');
-    maxHp = playerCombatStats.hp;
-    encounterEssence = 0;         
-    encounterDrop.clear();
-    _victoryProcessed = false; 
-    isMimic = false;
-    isBoss = false;
-    currentState = GameState.combat;
-    int numEnemies = Random().nextInt(4) + 1; 
-    List<Enemy> spawnedEnemies = [];
-    List<Enemy Function()> iniPool = [
-      () => SlimeEnemy(),
-      () => GoblinEnemy(),
-      () => SpiderEnemy(),
-      () => BatEnemy(),
-      () => OrcEnemy(),
-    ];
-    
-    /*
-    if(dungeon.level >= 2){
-      iniPool.add(() => BatEnemy());
-    }
-
-    if(dungeon.level >= 3){
-      iniPool.add(() => OrcEnemy());
-    }
-    */
-    if(dungeon.level >= 4){
-      iniPool = [
-        () => OvoEnemy(),
-        () => WormEnemy(),
-        () => FungoEnemy(),
-        () => Fungo2Enemy(), 
-        () => BugEnemy(),   
-        () => InfectadoEnemy(), 
-      ];
-    }
-  /*
-    if(dungeon.level >= 5){
-      iniPool.add(() => BugEnemy());
-    }
-
-    if(dungeon.level >= 6){
-      iniPool.add(() => InfectadoEnemy());
-    }
-  */
-    if(dungeon.level >= 7){
-      iniPool = [
-        () => EsqueletoEnemy(),
-        () => DollEnemy(),
-        () => InfectadoEnemy(),
-        () => JesterEnemy(),
-        () => NagaEnemy(),
-        () => HandEnemy()
-      ];
-    }
-/*
-    if(dungeon.level >= 8){
-      iniPool.add(() => NagaEnemy());
-    }
-
-    if(dungeon.level >= 8){
-      iniPool.add(() => HandEnemy());
-    }
-*/  
-    if(dungeon.level >= 10){
-      iniPool = [
-        () => AberraArvEnemy(),
-        () => AberraBestaEnemy(),
-        () => AberraBrutoEnemy(),
-        () => AberraVoaEnemy(),
-        () => AberraOvoEnemy(),
-        () => AberraCultistaEnemy(),
-      ];
-    }
-    for (int i = 0; i < numEnemies; i++) {
-      int enemyType = Random().nextInt(iniPool.length); 
-      Enemy newEnemy = iniPool[enemyType]();
-      
-      newEnemy.strafePosition = -0.6 + (i * 0.6); 
-
-      if (i >= 2) { 
-        newEnemy.isFrontRow = false;
-        newEnemy.visualScale = 0.65;  
-        newEnemy.visualYOffset = -0.15;
-        newEnemy.visualDarkness = 0.6;
-      }
-
-      spawnedEnemies.add(newEnemy);
-    }
-    combatOverlay.startEncounter(spawnedEnemies);
-    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 1;
-  }
-
-  void _triggerSpecificEncounter(EnemyType type) {
-    encounterEssence = 0; 
-    maxHp = playerCombatStats.hp;
-    encounterDrop.clear();
-    _victoryProcessed = false;
-    isMimic = false;
-    isBoss = false;
-    currentState = GameState.combat;
-    Enemy newEnemy;
-    switch (type) {
-        case EnemyType.slime: newEnemy = SlimeEnemy(); break;
-        case EnemyType.goblin: newEnemy = GoblinEnemy(); break;
-        case EnemyType.spider: newEnemy = SpiderEnemy(); break;
-        case EnemyType.orc: newEnemy = OrcEnemy(); break;
-        case EnemyType.mimic: 
-          isMimic = true;
-          List<Item> allEquipments = [
-            ItemDatabase.espadaCurta,
-            ItemDatabase.armaduraFerro,
-            ItemDatabase.armaduraAco,
-            ItemDatabase.armaduraBronze,
-            ItemDatabase.clava,
-            ItemDatabase.espadaLonga,
-            ItemDatabase.zweihander,
-            ItemDatabase.varinha,
-            ItemDatabase.gambeson,
-            ItemDatabase.escudoTorre,
-            ItemDatabase.warhammer,
-            ItemDatabase.lanca,
-            ItemDatabase.claymore,
-            ItemDatabase.armaduraCouro,
-            ItemDatabase.machado,
-            ItemDatabase.firePillar,
-            ItemDatabase.escudoMadeira,
-            ItemDatabase.escudoFerro,
-            ItemDatabase.piercingShot,
-            ItemDatabase.toxicCloud,
-          ];
-
-          List<Item> unownedEquipments = allEquipments.where((equip) {
-            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
-          }).toList();    
-          
-          var mimic = MimicEnemy()
-              ..strafePosition = 0
-              ..isFrontRow = true
-              ..drop.add(unownedEquipments[Random().nextInt(unownedEquipments.length)]);
-          combatOverlay.startEncounter([mimic]);
-          playerCombatStats.currentPhase = CombatPhase.entering; 
-          playerCombatStats.animTimer = 1;
-          return;
-
-        case EnemyType.bug: newEnemy = BugEnemy(); break;
-        case EnemyType.worm: newEnemy = WormEnemy(); break;
-        case EnemyType.ovo: newEnemy = OvoEnemy(); break;
-        case EnemyType.fungo: newEnemy = FungoEnemy(); break;
-        case EnemyType.fungo2: newEnemy = Fungo2Enemy(); break;
-        case EnemyType.infectado: newEnemy = InfectadoEnemy(); break;
-        case EnemyType.esqueleto: newEnemy = EsqueletoEnemy(); break;
-        case EnemyType.mao: newEnemy = HandEnemy(); break;
-        case EnemyType.doll: newEnemy = DollEnemy(); break;
-        case EnemyType.goblinShop: newEnemy = GoblinShopEnemy(); break;
-        case EnemyType.boss1: isBoss = true; newEnemy = OrcChefe(); break;
-        case EnemyType.boss3: isBoss = true; newEnemy = MagoEnemy(); break;
-        case EnemyType.boss2:
-
-          isBoss = true;
-
-          var bug1 = BugEnemy()
-              ..strafePosition = 0.4
-              ..isFrontRow = true;
-
-          var bug2 = BugEnemy()
-              ..strafePosition = -0.4
-              ..isFrontRow = true;
-        
-          var queen = RainhaInsetoEnemy()
-            ..strafePosition = 0.0
-            ..isFrontRow = false;
-          
-          var leftClaw = GarraRainhaEnemy(queen, -0.24)
-            ..isFrontRow = false;
-            
-          var rightClaw = GarraRainhaEnemy(queen, 0.24)
-            ..isFrontRow = false
-            ..isFlipped = true;
-
-          combatOverlay.startEncounter([bug1, bug2, queen, leftClaw, rightClaw]);
-          playerCombatStats.currentPhase = CombatPhase.entering; 
-          playerCombatStats.animTimer = 1;
-          return;
-        
-        case EnemyType.jester: newEnemy = JesterEnemy(); break;  
-        case EnemyType.naga: newEnemy = NagaEnemy(); break;  
-        case EnemyType.aberraBruto: newEnemy = AberraBrutoEnemy(); break;  
-        case EnemyType.aberraVoa: newEnemy = AberraVoaEnemy(); break;  
-        case EnemyType.aberraBesta: newEnemy = AberraBestaEnemy(); break;  
-        case EnemyType.aberraArv: newEnemy = AberraArvEnemy(); break;  
-        case EnemyType.aberraCult: newEnemy = AberraCultistaEnemy(); break;  
-        case EnemyType.aberraOvo: newEnemy = AberraOvoEnemy(); break;  
-        case EnemyType.boss4:
-
-          isBoss = true;
-          /*
-          var tent1 = TentaculoEnemy()
-              ..strafePosition = 0.4
-              ..isFrontRow = true;
-
-          var tent2 = TentaculoEnemy()
-              ..strafePosition = -0.4
-              ..isFrontRow = true
-              ..isFlipped = true;
-          */
-          var cult1 = AberraCultistaEnemy()
-              ..strafePosition = 0.5
-              ..isFrontRow = false;
-
-          var cult2 = AberraCultistaEnemy()
-              ..strafePosition = -0.5
-              ..isFrontRow = false
-              ..isFlipped = true;
-
-          var cult3 = AberraBrutoEnemy()
-              ..strafePosition = 0
-              ..isFrontRow = true;          
-
-          var ant = AntigoEnemy()
-            ..strafePosition = 0.0
-            ..isFrontRow = false;
-          
-          combatOverlay.startEncounter([cult1, cult2, cult3, ant]);
-          playerCombatStats.currentPhase = CombatPhase.entering; 
-          playerCombatStats.animTimer = 1;
-          return;
-        
-        default: newEnemy = SlimeEnemy(); break;
-      }
-    newEnemy.strafePosition = 0.0; 
-    combatOverlay.startEncounter([newEnemy]);
-    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 1;
-  }
-
-  void startInput(GameInput input) {
-    if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
-    if (currentState == GameState.settings) {
-      if (input == GameInput.up) {
-        AudioManager.playSfx('sfx/hover.wav');
-        settingsCursor.value = (settingsCursor.value - 1 + 4) % 4;
-      }
-      if (input == GameInput.down) {
-        AudioManager.playSfx('sfx/hover.wav');
-        settingsCursor.value = (settingsCursor.value + 1) % 4;
-      }
-      
-      if (input == GameInput.buttonA) {
-        AudioManager.playSfx('sfx/confirm.wav');
-        
-        if (settingsCursor.value == 0) {
-          AudioManager.toggleMusic();
-          settingsRefresh.value = !settingsRefresh.value; 
-        } 
-        else if (settingsCursor.value == 1) {
-          AudioManager.toggleSfx();
-          settingsRefresh.value = !settingsRefresh.value; 
-        } 
-        else if (settingsCursor.value == 2) {
-          I18n.toggleLanguage();
-          settingsRefresh.value = !settingsRefresh.value; 
-        }
-        else if (settingsCursor.value == 3) {
-          closeSettings();
-        }
-      }
-
-      if (input == GameInput.buttonB) {
-        closeSettings();
-      }
-      return; 
-    }
-    if (currentState == GameState.shop) {
-      // Movimentação do Cursor
-      if (input == GameInput.up) {
-        shopCursor--;
-        AudioManager.playSfx('sfx/hover.wav'); 
-      }
-      if (input == GameInput.down) {
-        shopCursor++;
-        AudioManager.playSfx('sfx/hover.wav');
-      }
-
-      // --- LIMITES DO CURSOR ---
-      int maxCursor = 0;
-      if (currentShopPhase == ShopPhase.main) maxCursor = 3; 
-      else if (currentShopPhase == ShopPhase.buy) maxCursor = max(0, shopInventory.length - 1);
-      else if (currentShopPhase == ShopPhase.steal) maxCursor = max(0, shopInventory.length - 1);
-      else if (currentShopPhase == ShopPhase.sell) maxCursor = max(0, playerCombatStats.inventory.length - 1);
-      else if (currentShopPhase == ShopPhase.confirmSell) maxCursor = 1; 
-
-      if (shopCursor < 0) shopCursor = maxCursor;
-      if (shopCursor > maxCursor) shopCursor = 0;
-
-      // --- BOTÃO B (VOLTAR) ---
-      if (input == GameInput.buttonB) {
-        if (currentShopPhase == ShopPhase.main) {
-          currentState = GameState.exploration; // Sai da loja de vez
-        } else {
-          currentShopPhase = ShopPhase.main; // Volta pro menu principal da loja
-          shopCursor = 0;
-        }
-      }
-
-      // --- BOTÃO A (CONFIRMAR) ---
-      if (input == GameInput.buttonA) {
-        
-        // FASE 1: MENU PRINCIPAL DA LOJA
-        if (currentShopPhase == ShopPhase.main) {
-          AudioManager.playSfx('sfx/confirm.wav');
-          if (shopCursor == 0) { currentShopPhase = ShopPhase.buy; shopCursor = 0; } 
-          else if (shopCursor == 1) { currentShopPhase = ShopPhase.sell; shopCursor = 0; } 
-          else if (shopCursor == 2) { currentShopPhase = ShopPhase.steal; shopCursor = 0; } 
-          else if (shopCursor == 3) { currentState = GameState.exploration; }
-        }
-        
-        // FASE 2: COMPRAR ITENS
-        else if (currentShopPhase == ShopPhase.buy) {
-          if (shopInventory.isEmpty) return;
-          Item itemToBuy = shopInventory[shopCursor];
-          
-          if (playerCombatStats.inventory.length >= playerCombatStats.maxInventory && 
-              !playerCombatStats.inventory.any((i) => i.name == itemToBuy.name)) {
-            showMessage("Inventário cheio!");
-          } else if (_getPlayerCoins() >= itemToBuy.value) {
-            _removeCoins(itemToBuy.value);
-            
-            // Adiciona no inventário do jogador (Lógica de stack ou novo slot)
-            try {
-              var existingItem = playerCombatStats.inventory.firstWhere((i) => i.name == itemToBuy.name);
-              existingItem.quantity++;
-            } catch (e) {
-              // Simula um clone do item para não bugar a referência da loja
-              Item clonedItem = Item(itemToBuy.name, itemToBuy.type, itemToBuy.imagePath, itemToBuy.power, value: itemToBuy.value, quantity: 1, cor: itemToBuy.cor);
-              playerCombatStats.inventory.add(clonedItem);
-            }
-            itemToBuy.quantity--;
-            if (itemToBuy.quantity <= 0) {
-              shopInventory.remove(itemToBuy);
-              
-              // Se o cursor estava no final da lista e o item sumiu, recua o cursor em 1
-              if (shopCursor >= shopInventory.length && shopCursor > 0) {
-                shopCursor--;
-              }
-              
-              // Se o jogador comprou absolutamente TUDO, volta pro menu principal!
-              if (shopInventory.isEmpty) {
-                currentShopPhase = ShopPhase.main;
-                shopCursor = 0;
-              }
-            }
-            AudioManager.playSfx('sfx/confirm.wav'); // Som de caixa registradora
-            //showMessage("Comprado: ${itemToBuy.name}");
-          } else {
-            AudioManager.playSfx('sfx/denied.wav');
-            //showMessage("Moedas insuficientes!");
-          }
-        }
-
-        // FASE 3: ESCOLHER ITEM PARA VENDER
-        else if (currentShopPhase == ShopPhase.sell) {
-          if (playerCombatStats.inventory.isEmpty) return;
-          itemToSell = playerCombatStats.inventory[shopCursor];
-          
-          if (itemToSell!.name == "moeda") {
-            AudioManager.playSfx('sfx/denied.wav');
-            showMessage("Você não pode vender dinheiro!");
-            return;
-          }
-
-          if (itemToSell == playerCombatStats.equippedWeapon) { 
-            AudioManager.playSfx('sfx/denied.wav');
-            showMessage("Desequipa o item antes de o vender!");
-            return; // Bloqueia o avanço para a tela de confirmação
-          }
-
-          if (itemToSell == playerCombatStats.equippedArmor) { 
-            AudioManager.playSfx('sfx/denied.wav');
-            showMessage("Desequipa o item antes de o vender!");
-            return; // Bloqueia o avanço para a tela de confirmação
-          }
-
-          if (itemToSell == playerCombatStats.equippedShield) { 
-            AudioManager.playSfx('sfx/denied.wav');
-            showMessage("Desequipa o item antes de o vender!");
-            return; // Bloqueia o avanço para a tela de confirmação
-          }
-          AudioManager.playSfx('sfx/confirm.wav');
-          currentShopPhase = ShopPhase.confirmSell;
-          shopCursor = 0;
-        }
-
-        // FASE 4: CONFIRMAR VENDA
-        else if (currentShopPhase == ShopPhase.confirmSell) {
-          if (shopCursor == 0 && itemToSell != null) { // VENDER
-            int valorVenda = (itemToSell!.value * 0.25).ceil(); 
-            if (valorVenda < 1) valorVenda = 1;
-
-            _addCoins(valorVenda);
-            
-            itemToSell!.quantity--;
-            if (itemToSell!.quantity <= 0) {
-              playerCombatStats.inventory.remove(itemToSell);
-            }
-            AudioManager.playSfx('sfx/use_item.wav');
-            currentShopPhase = ShopPhase.sell; // Volta pra lista de venda
-            shopCursor = 0;
-            itemToSell = null;
-          } else if (shopCursor == 1) { // SAIR
-            currentShopPhase = ShopPhase.sell;
-            shopCursor = 0;
-          }
-        }
-
-        else if (currentShopPhase == ShopPhase.steal) {
-          if (shopInventory.isEmpty) return;
-          Item itemToSteal = shopInventory[shopCursor];
-          
-          if (playerCombatStats.inventory.length >= playerCombatStats.maxInventory && 
-              !playerCombatStats.inventory.any((i) => i.name == itemToSteal.name)) {
-            showMessage("roubar!");
-          } else {
-            // 1. Adiciona o item de graça ao jogador
-            try {
-              var existingItem = playerCombatStats.inventory.firstWhere((i) => i.name == itemToSteal.name);
-              existingItem.quantity++;
-            } catch (e) {
-              Item clonedItem = Item(itemToSteal.name, itemToSteal.type, itemToSteal.imagePath, itemToSteal.power, value: itemToSteal.value, quantity: 1, cor: itemToSteal.cor);
-              playerCombatStats.inventory.add(clonedItem);
-            }
-
-            // 2. Toca um som de alarme/erro
-            // AudioManager.playSfx('sfx/alarm.wav'); 
-
-            // 3. Deleta a loja do mapa
-             int nx = player.x; int ny = player.y;
-             dungeon.grid[ny][nx] = TileType.floor;
-            
-            // 4. Inicia o combate com o Mercador 
-            showMessage("LADRÃO! VOCÊ PAGARÁ COM A VIDA!");
-            _triggerSpecificEncounter(EnemyType.goblinShop);
-            
-            // Força a saída do menu
-            return;
-          }
-        }
-      }
-      return; // Interrompe a função aqui para o jogador não andar no fundo!
-    }
-
-    if (currentState == GameState.manual) {
-      if (input == GameInput.buttonB) {
-        AudioManager.playSfx('sfx/decline.wav');
-        closeManual();
-      }
-      return;
-    }
-    if (input == GameInput.pause) { togglePause(); return; }
-
-    if (currentState == GameState.paused) {
-      if (input == GameInput.up) {
-        AudioManager.playSfx('sfx/hover.wav');
-        // Sobe o cursor (0, 1, 2)
-        pauseMenuCursor.value = (pauseMenuCursor.value - 1 + 3) % 3;
-      }
-      if (input == GameInput.down) {
-        AudioManager.playSfx('sfx/hover.wav');
-        // Desce o cursor
-        pauseMenuCursor.value = (pauseMenuCursor.value + 1) % 3;
-      }
-      if (input == GameInput.buttonA) {
-        AudioManager.playSfx('sfx/confirm.wav');
-        if (pauseMenuCursor.value == 0) {
-          togglePause(); // CONTINUAR
-        } else if (pauseMenuCursor.value == 1) {
-          quitToMainMenu(); // VOLTAR
-        } else if (pauseMenuCursor.value == 2) {
-          //showHitboxes = !showHitboxes; // DEBUG
-          //godMode = !godMode;
-          openSettings(); 
-        }
-      }
-      return;
-    }
-
-    if (currentState == GameState.mainMenu) {
-      int maxOptions = hasSavedGame ? 4 : 3; 
-
-      if (input == GameInput.up) {
-        AudioManager.playSfx('sfx/hover.wav');
-        mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions;
-      }
-      if (input == GameInput.down) {
-        AudioManager.playSfx('sfx/hover.wav');
-        mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions;
-      }
-      if (input == GameInput.buttonA) {
-        AudioManager.playSfx('sfx/confirm.wav');
-        
-        if (hasSavedGame) {
-          if (mainMenuCursor.value == 0) {
-             loadGame().then((_) {
-               currentState = GameState.exploration;
-               overlays.remove('MainMenu');
-             });
-          } else if (mainMenuCursor.value == 1) {
-            startGame(); 
-          } else if (mainMenuCursor.value == 2) {
-            openSettings();
-          } else if (mainMenuCursor.value == 3) {
-            openManual();
-          }
-        } else {
-          if (mainMenuCursor.value == 0) {
-            startGame(); 
-          } else if (mainMenuCursor.value == 1) {
-            openSettings();
-          } else if (mainMenuCursor.value == 2) {
-            openManual();
-          }
-        }
-      }
-      return; 
-    }
-
-    if (currentState == GameState.gameOver) {
-      int maxOptions = 2; 
-
-      if (input == GameInput.up) {
-        AudioManager.playSfx('sfx/hover.wav');
-        mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions;
-      }
-      if (input == GameInput.down) {
-        AudioManager.playSfx('sfx/hover.wav');
-        mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions;
-      }
-      if (input == GameInput.buttonA) {
-        AudioManager.playSfx('sfx/confirm.wav');
-
-        if (mainMenuCursor.value == 0) {
-          startGame();
-        } else if (mainMenuCursor.value == 1) {
-          quitToMainMenu();
-        }
-      }
-      return; 
-    }
-
-    if (currentState == GameState.levelUp) {
-      AudioManager.playSfx('sfx/hover.wav');
-      if (input == GameInput.up) {
-        levelUpCursor = (levelUpCursor - 1 + 4) % 4; 
-      }
-      if (input == GameInput.down) {
-        levelUpCursor = (levelUpCursor + 1) % 4;
-      }
-      
-      if (input == GameInput.right || (input == GameInput.buttonA && levelUpCursor < 3)) {
-        AudioManager.playSfx('sfx/hover.wav');
-        if (pointsToDistribute > 0 && levelUpCursor < 3) {
-          pointsToDistribute--;
-          if (levelUpCursor == 0) tempStr++;
-          if (levelUpCursor == 1) tempCon++;
-          if (levelUpCursor == 2) tempWis++;
-        }
-      }
-      
-      if (input == GameInput.left || input == GameInput.buttonB) {
-        if (levelUpCursor == 0 && tempStr > 0) { tempStr--; pointsToDistribute++; }
-        if (levelUpCursor == 1 && tempCon > 0) { tempCon--; pointsToDistribute++; }
-        if (levelUpCursor == 2 && tempWis > 0) { tempWis--; pointsToDistribute++; }
-        if (levelUpCursor == 3 && input == GameInput.buttonB) {
-          currentState = GameState.exploration;
-        }
-      }
-
-      if (input == GameInput.buttonA && levelUpCursor == 3) {
-        if (pointsToDistribute == 0) {
-          playerCombatStats.essence -= levelUpCost;
-          playerCombatStats.str += tempStr;
-          playerCombatStats.con += tempCon;
-          playerCombatStats.wis += tempWis;
-          playerCombatStats.recalculateMaxHp();
-          
-          dungeon.grid[player.y][player.x] = TileType.floor;
-          showMessage(I18n.t('atrib_melhorados'));
-          currentState = GameState.exploration;
-        } else {
-          showMessage(I18n.t('atrib_distri'));
-        }
-      }
-      return;
-    }
-
-    if (currentState == GameState.inventory) {
-      if (playerCombatStats.inventory.isEmpty) {
-        isItemActionMenuOpen = false;
-      }
-
-      if (isItemActionMenuOpen) {
-        if (input == GameInput.up) {
-          AudioManager.playSfx('sfx/hover.wav');
-          itemActionCursor = (itemActionCursor - 1 + 3) % 3;
-        } else if (input == GameInput.down) {
-          AudioManager.playSfx('sfx/hover.wav');
-          itemActionCursor = (itemActionCursor + 1) % 3;
-        } else if (input == GameInput.buttonA) {
-          AudioManager.playSfx('sfx/confirm.wav');
-          if (itemActionCursor == 0) {
-            Item item = playerCombatStats.inventory[inventoryCursor];
-            _useOrEquipItem(item); 
-            isItemActionMenuOpen = false;
-          } else if (itemActionCursor == 1) {
-            dropSelectedItem(inventoryCursor);
-            isItemActionMenuOpen = false;
-            if (inventoryCursor >= playerCombatStats.inventory.length) {
-              inventoryCursor = max(0, playerCombatStats.inventory.length - 1);
-            }
-          } else if (itemActionCursor == 2) {
-            isItemActionMenuOpen = false;
-          }
-        } else if (input == GameInput.buttonB || input == GameInput.pause) {
-          AudioManager.playSfx('sfx/decline.wav');
-          isItemActionMenuOpen = false; 
-        }
-      } 
-      else {
-        if (input == GameInput.up) {
-          AudioManager.playSfx('sfx/hover.wav');
-          //inventoryCursor = max(0, inventoryCursor - 1);
-          inventoryCursor -= 1;
-          if(inventoryCursor<0) inventoryCursor = playerCombatStats.inventory.length - 1;
-        } else if (input == GameInput.down) {
-          AudioManager.playSfx('sfx/hover.wav');
-          //inventoryCursor = min(playerCombatStats.inventory.length - 1, inventoryCursor + 1);
-          inventoryCursor += 1;
-          if(inventoryCursor>playerCombatStats.inventory.length - 1) inventoryCursor = 0;
-        } else if (input == GameInput.buttonA && playerCombatStats.inventory.isNotEmpty) {
-          AudioManager.playSfx('sfx/confirm.wav');
-          isItemActionMenuOpen = true;
-          itemActionCursor = 0;
-        } else if (input == GameInput.buttonB || input == GameInput.pause) {
-          AudioManager.playSfx('sfx/decline.wav');
-          currentState = GameState.exploration; 
-        }
-      }
-      return; 
-    }
-    
-    if (currentState == GameState.exploration) {
-      if (isPassTurnPromptOpen) {
-        if (input == GameInput.buttonA) {
-          isPassTurnPromptOpen = false; 
-          _onPlayerStepped(); 
-        } else if (input == GameInput.buttonB) {
-          isPassTurnPromptOpen = false; 
-        }
-        return;
-      }
-
-      if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
-      if (input == GameInput.up) { 
-        if (player.move(true, dungeon)){
-          _onPlayerStepped(); 
-          AudioManager.playSfx('sfx/step.wav');
-        } else {
-          renderer.triggerWallBump(forward: true);
-          AudioManager.playSfx('sfx/landing.wav');
-        } 
-      }
-      if (input == GameInput.down) { 
-        if (player.move(false, dungeon)){
-          _onPlayerStepped(); 
-          AudioManager.playSfx('sfx/step.wav');
-        } else {
-          renderer.triggerWallBump(forward: true);
-          AudioManager.playSfx('sfx/landing.wav');
-        } 
-      }
-      if (input == GameInput.left){ 
-        player.turn(false);
-        AudioManager.playSfx('sfx/step.wav');
-      }
-      if (input == GameInput.right) { 
-        player.turn(true);
-        AudioManager.playSfx('sfx/step.wav');
-      }
-      if (input == GameInput.buttonA) {
-        Point<int> currentPos = Point(player.x, player.y);
-        
-        if (dungeon.droppedItems.containsKey(currentPos) && dungeon.droppedItems[currentPos]!.isNotEmpty) {
-          Item itemToPick = dungeon.droppedItems[currentPos]!.first;
-          
-          if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
-            dungeon.droppedItems[currentPos]!.removeAt(0); 
-            receiveItem(itemToPick); 
-          } else {
-            showMessage("$I18n.t('inv_cheio') ${itemToPick.name}.");
-          }
-          return; 
-        }
-        _interact(); 
-      }
-      
-      if (input == GameInput.buttonB) { 
-        // /*
-        AudioManager.playSfx('sfx/confirm.wav');
-        currentState = GameState.inventory; 
-        inventoryCursor = 0; 
-        isActionMenuOpen = false; 
-        isItemActionMenuOpen = false; 
-        // */
-        //_triggerSpecificEncounter(EnemyType.naga);
-        //triggerEncounter();
-      }
-      return; 
-    } 
-    
-    // --- MODO COMBATE ---
-    if (currentState == GameState.combat) {
-      if (activeMessage != null) { 
-        if (input == GameInput.buttonA) dismissMessage(); 
-        return; 
-      }
-
-      bool easyDashShield = playerCombatStats.equippedShield?.easyDash ?? false; 
-      bool easyDashArmor = playerCombatStats.equippedArmor?.easyDash ?? false; 
-      bool chargeAttackShield = playerCombatStats.equippedShield?.hasChargeAttack ?? false; 
-      bool chargeAttackWeapon = playerCombatStats.equippedWeapon?.hasChargeAttack ?? false; 
-
-      int peso = playerCombatStats.equippedArmor?.peso ?? 0; 
-
-      double dcusto = dashCusto + peso*2 ;
-      if (easyDashShield || easyDashArmor) dcusto = dashCusto/2;
-      
-      if (input == GameInput.left) {
-        leftPressed = true;
-        if (leftTapTimer > 0) {
-          playerCombatStats.stamina -= dcusto;
-          dashTimer = dashDur; 
-          dashDirection = -1.0;
-          leftTapTimer = 0.0; 
-        } else {
-          leftTapTimer = 0.25; 
-        }
-      }
-      if (input == GameInput.right) {
-        rightPressed = true;
-        if (rightTapTimer > 0) {
-          playerCombatStats.stamina -= dashCusto;
-          dashTimer = dashDur;
-          dashDirection = 1.0;
-          rightTapTimer = 0.0;
-        } else {
-          rightTapTimer = 0.25;
-        }
-      }
-      if (input == GameInput.down) downPressed = true;
-      if (input == GameInput.buttonA) {
-        if(chargeAttackShield || chargeAttackWeapon){
-          if (playerCombatStats.currentPhase == CombatPhase.idle) {
-            playerCombatStats.currentPhase = CombatPhase.windup;
-            playerCombatStats.isCharging = true;
-            playerCombatStats.chargeTimer = 0.0;
-            playerCombatStats.isHeavyAttack = false;
-            playerCombatStats.animTimer = 0.5; // Reseta o temporizador visual da animação
-          }
-        }else{
-          _performAttack();
-        }
-        // 
-        
-      }
-      
-      if (input == GameInput.up && playerCombatStats.consumables.isNotEmpty) {
-        selectedConsumableIndex++;
-        if (selectedConsumableIndex >= playerCombatStats.consumables.length) selectedConsumableIndex = 0;
-      }
-      if (input == GameInput.buttonB && playerCombatStats.consumables.isNotEmpty) {
-        Item sel = playerCombatStats.consumables[selectedConsumableIndex];
-        _useCombatConsumable(sel);
-      }
-    }
-  }
-  
-  void stopInput(GameInput input) {
-    if (input == GameInput.left) leftPressed = false;
-    if (input == GameInput.right) rightPressed = false;
-    if (input == GameInput.down) downPressed = false;
-    if (input == GameInput.up) upPressed = false;
-
-    if (currentState == GameState.combat && input == GameInput.buttonA) {
-      if (playerCombatStats.isCharging) {
-        playerCombatStats.isCharging = false;
-
-        double custoStaminaBase = playerCombatStats.staminaCost;
-
-        // Se segurou por 1.0 segundo ou mais, é um ataque pesado!
-        if (playerCombatStats.chargeTimer >= 1.0) {
-          playerCombatStats.isHeavyAttack = true;
-          playerCombatStats.stamina = max(playerCombatStats.stamina - (custoStaminaBase * 1.5), 0.0);
-        } else {
-          playerCombatStats.isHeavyAttack = false;
-          playerCombatStats.stamina = max(playerCombatStats.stamina - custoStaminaBase, 0.0);
-        }
-
-        // Transiciona para a fase ativa de dano
-        playerCombatStats.currentPhase = CombatPhase.active;
-        playerCombatStats.animTimer = 0.15; // Tempo que o hit box fica ativo na tela
-        playerCombatStats.attackHit = false;
-      }
-    }
-  }
-
-  void onTouchStart(GameInput input) {
-    if (input == GameInput.up) upPressed = true;
-    if (input == GameInput.down) downPressed = true;
-    if (input == GameInput.left) leftPressed = true;
-    if (input == GameInput.right) rightPressed = true;
-
-    explorationMoveCooldown = explorationMoveCooldownTime;
-  }
-
   void _useOrEquipItem(Item item) async {
     String fileName = item.imagePath.split('/').last;
-
     if (item.type == ItemType.weapon) { 
-      if (item.str > playerCombatStats.str){
-        AudioManager.playSfx('sfx/denied.wav');
-        showMessage(I18n.t('precisa_str').replaceAll('{str}', item.str.toString()));
-      }else{
-        playerCombatStats.equippedWeapon = item; 
-        if (item.onUse != null) item.onUse!(item, this);
-        await changeWeaponSprite('actors/$fileName'); 
-      }
-      
+      if (item.str > playerCombatStats.str){ AudioManager.playSfx('sfx/denied.wav'); showMessage(I18n.t('precisa_str').replaceAll('{str}', item.str.toString())); }
+      else{ playerCombatStats.equippedWeapon = item; if (item.onUse != null) item.onUse!(item, this); await changeWeaponSprite('actors/$fileName'); }
     }
     else if (item.type == ItemType.armor) { 
-      playerCombatStats.equippedArmor = item; 
-      if (item.onUse != null) item.onUse!(item, this);
-      await changeArmorSprite('actors/$fileName'); 
-
+      playerCombatStats.equippedArmor = item; if (item.onUse != null) item.onUse!(item, this); await changeArmorSprite('actors/$fileName'); 
       int peso = playerCombatStats.equippedArmor?.peso ?? 0;
-      double staminaDelay = 0.5;
-      if (peso == 2) staminaDelay = 0.6;
-      else if(peso == 3) staminaDelay = 1.0;
+      double staminaDelay = 0.5; if (peso == 2) staminaDelay = 0.6; else if(peso == 3) staminaDelay = 1.0;
       playerCombatStats.staminaRegenDelay = staminaDelay;
     }
-    else if (item.type == ItemType.shield) { 
-      playerCombatStats.equippedShield = item; 
-      if (item.onUse != null) item.onUse!(item, this);
-      await changeShieldSprite('actors/$fileName'); 
-    }
-    else if (item.type == ItemType.consumable) { 
-      if (item.onUse != null) item.onUse!(item, this);
-      AudioManager.playSfx('sfx/use_item.wav');
-      _consumeItem(item);
-    }
-    else if (item.type == ItemType.coin) { 
-      showMessage(I18n.t('guarda_batalha'));
-    }
+    else if (item.type == ItemType.shield) { playerCombatStats.equippedShield = item; if (item.onUse != null) item.onUse!(item, this); await changeShieldSprite('actors/$fileName'); }
+    else if (item.type == ItemType.consumable) { if (item.onUse != null) item.onUse!(item, this); AudioManager.playSfx('sfx/use_item.wav'); _consumeItem(item); }
+    else if (item.type == ItemType.coin) { showMessage(I18n.t('guarda_batalha')); }
   }
 
   void _useCombatConsumable(Item item) {
     if (item.type == ItemType.consumable) {
-      if (item.onUse != null) item.onUse!(item, this);
-      _consumeItem(item); 
-      AudioManager.playSfx('sfx/use_item.wav');
+      if (item.onUse != null) item.onUse!(item, this); _consumeItem(item); AudioManager.playSfx('sfx/use_item.wav');
     } 
     else if (item.type == ItemType.spell) {
-      if (playerCombatStats.mana >= item.manaCost) {
-        playerCombatStats.mana -= item.manaCost; 
-        if (item.onUse != null) item.onUse!(item, this);
-      } else {
-        combatOverlay.addFloatingText(I18n.t('no_mana'), playerCombatStats.getHurtbox(size), Palette.cinzaCla);
-      }
+      if (playerCombatStats.mana >= item.manaCost) { playerCombatStats.mana -= item.manaCost; if (item.onUse != null) item.onUse!(item, this); } 
+      else { combatOverlay.addFloatingText(I18n.t('no_mana'), playerCombatStats.getHurtbox(size), Palette.cinzaCla); }
     }
   }
 
@@ -2417,350 +1514,43 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
-  void _onPlayerStepped() {
-    dungeon.advanceSpikes();
-    dungeon.advancePoison();
-    dungeon.advanceTeleport();
-
-    playerCombatStats.recoverMana();
-    if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 3) {
-      playerCombatStats.hp -= 5; 
-      shakeScreen(0.3, 10.0);
-      playerCombatStats.applyHitStun(0.3); 
-      showMessage(I18n.t('trap1'));
-      if (playerCombatStats.hp <= 0) handlePlayerDeath();
-    }
-
-    if (dungeon.getTile(player.x, player.y) == TileType.poison && (dungeon.poisonState == 3 || dungeon.poisonState == 4)) {
-      playerCombatStats.poisonTmr = 10; 
-      shakeScreen(0.3, 10.0);
-      playerCombatStats.applyHitStun(0.3); 
-      showMessage(I18n.t('trap2'));
-    }
-
-    if (dungeon.getTile(player.x, player.y) == TileType.teleport && (dungeon.teleportState == 3 || dungeon.teleportState == 4)) {
-      // 1. Criar uma lista para guardar todos os blocos seguros
-      List<Point<int>> safeTiles = [];
-
-      // 2. Varrer o mapa procurando blocos de chão comum
-      for (int y = 1; y < dungeon.height - 1; y++) {
-        for (int x = 1; x < dungeon.width - 1; x++) {
-          // Queremos teleportar APENAS para chãos vazios, para evitar bugar o jogo
-          if (dungeon.grid[y][x] == TileType.floor) {
-            
-            // (Opcional) Evitar teleportar o jogador para o bloco exato onde ele já está
-            if (x != player.x || y != player.y) {
-              safeTiles.add(Point(x, y));
-            }
-          }
-        }
-      }
-
-      // 3. Se encontrou lugares seguros, faz a mágica!
-      if (safeTiles.isNotEmpty) {
-        // Sorteia um ponto da lista
-        Point<int> randomDest = safeTiles[Random().nextInt(safeTiles.length)];
-
-        // Atualiza a posição do jogador
-        player.x = randomDest.x;
-        player.y = randomDest.y;
-
-        // Atualiza a visão/minimapa imediatamente para o novo local
-        dungeon.explored[player.y][player.x] = true;
-
-        // =========================================================
-        // FEEDBACK PARA O JOGADOR (Game Feel)
-        // =========================================================
-        
-        // Mostra a mensagem no HUD
-        showMessage(I18n.t('trap3'));
-        
-        // Treme a tela para dar a sensação de desorientação (usando a função que criamos antes!)
-        shakeScreen(0.3, 10.0);
-        
-        // Toca o som (se você tiver um)
-        // AudioManager.playSfx('sfx/teleport.wav');
-        
-        // (Opcional) Muda a direção do jogador aleatoriamente para desorientar ainda mais!
-        List<Direction> dirs = [Direction.north, Direction.east, Direction.south, Direction.west];
-        player.facing = dirs[Random().nextInt(dirs.length)];
-      }
-    }
-
-    if (playerCombatStats.poisonTmr > 0){
-      playerCombatStats.poisonTmr --;
-      if(playerCombatStats.hp > 1)playerCombatStats.hp -= 1;   
-      playerCombatStats.applyEffect(0.3,Palette.verde);
-      if (playerCombatStats.poisonTmr == 0)showMessage(I18n.t('sente_bem'));
-    }
-    dungeon.moveEnemies(Point(player.x, player.y));
-
-    for (int i = 0; i < dungeon.roamingEnemies.length; i++) {
-      if (dungeon.roamingEnemies[i].x == player.x && dungeon.roamingEnemies[i].y == player.y) {
-        dungeon.roamingEnemies.removeAt(i); 
-        triggerEncounter(); 
-        break; 
-      }
-    }
+  void _endEncounter() { playerCombatStats.currentPhase = CombatPhase.exiting; playerCombatStats.animTimer = 1; }
+  
+  void startCombat(List<Enemy> enemies) {
+    AudioManager.playSfx('sfx/encounter.wav'); encounterEssence = 0; encounterDrop.clear(); victoryProcessed = false;
+    isMimic = false; isBoss = false; currentState = GameState.combat;
+    combatOverlay.startEncounter(enemies);
+    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 1;
   }
 
-  void _interact() {
-    TileType playerTile = dungeon.getTile(player.x, player.y);
+  void resetGame() {
+    AudioManager.playBgm('music/8-bit-dungeon.mp3', volume: 0.2); runTime=0;
+    for (var enemy in combatOverlay.enemies) enemy.removeFromParent(); 
+    combatOverlay.enemies.clear(); _messageQueue.clear(); 
 
-    if (playerTile == TileType.floor || playerTile == TileType.entry || playerTile == TileType.openChest
-     || playerTile == TileType.spike || playerTile == TileType.poison || playerTile == TileType.teleport) {
-      Point<int> currentPos = Point(player.x, player.y);
-      if (!dungeon.droppedItems.containsKey(currentPos) || dungeon.droppedItems[currentPos]!.isEmpty) {
-        isPassTurnPromptOpen = true; 
-        return;
-      }
-    }
+    playerCombatStats.str = 5; playerCombatStats.con = 5; playerCombatStats.wis = 5;
+    playerCombatStats.hp = playerCombatStats.maxHp; playerCombatStats.stamina = playerCombatStats.con*3; playerCombatStats.mana = playerCombatStats.wis*3;
+    playerCombatStats.currentPhase = CombatPhase.idle;
 
-    if (playerTile == TileType.shop) {
-      openShop();
-    }
+    _initializeInventory();
+    dungeon.level = 1; player.hasKey = false;
+    dungeon.width = mapSize; dungeon.height = mapSize; dungeon.generateProceduralMap();
+    player.x = dungeon.playerSpawn.x; player.y = dungeon.playerSpawn.y; player.facing = Direction.north;
 
-    if (playerTile == TileType.font) {
-      playerCombatStats.hp = playerCombatStats.maxHp;
-      playerCombatStats.mana = playerCombatStats.wis*3;
-      playerCombatStats.vfxTimer = 0.5;
-      playerCombatStats.vfxColor = Palette.vermelho;
-      showMessage(I18n.t('font_healed'));
-    }
+    shopInventory = [ ItemDatabase.clava, ItemDatabase.gambeson, ItemDatabase.escudoFerro, ItemDatabase.staminaPotion ];
+    combatOverlay.enemies.clear();
+    combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+  }
 
-    if (playerTile == TileType.fontPoison) {
-      playerCombatStats.poisonTmr = 10; 
-      playerCombatStats.vfxTimer = 0.5;
-      playerCombatStats.vfxColor = Palette.verde;
-      showMessage(I18n.t('font_poisoned'));
-    }
+  void startGame() {
+    resetGame(); currentState = GameState.exploration;
+    overlays.remove('GameOver'); overlays.remove('MainMenu');
+  }
 
-    if (playerTile == TileType.shrine) {
-      int cost = levelUpCost;
-      if (playerCombatStats.essence >= cost) {
-        pointsToDistribute = 3;
-        tempStr = 0; tempCon = 0; tempWis = 0;
-        levelUpCursor = 0;
-        currentState = GameState.levelUp; 
-      } else {
-        showMessage(I18n.t('shrine_cost').replaceAll('{cost}', cost.toString()).replaceAll('{essence}', playerCombatStats.essence.toInt().toString()));
-      }
-      return;
-    }
-
-    if (playerTile == TileType.door) {
-      if (player.hasKey) {
-        showMessage(I18n.t('open_door').replaceAll('{level}', (dungeon.level + 1).toString()), onDismiss: () async {
-          //player.floorLevel++;
-          player.hasKey = false;
-          dungeon.width += 5; 
-          dungeon.height += 5;
-          dungeon.level ++;
-          dungeon.droppedItems.clear();
-          dungeon.generateProceduralMap(); 
-          player.x = dungeon.playerSpawn.x;
-          player.y = dungeon.playerSpawn.y;
-          player.facing = Direction.north;
-
-          /*
-          List<Item> armas = [ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.clava,ItemDatabase.warhammer,];
-          List<Item> armaduras = [ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco, ItemDatabase.gambeson,
-          ItemDatabase.armaduraBronze,];
-          List<Item> escudos = [ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro,ItemDatabase.escudoTorre,];
-          List<Item> pocoes = [ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,];
-          
-          List<Item> unownedWeapons = armas.where((equip) {
-            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
-          }).toList();
-          List<Item> unownedArmors = armaduras.where((equip) {
-            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
-          }).toList();
-          List<Item> unownedShields = escudos.where((equip) {
-            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
-          }).toList();
-
-          unownedWeapons.shuffle();
-          unownedArmors.shuffle();
-          unownedShields.shuffle();
-          pocoes.shuffle();
-
-          shopInventory = [];
-
-          shopInventory.add(unownedWeapons[0]);
-          shopInventory.add(unownedArmors[0]);
-          shopInventory.add(unownedShields[0]);
-          shopInventory.add(pocoes[0]);
-        */
-
-          List<Item> items = [
-            //armas
-            ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado,ItemDatabase.clava,
-            ItemDatabase.lanca,ItemDatabase.claymore,ItemDatabase.warhammer,ItemDatabase.varinha,ItemDatabase.zweihander,
-            //armaduras
-            ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco,
-            ItemDatabase.armaduraBronze, ItemDatabase.gambeson,
-            //escudos
-            ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.escudoTorre,
-            //magias
-            ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
-          ];
-
-          List<Item> consumiveis = [
-            //pocoes
-            ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
-            //itens
-            ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
-            ItemDatabase.bugOrgan, ItemDatabase.bola,
-          ];
-
-          List<Item> unownedItens = items.where((equip) {
-            return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
-          }).toList();
-
-          unownedItens.addAll(consumiveis);
-
-          unownedItens.shuffle();
-
-          shopInventory = [];
-
-          shopInventory.add(unownedItens[0]);
-          shopInventory.add(unownedItens[1]);
-          shopInventory.add(unownedItens[2]);
-          shopInventory.add(unownedItens[3]);
-
-          await saveGame();
-
-          combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
-
-          if(dungeon.level >= 13){
-            currentState = GameState.vitory;
-            overlays.add('Vitory');
-          }
-        });
-      } else {
-        showMessage(I18n.t('door_locked'));
-      }
-    } 
-    else if (playerTile == TileType.chest) {
-      int chance = Random().nextInt(100);
-      
-      if (chance < 45) { 
-        dungeon.grid[player.y][player.x] = TileType.floor; 
-        showMessage(I18n.t('mimico_found'), onDismiss: () { _triggerSpecificEncounter(EnemyType.mimic); }); 
-      
-      } else if (chance < 60) { 
-        dungeon.grid[player.y][player.x] = TileType.openChest; 
-        int loot = Random().nextInt(30) + 10; 
-        showMessage(I18n.t('found_essences').replaceAll('{loot}', loot.toString()), onDismiss: () { playerCombatStats.essence += loot; }); 
-      
-      } else {
-        dungeon.grid[player.y][player.x] = TileType.openChest; 
-        
-        List<Item> allEquipments = [
-          ItemDatabase.espadaCurta,
-          ItemDatabase.armaduraFerro,
-          ItemDatabase.armaduraAco,
-          ItemDatabase.armaduraBronze,
-          ItemDatabase.espadaLonga,
-          ItemDatabase.zweihander,
-          ItemDatabase.varinha,
-          ItemDatabase.escudoTorre,
-          ItemDatabase.warhammer,
-          ItemDatabase.clava,
-          ItemDatabase.claymore,
-          ItemDatabase.lanca,
-          ItemDatabase.armaduraCouro,
-          ItemDatabase.machado,
-          ItemDatabase.firePillar,
-          ItemDatabase.escudoMadeira,
-          ItemDatabase.escudoFerro,
-          ItemDatabase.piercingShot,
-          ItemDatabase.toxicCloud,
-        ];
-
-        List<Item> unownedEquipments = allEquipments.where((equip) {
-          return !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
-        }).toList();
-
-        unownedEquipments.shuffle(); 
-        Item newEquipment = unownedEquipments.first;
-        newEquipment.quantity = 1; 
-
-        showMessage(I18n.t('item_found').replaceAll('{item}', newEquipment.name), onDismiss: () {
-          receiveItem(newEquipment);
-        });
-
-        /*bool tryEquipment = chance >= 45 && chance < 75;
-
-        if (tryEquipment && unownedEquipments.isNotEmpty) {
-          unownedEquipments.shuffle(); 
-          Item newEquipment = unownedEquipments.first;
-          newEquipment.quantity = 1; 
-
-          showMessage("Você encontrou um item: ${newEquipment.name}!", onDismiss: () {
-            receiveItem(newEquipment);
-          });
-          
-        } else {
-          List<Item> allConsumables = [
-            ItemDatabase.healthPotion,
-            ItemDatabase.manaPotion,
-            ItemDatabase.bomb,
-            ItemDatabase.staminaPotion,
-            ItemDatabase.reflexPotion,
-          ];
-
-          int totalConsumables = allConsumables.length;
-          int randomIndex = Random().nextInt(totalConsumables);
-          
-          Item droppedItem = allConsumables[randomIndex];
-          droppedItem.quantity = 1;
-
-          showMessage("Você encontrou um item: ${droppedItem.name}!", onDismiss: () {
-            var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
-            if (existingItems.isNotEmpty) {
-              existingItems.first.quantity += droppedItem.quantity; 
-            } else {
-              receiveItem(droppedItem);
-            }
-          });
-        }
-        */
-      }
-    }
-    else if (playerTile == TileType.crate) {
-      int chance = Random().nextInt(100);
-      dungeon.grid[player.y][player.x] = TileType.floor; 
-      
-      if (chance < 40) { 
-        showMessage(I18n.t('caixa_vazia')); 
-      } else {
-        List<Item> allConsumables = [
-            ItemDatabase.healthPotion,
-            ItemDatabase.manaPotion,
-            ItemDatabase.bomb,
-            ItemDatabase.staminaPotion,
-            ItemDatabase.reflexPotion,
-            ItemDatabase.meat,
-            ItemDatabase.faca,
-            ItemDatabase.bugOrgan,
-          ];
-
-        int totalConsumables = allConsumables.length;
-        int randomIndex = Random().nextInt(totalConsumables);
-        
-        Item droppedItem = allConsumables[randomIndex];
-        droppedItem.quantity = 1;
-
-        showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(droppedItem.name)), onDismiss: () {
-          var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
-          if (existingItems.isNotEmpty) {
-            existingItems.first.quantity += droppedItem.quantity; 
-          } else {
-            receiveItem(droppedItem);
-          }
-        });
-      }
-    }
+  void handlePlayerDeath() async { 
+    final prefs = await SharedPreferences.getInstance(); await prefs.remove('save_game');
+    hasSavedGame = false;
+    for (var e in combatOverlay.enemies) e.isAlive = false;
+    currentState = GameState.gameOver; overlays.add('GameOver');
   }
 }
