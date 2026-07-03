@@ -1279,7 +1279,7 @@ class FungoEnemy extends Enemy {
 
   @override
   void update(double dt) {
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     floatTimer += dt;
 
@@ -1396,7 +1396,7 @@ class Fungo2Enemy extends Enemy {
 
   @override
   void update(double dt) {
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
     floatTimer += dt;
 
     flightOffset = -0.25 + (sin(floatTimer * speed) * 0.25);
@@ -1981,7 +1981,7 @@ class JesterEnemy extends Enemy {
   void update(double dt) {
     super.update(dt);
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     // 3. LÓGICA DE ATAQUE (Disparo do Projétil)
     // Usamos o update principal porque a classe base desativa o updateBehavior enquanto ataca!
@@ -2267,7 +2267,7 @@ class HandEnemy extends Enemy {
   void update(double dt) {
     super.update(dt);
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     // =========================================================================
     // NOVO: RELÓGIO CUSTOMIZADO PARA AS FASES SECUNDÁRIAS
@@ -2651,7 +2651,7 @@ class MagoEnemy extends Enemy {
 
     if(hp <= maxHp/2 && !podeInvocar) podeInvocar = true;
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true;
@@ -2785,7 +2785,7 @@ class AberraVoaEnemy extends Enemy {
   void update(double dt) {
     super.update(dt); 
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true;
@@ -3164,7 +3164,7 @@ class AntigoEnemy extends Enemy {
 
     if(!_temTentaculos) attackHeight = 0.7;
 
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
     if(!_temCultistas){
       ritualTmr = 0;

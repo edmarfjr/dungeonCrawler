@@ -2030,30 +2030,31 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         
         if (hasSavedGame) {
           if (mainMenuCursor.value == 0) {
-             // NOVO: Carrega o Jogo Salvo!
              loadGame().then((_) {
                currentState = GameState.exploration;
                overlays.remove('MainMenu');
              });
           } else if (mainMenuCursor.value == 1) {
-            startGame(); // Substitui o save (Novo Jogo)
+            startGame(); 
           } else if (mainMenuCursor.value == 2) {
             openSettings();
           } else if (mainMenuCursor.value == 3) {
             openManual();
           }
         } else {
-          // Sem save game
-          if (mainMenuCursor.value == 0) startGame();
-          else if (mainMenuCursor.value == 1) openSettings();
-          else if (mainMenuCursor.value == 2) openManual();
+          if (mainMenuCursor.value == 0) {
+            startGame(); 
+          } else if (mainMenuCursor.value == 1) {
+            openSettings();
+          } else if (mainMenuCursor.value == 2) {
+            openManual();
+          }
         }
       }
       return; 
     }
 
     if (currentState == GameState.gameOver) {
-      // Se tiver jogo salvo, temos 3 botões. Se não, apenas 2.
       int maxOptions = 2; 
 
       if (input == GameInput.up) {
@@ -2067,9 +2068,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (input == GameInput.buttonA) {
         AudioManager.playSfx('sfx/confirm.wav');
 
-        if (mainMenuCursor.value == 0) startGame();
-        else if (mainMenuCursor.value == 1) quitToMainMenu();
-        
+        if (mainMenuCursor.value == 0) {
+          startGame();
+        } else if (mainMenuCursor.value == 1) {
+          quitToMainMenu();
+        }
       }
       return; 
     }
