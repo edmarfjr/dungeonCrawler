@@ -44,13 +44,13 @@ class MainMenuOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: I18n.t('menu_manual'),
+                    title: I18n.t('menu_settings'),
                     index: 2,
                     currentIndex: cursorIndex,
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: I18n.t('menu_settings'),
+                    title: I18n.t('menu_manual'),
                     index: 3,
                     currentIndex: cursorIndex,
                   ),
@@ -63,13 +63,13 @@ class MainMenuOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: I18n.t('menu_manual'),
+                    title: I18n.t('menu_settings'),
                     index: 1,
                     currentIndex: cursorIndex,
                   ),
                   const SizedBox(height: 20),
                   _buildMenuOption(
-                    title: I18n.t('menu_settings'),
+                    title: I18n.t('menu_manual'),
                     index: 2,
                     currentIndex: cursorIndex,
                   ),
@@ -93,7 +93,6 @@ class MainMenuOverlay extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // A SETINHA DE SELEÇÃO:
           Text(
             isSelected ? "> " : "  ",
             style: TextStyle(
@@ -104,7 +103,6 @@ class MainMenuOverlay extends StatelessWidget {
               decoration: TextDecoration.none,
             ),
           ),
-          // O TEXTO DO BOTÃO:
           Text(
             title,
             style: TextStyle(

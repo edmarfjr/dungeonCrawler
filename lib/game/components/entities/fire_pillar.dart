@@ -1,5 +1,4 @@
 import 'dart:ui' as ui;
-import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';

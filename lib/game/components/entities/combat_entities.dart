@@ -2,7 +2,6 @@ import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 import 'package:flame/components.dart';
-import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart';
 
 enum CombatPhase { idle, walk, guard, windup, active, recovery, entering, exiting, hit, summon, die, windup2, active2, recovery2 }

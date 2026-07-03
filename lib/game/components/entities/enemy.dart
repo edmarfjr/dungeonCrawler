@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/Effects/healing_cloud_effect.dart';
 import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/entities/arc_projectile.dart';
 import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
@@ -12,7 +11,6 @@ import 'package:dungeon_crawler/game/components/entities/poison_cloud.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
-import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
@@ -54,8 +52,6 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
       ;
     
   }
-
-  @override
   bool get canChangeRow => !_EstaAtacando;
 
   double visualScale = 1.0; 
@@ -126,7 +122,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
 
   @override
   void update(double dt) {
-    if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
     super.update(dt);
     priority = isFrontRow ? 10 : 0;
 
@@ -1284,7 +1280,6 @@ class FungoEnemy extends Enemy {
   @override
   void update(double dt) {
     if (!isAlive || isDying || gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
-    if (!isAlive) return;
 
     floatTimer += dt;
 

@@ -1,11 +1,9 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
-
 import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 import 'package:dungeon_crawler/game/components/entities/enemy.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:flame/components.dart';
-import 'package:flame_audio/flame_audio.dart';
 
 class BounceProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   Vector2 velocity;

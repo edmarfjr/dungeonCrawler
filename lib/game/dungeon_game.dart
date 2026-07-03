@@ -205,18 +205,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       var existing = playerCombatStats.inventory.where((i) => i.name == newItem.name).toList();
       if (existing.isNotEmpty) {
         existing.first.quantity += newItem.quantity;
-        showMessage(I18n.t('obteve_mais').replaceAll('[quant]', newItem.quantity.toString()).replaceAll('[item]', newItem.name));
+        showMessage(I18n.t('obteve_mais').replaceAll('[quant]', newItem.quantity.toString()).replaceAll('[item]', I18n.t(newItem.name)));
         return;
       }
     }
 
     if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
       playerCombatStats.inventory.add(newItem);
-      showMessage(I18n.t('pegou_item').replaceAll('[item]', newItem.name));
+      showMessage(I18n.t('pegou_item').replaceAll('[item]', I18n.t(newItem.name)));
     } else {
       Point<int> pos = Point(player.x, player.y);
       dungeon.droppedItems.putIfAbsent(pos, () => []).add(newItem);
-      showMessage(I18n.t('inv_chao').replaceAll('[item]', newItem.name));
+      showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(newItem.name)));
     }
   }
 
@@ -235,7 +235,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     dungeon.droppedItems.putIfAbsent(pos, () => []).add(item);
     
     playerCombatStats.inventory.removeAt(cursorIndex);
-    showMessage(I18n.t('inv_chao').replaceAll('[item]', item.name));
+    showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(item.name)));
   }
 
   void _initializeInventory() {
@@ -663,8 +663,34 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         titlePaint.render(canvas, I18n.t('comprar'), Vector2(20, startY - 15));
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
-          String texto = "${item.name} - \$${item.value}";
-          (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + 15 +(i * 30)));
+          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
+          String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
+          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+          
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
+          textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+          TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
+          try {
+            ui.Image itemImg = images.fromCache(item.imagePath);
+            Color tint = item.cor; 
+            final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+            
+            canvas.drawImageRect(
+              itemImg,
+              Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
+              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
+              tintPaint 
+            );
+          } catch (e) {
+            debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
+            canvas.drawRect(
+              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
+              Paint()..color = Colors.pinkAccent
+            );
+          }
+
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
         }
       }
 
@@ -673,21 +699,36 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         titlePaint.render(canvas, I18n.t('vender'), Vector2(20, startY - 15));
         for (int i = 0; i < playerCombatStats.inventory.length; i++) {
           Item item = playerCombatStats.inventory[i];
-          int valorVenda = (item.value * 0.5).floor(); // Metade do preço
-          if (valorVenda < 1) valorVenda = 1;
+          bool itEqp = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item);
+          Color textColor = i == shopCursor ? Palette.branco : itEqp? Palette.cinzaEsc:Palette.cinzaCla;
+          String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
+          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
           
-          bool isEquipped = (item == playerCombatStats.equippedWeapon || item == playerCombatStats.equippedArmor || item == playerCombatStats.equippedShield);
-          String sufixo = isEquipped ? " ${I18n.t('equipado')}" : "";
-          
-          String texto = "${item.name} (x${item.quantity})$sufixo - ${I18n.t('vender_por')}\$$valorVenda";
-          
-          TextPaint paintToUse = normalPaint;
-          if (i == shopCursor) {
-            paintToUse = selectPaint;
-          } else if (isEquipped) {
-            paintToUse = TextPaint(style: const TextStyle(color: Palette.cinzaEsc, fontSize: 16, fontFamily: 'pixelFont'));
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
+          textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+          TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
+          try {
+            ui.Image itemImg = images.fromCache(item.imagePath);
+            Color tint = item.cor; 
+            final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+            
+            canvas.drawImageRect(
+              itemImg,
+              Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
+              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
+              tintPaint 
+            );
+          } catch (e) {
+            debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
+            canvas.drawRect(
+              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
+              Paint()..color = Colors.pinkAccent
+            );
           }
-          (i == shopCursor ? selectPaint : paintToUse).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + 15 +(i * 30)));
+
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+        
         }
       }
 
@@ -711,8 +752,33 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
-          String texto = item.name;
-          (i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + texto, Vector2(20, startY + 15 +(i * 30)));
+          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
+          
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
+          textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+
+          TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
+          try {
+            ui.Image itemImg = images.fromCache(item.imagePath);
+            Color tint = item.cor; 
+            final tintPaint = Paint()..colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+            
+            canvas.drawImageRect(
+              itemImg,
+              Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
+              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
+              tintPaint 
+            );
+          } catch (e) {
+            debugPrint("⚠️ ERRO: A imagem '${item.imagePath}' não foi carregada no onLoad!");
+            canvas.drawRect(
+              Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), 
+              Paint()..color = Colors.pinkAccent
+            );
+          }
+
+          TextPainter(text: TextSpan(text: I18n.t(item.name), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+        
         }
       }
     }
@@ -826,14 +892,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
       String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
       
-      //canvas.drawRect(Rect.fromLTWH(20, startY + (i * 50), size.x - 40, 50), 
-      //Paint()..color = i == inventoryCursor ? Palette.azul.withOpacity(0.3) : Colors.transparent);    
-
       TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: 
       textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
-
-      //(i == shopCursor ? selectPaint : normalPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], 
-      //Vector2(20, startY + 40 + (i * 30)));
 
       TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
       try {
@@ -855,7 +915,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         );
       }
 
-      TextPainter(text: TextSpan(text: "${item.name}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
     }
 
     if (isActionMenuOpen) {
@@ -1976,17 +2036,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
                overlays.remove('MainMenu');
              });
           } else if (mainMenuCursor.value == 1) {
-             startGame(); // Substitui o save (Novo Jogo)
+            startGame(); // Substitui o save (Novo Jogo)
           } else if (mainMenuCursor.value == 2) {
-             openManual();
+            openSettings();
           } else if (mainMenuCursor.value == 3) {
-             openSettings();
+            openManual();
           }
         } else {
           // Sem save game
           if (mainMenuCursor.value == 0) startGame();
-          else if (mainMenuCursor.value == 1) openManual();
-          else if (mainMenuCursor.value == 2) openSettings();
+          else if (mainMenuCursor.value == 1) openSettings();
+          else if (mainMenuCursor.value == 2) openManual();
         }
       }
       return; 
@@ -2689,7 +2749,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         Item droppedItem = allConsumables[randomIndex];
         droppedItem.quantity = 1;
 
-        showMessage(I18n.t('item_found').replaceAll('{item}', droppedItem.name), onDismiss: () {
+        showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(droppedItem.name)), onDismiss: () {
           var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
           if (existingItems.isNotEmpty) {
             existingItems.first.quantity += droppedItem.quantity; 

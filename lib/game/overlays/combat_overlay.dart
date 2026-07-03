@@ -440,24 +440,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     }
   }
 
-  void _drawSpiderWebLines(Canvas canvas, Enemy enemy) {
-    if (enemy.type != EnemyType.spider || !enemy.isAlive) return;
-    double cx = (size.x / 2) + (enemy.strafePosition * size.x * 0.35) + 4;
-    double spiderTopY = size.y * enemy.yPosition;
-    final webPaint = Paint()
-      ..color = Palette.branco 
-      ..strokeWidth = 5.0 
-      ..style = PaintingStyle.stroke
-      ..isAntiAlias = false;
-    final webPaintBorder = Paint()
-      ..color = Palette.preto
-      ..strokeWidth = 15.0 
-      ..isAntiAlias = false
-      ..style = PaintingStyle.stroke;  
-    canvas.drawLine(Offset(cx, spiderTopY), Offset(cx, 0), webPaintBorder);
-    canvas.drawLine(Offset(cx, spiderTopY), Offset(cx, 0), webPaint);
-  }
-
   void _drawPlayer(Canvas canvas) {
     if (playerStats.invencibleTmr>0 && (playerStats.invencibleTmr * 15).toInt() % 2 == 0) return;
     
@@ -610,17 +592,17 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     if (gameRef.currentState == GameState.exploration) {
       
-      String direc = 'N';
+      String direc = 'dir_n';
       switch (gameRef.player.facing) {
-      case Direction.north: direc = '-N-'; break;
-      case Direction.east:  direc = '-E-'; break;
-      case Direction.south: direc = '-S-'; break;
-      case Direction.west:  direc = '-W-'; break;
+      case Direction.north: direc = 'dir_n'; break;
+      case Direction.east:  direc = 'dir_l'; break;
+      case Direction.south: direc = 'dir_s'; break;
+      case Direction.west:  direc = 'dir_o'; break;
     }
       TextPainter(
-          text: TextSpan(text: direc, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
+          text: TextSpan(text: I18n.t(direc).toUpperCase(), style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x/2 - direc.length*6 , 22));
+        )..layout()..paint(canvas, Offset(size.x/2 - I18n.t(direc).length*6 , 22));
     }
   }
 
