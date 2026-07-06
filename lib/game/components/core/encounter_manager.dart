@@ -68,6 +68,7 @@ class EncounterManager {
             ItemDatabase.escudoFerro,
             ItemDatabase.piercingShot,
             ItemDatabase.toxicCloud,
+            ItemDatabase.thunderStorm,
           ];
 
           List<Item> unownedEquipments = allEquipments.where((equip) {

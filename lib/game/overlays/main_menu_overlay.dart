@@ -20,6 +20,8 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
   void initState() {
     super.initState();
 
+    widget.game.isMainMenuAnimating = true;
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -35,11 +37,16 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
       ),
     );
 
-    _animationController.forward();
+    _animationController.forward().then((_) {
+      if (mounted) {
+        widget.game.isMainMenuAnimating = false;
+      }
+    });
   }
 
   @override
   void dispose() {
+    widget.game.isMainMenuAnimating = false;
     _animationController.dispose();
     super.dispose();
   }
@@ -128,6 +135,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
 
     return GestureDetector(
       onTap: () {
+        if (widget.game.isMainMenuAnimating) return;
         widget.game.mainMenuCursor.value = index;
         widget.game.startInput(GameInput.buttonA);
       },

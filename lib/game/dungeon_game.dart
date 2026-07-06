@@ -76,6 +76,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double shakeTimer = 0.0, shakeIntensity = 0.0, runTime = 0.0;
   bool isRunStartAnimating = false;
   double runStartAnimTimer = 0.0;
+  bool isMainMenuAnimating = false;
   final double runStartAnimDuration = 1.2;
   double maxHp = 0, regenTmr = 2;
   bool godMode = false, victoryProcessed = true, isBoss = false, isMimic = false;
@@ -1318,6 +1319,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     //if (AudioManager.currentTrack != 'music/main-menu.ogg') {
     //  AudioManager.playBgm('music/main-menu.ogg');
     //}
+    if (isMainMenuAnimating) return;
     int maxOptions = hasSavedGame ? 4 : 3; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
