@@ -8,6 +8,14 @@ class SettingsMenuOverlay extends StatelessWidget {
   final DungeonCrawlerGame game;
   const SettingsMenuOverlay({super.key, required this.game});
 
+  String _buildVolumeBars(int level) {
+    String bars = "";
+    for (int i = 1; i <= 10; i++) {
+      bars += (i <= level) ? "|" : "."; 
+    }
+    return "< $bars >";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -18,8 +26,6 @@ class SettingsMenuOverlay extends StatelessWidget {
           builder: (context, child) {
             
             int cursorIndex = game.settingsCursor.value;
-            String textOn = I18n.t('opt_on');
-            String textMuted = I18n.t('opt_muted');
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -36,18 +42,17 @@ class SettingsMenuOverlay extends StatelessWidget {
                 const SizedBox(height: 60),
                 
                 _buildMenuOption(
-                  title: "${I18n.t('opt_music')}: ${AudioManager.isMusicMuted ? textMuted : textOn}",
+                  title: "${I18n.t('opt_music')}: ${_buildVolumeBars(AudioManager.bgmVolumeLevel)}",
                   index: 0, currentIndex: cursorIndex,
                 ),
                 const SizedBox(height: 20),
                 
                 _buildMenuOption(
-                  title: "${I18n.t('opt_sfx')}: ${AudioManager.isSfxMuted ? textMuted : textOn}",
+                  title: "${I18n.t('opt_sfx')}: ${_buildVolumeBars(AudioManager.sfxVolumeLevel)}",
                   index: 1, currentIndex: cursorIndex,
                 ),
                 const SizedBox(height: 20),
                 
-                // --- NOVA OPÇÃO DE IDIOMA ---
                 _buildMenuOption(
                   title: "${I18n.t('opt_lang')}: < ${I18n.t('lang_name')} >",
                   index: 2, currentIndex: cursorIndex,

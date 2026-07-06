@@ -29,6 +29,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   double _bumpTimer = 0.0;
   double _maxBumpTime = 0.18; 
   bool _bumpForward = true;
+  double yOffsetAnim = 0.0;
 
   MazeRenderer({
     required this.map,
@@ -67,6 +68,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     super.render(canvas);
 
     canvas.save();
+    if (yOffsetAnim > 0) {
+      canvas.translate(0, yOffsetAnim);
+    }
 
     // 2. APLICA O TRANCO DE IMPACTO NA CÂMERA
     if (_bumpTimer > 0) {

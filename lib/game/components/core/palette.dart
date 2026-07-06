@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 class Palette {
-  static const Color preto = Color(0xFF000000);//Color(0xFF0d0d0d); 
+  static const Color preto = Color(0xFF0d0d0d);//Color(0xFF0d0d0d); 
   static const Color cinzaEsc = Color(0xFF383838);
   static const Color cinzaMed = Color(0xFF4f4f4f);
   static const Color cinza = Color(0xFF828282);
   static const Color cinzaCla = Color(0xFFb5b5b5);
-  static const Color branco = Color(0xFFFFF1E8);//Color(0xFFd9d9d9);
+  static const Color branco = Color(0xFFd9d9d9);//Color(0xFFd9d9d9);
   static const Color marromEsc = Color(0xFF4c2712);
   static const Color marrom = Color(0xFF60361d);
   static const Color marromCla = Color(0xFFa86437);

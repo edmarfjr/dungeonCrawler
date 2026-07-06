@@ -807,11 +807,9 @@ class BatEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
-    // FASE DE PATRULHA
     if (currentPhase == CombatPhase.idle) {
-      targetY = flightHeight; // Garante que a intenção é ficar no teto
+      targetY = flightHeight; 
 
-      // Só flutua de um lado pro outro se já tiver chegado lá em cima
       if ((yPosition - flightHeight).abs() < 0.05) {
         strafePosition += currentDir * speed * dt;
         
@@ -825,11 +823,10 @@ class BatEnemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
    
-    // Decide atacar se o tempo estourou E se ele estiver fisicamente lá no alto
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 1.0; // Tempo de preparo/mergulho
-      targetY = attackHeight; // Comando para a classe pai: "Desça para o chão!"
+      animTimer = 0.5; 
+      targetY = attackHeight; 
       attackCooldown = maxAttackCooldown;
       targetStrafe = gameRef.playerCombatStats.strafePosition;
     }
@@ -837,45 +834,38 @@ class BatEnemy extends Enemy {
 
   @override
   void update(double dt) {
-    super.update(dt); // A classe pai resolve a cor, timers e sprites
+    super.update(dt); 
 
     if (currentPhase == CombatPhase.windup) {
       priority = 15;
       targetY = attackHeight;
 
-      // 1. Descobre a diferença nos eixos X e Y
       double dx = targetStrafe - strafePosition;
       double dy = targetY - yPosition;
       
-      // 2. Calcula a distância total em linha reta (Teorema de Pitágoras)
       double distance = sqrt(dx * dx + dy * dy);
 
-      // 3. Move o morcego simultaneamente nos dois eixos se ainda não chegou ao alvo
       if (distance > 0.01) {
-        double diveSpeed = speed*3; // Velocidade do mergulho (Aumente se quiser mais agressivo)
+        double diveSpeed = speed*3; 
         double moveStep = diveSpeed * dt;
 
-        // Trava de segurança para ele não "passar do ponto" e tremer
         if (moveStep > distance) moveStep = distance;
 
-        // Distribui a velocidade perfeitamente na diagonal
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
       }
 
     } else {
       if(isDying) return;
-      // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
       if ((yPosition - targetY).abs() > 0.01) {
-        double verticalSpeed = speed; // Velocidade que ele volta para o teto
+        double verticalSpeed = speed; 
         yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
       }
 
-      // Controla a intenção de altura baseada na fase
       if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
-        targetY = attackHeight; // Mantém no chão para você poder bater nele
+        targetY = attackHeight; 
       } else if (currentPhase == CombatPhase.idle) {
-        targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
+        targetY = flightHeight; 
         priority = isFrontRow ? 10 : 0;
       }
     }
@@ -897,7 +887,6 @@ class OrcChefe extends Enemy {
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 40, hitboxOffsetX: 20,drop: [ItemDatabase.espadaOrc]
   );
 
-  // MÁGICA 1: Se ele estiver invocando, desligamos o melee para a hitbox não machucar o jogador!
   @override
   bool get isMelee => !isSummoning;
 
@@ -911,10 +900,8 @@ class OrcChefe extends Enemy {
     if (isSummoning || currentPhase == CombatPhase.summon) {
       return; 
     }
-    // 1. Lê a mente do jogador (Igual ao Orc comum)
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
-    // 2. Verifica se o próprio chefe está ocupado atacando ou invocando
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery ||
@@ -922,16 +909,12 @@ class OrcChefe extends Enemy {
                            currentPhase == CombatPhase.active2 || 
                            currentPhase == CombatPhase.recovery2;
 
-    // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
     if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
-      // O jogador tentou bater e o Chefe está livre: Levanta o Escudo!
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
-      // O jogador parou de bater: Abaixa o Escudo!
       currentPhase = CombatPhase.idle;
     }
 
-    // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
@@ -941,21 +924,16 @@ class OrcChefe extends Enemy {
         isFleeing = false;
       }
 
-      // --- LÓGICA DE MOVIMENTO ---
       if (isFleeing) {
-        // Foge para a direção OPOSTA ao jogador
         double dir = -(player.strafePosition - strafePosition).sign;
-        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
         strafePosition += dir * speed * dt;
       } else {
-        // Vai para a direção DO jogador (com zona morta para não tremer)
         if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
       }
 
-      // Garante que não vai sair da tela
       strafePosition = strafePosition.clamp(-1.0, 1.0);
     }
   }
@@ -973,20 +951,18 @@ class OrcChefe extends Enemy {
 
     if (currentPhase == CombatPhase.idle && isFrontRow) {
       
-      // 1. PRIORIDADE: Invocar o lacaio
       if (summonCooldown <= 0) {
         isSummoning = true;
         isFrontRow = false;
         currentPhase = CombatPhase.summon;
         animTimer = 1.0;
-        summonCooldown = 15.0 + Random().nextDouble() * 5.0; // Próximo goblin só daqui a ~17s
+        summonCooldown = 15.0 + Random().nextDouble() * 5.0; 
         return;
       }
 
-      // 2. ALTERNÂNCIA DE ATAQUES
       if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
         isSummoning = false;
-        isHeavyAttack = !isHeavyAttack; // Alterna entre normal e pesado!
+        isHeavyAttack = !isHeavyAttack;
 
         naoInterrompe = isHeavyAttack;
 
@@ -996,12 +972,9 @@ class OrcChefe extends Enemy {
           currentPhase = CombatPhase.windup;
         }
         
-        
-        // O ataque pesado tem um aviso (windup) BEM MAIOR para dar tempo de o jogador esquivar
         animTimer = isHeavyAttack ? 0.8 : 0.5; 
         attackCooldown = maxAttackCooldown;
         
-        // O dano sobe violentamente no ataque pesado
         damage = isHeavyAttack ? 25 : 15; 
       }
     }
@@ -1052,12 +1025,10 @@ class OrcChefe extends Enemy {
       Paint? auraPaint;
       
       if (isHeavyAttack && !isSummoning) {
-        // Aura vermelha do mal (Ataque Indefensável)
         auraPaint = Paint()
           ..color = Palette.vermelho.withOpacity(0.6)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
       } else if (isSummoning) {
-        // Aura verde brilhante (Invocação)
         auraPaint = Paint()
           ..color = Palette.verde.withOpacity(0.6)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
@@ -1068,7 +1039,7 @@ class OrcChefe extends Enemy {
       }
     }
 
-    super.render(canvas); // Desenha a sombra e o sprite normalmente
+    super.render(canvas); 
   }
 }
 
@@ -1090,28 +1061,23 @@ class BugEnemy extends Enemy {
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-    // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
-    // 2. Lê o próprio estado: Eu já comecei a atacar?
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery;
 
-    // 3. Le se o player está sem stamina
     if (player.stamina <= 0){
       attackCooldown = 0;
       isFleeing = false;
     }
 
-    // --- INTELIGÊNCIA DE DEFESA ---
     if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
     }
 
-    // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
@@ -1121,21 +1087,17 @@ class BugEnemy extends Enemy {
         isFleeing = false;
       }
 
-      // --- LÓGICA DE MOVIMENTO ---
       if (isFleeing) {
-        // Foge para a direção OPOSTA ao jogador
         double dir = -(player.strafePosition - strafePosition).sign;
-        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        if (dir == 0) dir = 1.0; 
         strafePosition += dir * speed * dt;
       } else {
-        // Vai para a direção DO jogador (com zona morta para não tremer)
         if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
       }
 
-      // Garante que não vai sair da tela
       strafePosition = strafePosition.clamp(-1.0, 1.0);
     }
   }
@@ -1166,7 +1128,6 @@ class WormEnemy extends Enemy {
         strafePosition += dir * speed * dt;
     }
 
-      // Garante que não vai sair da tela
     strafePosition = strafePosition.clamp(-1.0, 1.0);
     
   }
@@ -1198,13 +1159,11 @@ class OvoEnemy extends Enemy {
   @override
   void onMount() {
     super.onMount();
-    _fixedRow = isFrontRow; // Grava onde o ovo nasceu
+    _fixedRow = isFrontRow; 
   }
-
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
-    
   }
 
    void _spawnworm() {
@@ -1218,7 +1177,6 @@ class OvoEnemy extends Enemy {
 
     gameRef.combatOverlay.enemies.add(worm);
     parent?.add(worm);
-    
   }
 
   @override 
@@ -1336,10 +1294,10 @@ class FungoEnemy extends Enemy {
           currentPhase = CombatPhase.idle;
         }
       }
-      return; // Bloqueia a IA padrão enquanto ele conjura as magias
+      return; 
     }
     
-    super._updatePhase(dt); // Deixa a IA da classe pai processar morte, recuo, etc.
+    super._updatePhase(dt); 
   }
 
   void _castHealingCloud() {
@@ -1419,10 +1377,9 @@ class Fungo2Enemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
 
-    // Fungos atacam tanto da linha de trás quanto da frente!
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
       currentPhase = CombatPhase.windup;
-      animTimer = 0.8; // Ele demora um pouco para "carregar" o ataque (dá tempo do jogador agir)
+      animTimer = 0.8;
       attackCooldown = maxAttackCooldown;
     }
   }
@@ -1450,10 +1407,10 @@ class Fungo2Enemy extends Enemy {
           currentPhase = CombatPhase.idle; 
         }
       }
-      return; // Bloqueia a IA padrão enquanto ele conjura as magias
+      return; 
     }
     
-    super._updatePhase(dt); // Deixa a IA da classe pai processar morte, recuo, etc.
+    super._updatePhase(dt); 
   }
 
   @override void onHitStun() {
@@ -1481,7 +1438,7 @@ class InfectadoEnemy extends Enemy {
 
   InfectadoEnemy() : super(name: 'infectado',
     type: EnemyType.infectado,  damage: 12,
-    color: Palette.cinza, // Cor do escudo/armadura
+    color: Palette.cinza, 
     hp: 90, maxHp: 90, dropEssence: 40, width: 144, height: 144, speed: 0.55,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 20,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteFung],
@@ -1489,18 +1446,14 @@ class InfectadoEnemy extends Enemy {
   ) {
     isMelee = true;
   }
-
-  // --- REGRA DE OURO: Só recebe dano se NÃO estiver a guarder ---
   @override
   bool get isVulnerable => currentPhase != CombatPhase.guard;
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-    // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
-    // 2. Lê o próprio estado: Eu já comecei a atacar?
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery ||
@@ -1508,14 +1461,12 @@ class InfectadoEnemy extends Enemy {
                            currentPhase == CombatPhase.active2 || 
                            currentPhase == CombatPhase.recovery2;
 
-    // --- INTELIGÊNCIA DE DEFESA ---
     if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
     }
 
-    // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
@@ -1525,21 +1476,17 @@ class InfectadoEnemy extends Enemy {
         isFleeing = false;
       }
 
-      // --- LÓGICA DE MOVIMENTO ---
       if (isFleeing) {
-        // Foge para a direção OPOSTA ao jogador
         double dir = -(player.strafePosition - strafePosition).sign;
-        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        if (dir == 0) dir = 1.0;
         strafePosition += dir * speed * dt;
       } else {
-        // Vai para a direção DO jogador (com zona morta para não tremer)
         if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
       }
 
-      // Garante que não vai sair da tela
       strafePosition = strafePosition.clamp(-1.0, 1.0);
     }
   }
@@ -1555,9 +1502,6 @@ class InfectadoEnemy extends Enemy {
     bool isCloseY = true;
 
     if (currentPhase == CombatPhase.idle && isFrontRow) {
-      
-
-      // 2. ALTERNÂNCIA DE ATAQUES
       if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
         isPoisonAtk = !isPoisonAtk;
         isMelee = !isPoisonAtk;
@@ -1594,10 +1538,10 @@ class InfectadoEnemy extends Enemy {
           currentPhase = CombatPhase.idle;
         }
       }
-      return; // Bloqueia a IA padrão enquanto ele conjura as magias
+      return;
     }
     
-    super._updatePhase(dt); // Deixa a IA da classe pai processar morte, recuo, etc.
+    super._updatePhase(dt); 
   }
 
   Future<void> _shootPoisonCloud() async {
@@ -1609,8 +1553,8 @@ class InfectadoEnemy extends Enemy {
 }
 
 class GarraRainhaEnemy extends Enemy {
-  final Enemy rainha; // Referência ao corpo principal
-  final double strafeOffset; // Distância fixa do centro da rainha
+  final Enemy rainha;
+  final double strafeOffset; 
   GarraRainhaEnemy(this.rainha, this.strafeOffset) : super(
     name: 'garra',
     type: EnemyType.garra, 
@@ -1661,7 +1605,6 @@ class RainhaInsetoEnemy extends Enemy {
 
   double summonCooldown = 20;
 
-  // A MÁGICA DA BLINDAGEM: Verifica se existem Garras Vivas no cenário!
   bool get _clawsDefeated {
     return !gameRef.combatOverlay.enemies.any((e) => e is GarraRainhaEnemy && e.isAlive);
   }
@@ -1680,18 +1623,15 @@ class RainhaInsetoEnemy extends Enemy {
   @override
   bool get canChangeRow => !_garrasEstaoAtacando;
 
-  // Sobrescreve a vulnerabilidade base do monstro
   @override
   bool get isVulnerable => _clawsDefeated;
 
   @override
   void updateBehavior(double dt, PlayerCombatStats player) {
-    // Se as garras morrerem e ela estiver escondida, ela avança para a linha de frente furiosa!
     if (_clawsDefeated && !isFrontRow) {
       isFrontRow = true;
     }
 
-    // Se move lentamente atrás do jogador para tentar mirar o veneno
     if(!_garrasEstaoAtacando){
       if (strafePosition < player.strafePosition - 0.1) {
         strafePosition += speed * dt;
@@ -1710,23 +1650,16 @@ class RainhaInsetoEnemy extends Enemy {
 
     if (summonCooldown <= 0 && currentPhase == CombatPhase.idle) {
       currentPhase = CombatPhase.windup;
-      animTimer = 1.0; // Animação longa avisando o jogador
+      animTimer = 1.0; 
       summonCooldown = 20;
       isSummoningEgg = true;
-      // Se as garras estiverem vivas, ela foca mais em botar ovos.
-      // Se estiver sozinha, ela foca mais em jogar veneno!
-      //double eggChance = _clawsDefeated ? 0.30 : 0.60;
-      //isSummoningEgg = Random().nextDouble() < eggChance;
     }
 
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
       currentPhase = CombatPhase.windup;
-      animTimer = 1.0; // Animação longa avisando o jogador
+      animTimer = 1.0; 
       attackCooldown = maxAttackCooldown;
       
-      // Se as garras estiverem vivas, ela foca mais em botar ovos.
-      // Se estiver sozinha, ela foca mais em jogar veneno!
-      //double eggChance = _clawsDefeated ? 0.30 : 0.60;
       isPoisonCloud = Random().nextDouble() < 0.9;
     }
   }
@@ -1767,9 +1700,8 @@ class RainhaInsetoEnemy extends Enemy {
 
   void _spawnEgg() {
     var ovo = OvoEnemy();
-    ovo.isFrontRow = false; // Bota o ovo na linha de trás por segurança
+    ovo.isFrontRow = false;
     
-    // O ovo cai em um lado aleatório da rainha
     ovo.strafePosition = strafePosition + (Random().nextBool() ? 0.4 : -0.4);
     ovo.strafePosition = ovo.strafePosition.clamp(-1.0, 1.0);
 
@@ -1802,29 +1734,24 @@ class EsqueletoEnemy extends Enemy {
     isMelee = true;
   }
 
-  // --- REGRA DE OURO: Só recebe dano se NÃO estiver a guarder ---
   @override
   bool get isVulnerable => currentPhase != CombatPhase.guard;
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-    // 1. Lê a "mente" do jogador: O jogador levantou a espada ou está a atacar?
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
-    // 2. Lê o próprio estado: Eu já comecei a atacar?
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery;
 
-    // --- INTELIGÊNCIA DE DEFESA ---
     if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
     }
 
-    // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
         isFleeing = true;
@@ -1834,21 +1761,17 @@ class EsqueletoEnemy extends Enemy {
         isFleeing = false;
       }
 
-      // --- LÓGICA DE MOVIMENTO ---
       if (isFleeing) {
-        // Foge para a direção OPOSTA ao jogador
         double dir = -(player.strafePosition - strafePosition).sign;
-        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        if (dir == 0) dir = 1.0;
         strafePosition += dir * speed * dt;
       } else {
-        // Vai para a direção DO jogador (com zona morta para não tremer)
         if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
       }
 
-      // Garante que não vai sair da tela
       strafePosition = strafePosition.clamp(-1.0, 1.0);
     }
   }
@@ -1894,11 +1817,8 @@ class JesterEnemy extends Enemy {
     return !isAttacking && !_isHopping;
   }
 
-  // 2. CORREÇÃO: A verdadeira defesa de dano!
   @override
   bool get isVulnerable {
-    // Só leva dano se estiver nas fases de ataque. 
-    // Na fase idle, pulando, ou na sua nova fase 'guard', ele bloqueia!
     return currentPhase == CombatPhase.windup || 
            currentPhase == CombatPhase.active || 
            currentPhase == CombatPhase.recovery;
@@ -1913,7 +1833,7 @@ class JesterEnemy extends Enemy {
     if (summonCooldown <= 0) {
         isSummoning = true;
         currentPhase = CombatPhase.windup;
-        animTimer = 0.5; // Fica 1.5s tocando o berrante / fazendo a pose
+        animTimer = 0.5; 
         summonCooldown = 10.0 + Random().nextDouble() * 5.0; 
         return;
       }
@@ -1934,20 +1854,14 @@ class JesterEnemy extends Enemy {
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery;
 
-    // --- INTELIGÊNCIA DE DEFESA ---
     if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
-      // Se o jogador estiver atacando, o Jester "congela" na pose de defesa.
-      // E como isVulnerable retornará 'false', ele vai bloquear o dano perfeitamente!
       currentPhase = CombatPhase.guard;
       animTimer = 0.5; 
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
-      // Assim que o jogador terminar de atacar, ele baixa a guarda rapidamente
       animTimer -= dt;
       if (animTimer <= 0) currentPhase = CombatPhase.idle;
     }
 
-    // 1. LÓGICA DE DECISÃO DO PULO
-    // Só pode decidir pular se estiver parado (idle) e não estiver no meio de um pulo
     if (currentPhase == CombatPhase.idle || currentPhase == CombatPhase.guard && !_isHopping) {
       _hopTimer -= dt;
 
@@ -1962,7 +1876,6 @@ class JesterEnemy extends Enemy {
       }
     }
 
-    // 2. LÓGICA DE MOVIMENTO HORIZONTAL
     if (_isHopping) {
       if ((strafePosition - _targetStrafe).abs() > 0.05) {
         strafePosition += (_targetStrafe > strafePosition ? 1 : -1) * speed * dt;
@@ -1983,10 +1896,8 @@ class JesterEnemy extends Enemy {
 
     if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
-    // 3. LÓGICA DE ATAQUE (Disparo do Projétil)
-    // Usamos o update principal porque a classe base desativa o updateBehavior enquanto ataca!
     if (currentPhase == CombatPhase.active && !attackHit) {
-      attackHit = true; // Trava para atirar apenas 1 vez por animação
+      attackHit = true;
 
       if(isSummoning){
         isSummoning= false;
@@ -2037,11 +1948,8 @@ class NagaEnemy extends Enemy {
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteNaga]
   ) {
     isMelee = true;
-    damage = 5; // Dano base do ataque normal
+    damage = 5; 
   }
-
-  // MÁGICA 1: Se ele estiver invocando, desligamos o melee para a hitbox não machucar o jogador!
-  
 
   @override
   bool get isVulnerable => currentPhase != CombatPhase.guard;
@@ -2049,10 +1957,8 @@ class NagaEnemy extends Enemy {
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
-    // 1. Lê a mente do jogador (Igual ao Orc comum)
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
-    // 2. Verifica se o próprio chefe está ocupado atacando ou invocando
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery ||
@@ -2060,16 +1966,12 @@ class NagaEnemy extends Enemy {
                            currentPhase == CombatPhase.active2 || 
                            currentPhase == CombatPhase.recovery2;
 
-    // --- INTELIGÊNCIA DE DEFESA (Igual ao Orc comum) ---
     if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3) {
-      // O jogador tentou bater e o Chefe está livre: Levanta o Escudo!
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
-      // O jogador parou de bater: Abaixa o Escudo!
       currentPhase = CombatPhase.idle;
     }
 
-    // --- MOVIMENTO NORMAL ---
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       
 
@@ -2081,21 +1983,16 @@ class NagaEnemy extends Enemy {
         isFleeing = false;
       }
 
-      // --- LÓGICA DE MOVIMENTO ---
       if (isFleeing) {
-        // Foge para a direção OPOSTA ao jogador
         double dir = -(player.strafePosition - strafePosition).sign;
-        if (dir == 0) dir = 1.0; // Previne que ele fique congelado se estiverem em cima um do outro
+        if (dir == 0) dir = 1.0; 
         strafePosition += dir * speed * dt;
       } else {
-        // Vai para a direção DO jogador (com zona morta para não tremer)
         if (distanceToPlayer > 0.01) {
           double dir = (player.strafePosition - strafePosition).sign;
           strafePosition += dir * speed * dt;
         }
       }
-
-      // Garante que não vai sair da tela
       strafePosition = strafePosition.clamp(-1.0, 1.0);
     }
   }
@@ -2112,10 +2009,8 @@ class NagaEnemy extends Enemy {
 
     if (currentPhase == CombatPhase.idle && isFrontRow) {
       
-
-      // 2. ALTERNÂNCIA DE ATAQUES
       if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0) {
-        isHeavyAttack = !isHeavyAttack; // Alterna entre normal e pesado!
+        isHeavyAttack = !isHeavyAttack;
 
         naoInterrompe = isHeavyAttack;
 
@@ -2125,12 +2020,9 @@ class NagaEnemy extends Enemy {
           currentPhase = CombatPhase.windup;
         }
         
-        
-        // O ataque pesado tem um aviso (windup) BEM MAIOR para dar tempo de o jogador esquivar
         animTimer = isHeavyAttack ? 0.8 : 0.5; 
         attackCooldown = maxAttackCooldown;
         
-        // O dano sobe violentamente no ataque pesado
         damage = isHeavyAttack ? 10 : 5; 
       }
     }
@@ -2173,7 +2065,7 @@ class NagaEnemy extends Enemy {
 
 class HandEnemy extends Enemy {
   double _teleportTimer = 0.0;
-  int _nextAttackType = 1; // 1 = Tiro Direto, 2 = Chuva de Pedras
+  int _nextAttackType = 1;
 
   HandEnemy() : super(
     name: 'mao',
@@ -2206,7 +2098,6 @@ class HandEnemy extends Enemy {
     attackCooldown -= dt; 
     
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle) {
-      // Decide aleatoriamente qual será o próximo ataque (1 ou 2)
       _nextAttackType = Random().nextBool() ? 1 : 2;
       
       if (_nextAttackType == 1) {
@@ -2214,24 +2105,20 @@ class HandEnemy extends Enemy {
       } else {
         currentPhase = CombatPhase.windup2;
       }
-      animTimer = 0.7; // Windup um pouco mais longo para dar tempo do jogador reagir
+      animTimer = 0.7;
       attackCooldown = maxAttackCooldown;
     }
   }
 
   @override
   void render(Canvas canvas) {
-    // Se a Mão estiver parada e faltarem 0.4 segundos ou menos para o teleporte...
     if (currentPhase == CombatPhase.idle && _teleportTimer > 0 && _teleportTimer <= 0.4) {
       
-      // ...nós usamos a mesma matemática de piscar do hitFlashTimer!
-      // Multiplicar por 20 faz o piscar ser bem frenético e assustador.
       if ((_teleportTimer * 20).toInt() % 2 == 0) {
-        return; // Retorna prematuramente para pular o desenho neste frame (ficando invisível)
+        return; 
       }
     }
     
-    // Se não entrou no 'if' acima (ou se é o frame visível do piscar), desenha normalmente:
     super.render(canvas);
   }
 
@@ -2240,7 +2127,6 @@ class HandEnemy extends Enemy {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
-    // Atualizado para reconhecer que está atacando mesmo se for o Ataque 2
     bool isSelfAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
                            currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
 
@@ -2269,9 +2155,6 @@ class HandEnemy extends Enemy {
 
     if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
-    // =========================================================================
-    // NOVO: RELÓGIO CUSTOMIZADO PARA AS FASES SECUNDÁRIAS
-    // A classe base não conhece o "windup2", então nós fazemos a transição aqui!
     if (currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2) {
       animTimer -= dt;
       if (animTimer <= 0) {
@@ -2289,11 +2172,7 @@ class HandEnemy extends Enemy {
         }
       }
     }
-    // =========================================================================
 
-    // --- EXECUÇÃO DOS ATAQUES (Separados por fase!) ---
-    
-    // Dispara apenas quando atingir o active 1
     if (currentPhase == CombatPhase.active && !attackHit) {
       attackHit = true; 
       gameRef.combatOverlay.add(ArcProjectile(
@@ -2301,7 +2180,6 @@ class HandEnemy extends Enemy {
       ));
     }
 
-    // Dispara apenas quando atingir o active 2
     if (currentPhase == CombatPhase.active2 && !attackHit) {
       attackHit = true; 
 
@@ -2341,11 +2219,9 @@ class DollEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
-    // FASE DE PATRULHA
     if (currentPhase == CombatPhase.idle) {
-      targetY = flightHeight; // Garante que a intenção é ficar no teto
+      targetY = flightHeight;
 
-      // Só flutua de um lado pro outro se já tiver chegado lá em cima
       if ((yPosition - flightHeight).abs() < 0.05) {
         strafePosition += currentDir * speed * dt;
         
@@ -2359,11 +2235,10 @@ class DollEnemy extends Enemy {
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     attackCooldown -= dt;
    
-    // Decide atacar se o tempo estourou E se ele estiver fisicamente lá no alto
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 1.0; // Tempo de preparo/mergulho
-      targetY = attackHeight; // Comando para a classe pai: "Desça para o chão!"
+      animTimer = 0.5;
+      targetY = attackHeight; 
       attackCooldown = maxAttackCooldown;
       targetStrafe = gameRef.playerCombatStats.strafePosition;
     }
@@ -2371,45 +2246,38 @@ class DollEnemy extends Enemy {
 
   @override
   void update(double dt) {
-    super.update(dt); // A classe pai resolve a cor, timers e sprites
+    super.update(dt);
 
     if (currentPhase == CombatPhase.windup) {
       priority = 15;
       targetY = attackHeight;
 
-      // 1. Descobre a diferença nos eixos X e Y
       double dx = targetStrafe - strafePosition;
       double dy = targetY - yPosition;
       
-      // 2. Calcula a distância total em linha reta (Teorema de Pitágoras)
       double distance = sqrt(dx * dx + dy * dy);
 
-      // 3. Move o morcego simultaneamente nos dois eixos se ainda não chegou ao alvo
       if (distance > 0.01) {
-        double diveSpeed = speed*3; // Velocidade do mergulho (Aumente se quiser mais agressivo)
+        double diveSpeed = speed*3;
         double moveStep = diveSpeed * dt;
 
-        // Trava de segurança para ele não "passar do ponto" e tremer
         if (moveStep > distance) moveStep = distance;
 
-        // Distribui a velocidade perfeitamente na diagonal
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
       }
 
     } else {
       if(isDying) return;
-      // Se ele não está a mergulhar, usa a física normal de subida ou de ficar parado
       if ((yPosition - targetY).abs() > 0.01) {
-        double verticalSpeed = speed; // Velocidade que ele volta para o teto
+        double verticalSpeed = speed;
         yPosition += (targetY > yPosition ? 1 : -1) * verticalSpeed * dt;
       }
 
-      // Controla a intenção de altura baseada na fase
       if (currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.active || currentPhase == CombatPhase.hit) {
-        targetY = attackHeight; // Mantém no chão para você poder bater nele
+        targetY = attackHeight;
       } else if (currentPhase == CombatPhase.idle) {
-        targetY = flightHeight; // O ataque acabou, manda subir de volta para o teto!
+        targetY = flightHeight;
         priority = isFrontRow ? 10 : 0;
       }
     }
@@ -2464,12 +2332,11 @@ class GoblinShopEnemy extends Enemy {
         isMelee = false;
         currentPhase = CombatPhase.windup2; 
         animTimer = 0.5;
-        attackCooldown = maxAttackCooldown; // IMPORTANTE: Reseta o cooldown para a magia também!
+        attackCooldown = maxAttackCooldown;
       }
     }
   }
 
-  // NOTE QUE O UPDATE VOLTOU A SER 'void' NORMAL (Sem async)
   @override
   void update(double dt) {
     super.update(dt); 
@@ -2721,7 +2588,6 @@ class AberraBrutoEnemy extends Enemy {
       isFleeing = false;
     }
 
-    // --- LÓGICA DE MOVIMENTO ---
     if (isFleeing) {
       double dir = -(player.strafePosition - strafePosition).sign;
       if (dir == 0) dir = 1.0; 
@@ -2912,7 +2778,6 @@ class AberraCultistaEnemy extends Enemy {
     attackCooldown -= dt;
     //bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
 
-    // NOVO: Adicionado '&& isFrontRow' - Inimigos na linha de trás NUNCA atacam!
     if (distancePixels <= reachPixels && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
       isHealingAttack = Random().nextDouble() < 0.40;
       isMelee = !isHealingAttack;

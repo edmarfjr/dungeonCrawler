@@ -4,22 +4,42 @@ import 'package:flame_audio/flame_audio.dart';
 class AudioManager {
   static bool isMusicMuted = false;
   static bool isSfxMuted = false;
-  static String? _currentTrack;      
+  static String? currentTrack;      
   static bool _isBgmInitialized = false;
   static bool _isBgmPausedInternally = false;
+  // Níveis de volume para a Interface (0 a 10)
+  static int bgmVolumeLevel = 3;
+  static int sfxVolumeLevel = 10;
 
-  static void playSfx(String file, {double volume = 1.0}) {
-    if (!isSfxMuted) {
-      FlameAudio.play(file, volume: volume);
+  // Multiplicadores reais para o motor de áudio (0.0 a 1.0)
+  static double _bgmVolume = 0.3;
+  static double _sfxVolume = 1.0;
+
+  static void applyVolumes() {
+    // A música costuma ser muito alta, então o máximo (10) será 50% do volume real
+    _bgmVolume = (bgmVolumeLevel / 10.0) * 0.5; 
+    
+    // Os efeitos sonoros vão de 0.0 a 1.0
+    _sfxVolume = sfxVolumeLevel / 10.0;
+    
+    // Se a música já estiver a tocar, atualiza o volume instantaneamente!
+    if (_isBgmInitialized && bgmVolumeLevel > 0) {
+       FlameAudio.bgm.audioPlayer.setVolume(_bgmVolume);
     }
   }
 
-  static void playBgm(String track, {double volume = 0.3}) {
-    _currentTrack = track; 
+  static void playSfx(String file, {double volume = 1.0}) {
+    if (sfxVolumeLevel > 0) {
+      FlameAudio.play(file, volume: _sfxVolume * volume);
+    }
+  }
+
+  static void playBgm(String track, {double volume = 1.0}) {
+    currentTrack = track; 
     _isBgmPausedInternally = false;
 
-    if (!isMusicMuted) {
-      FlameAudio.bgm.play(track, volume: volume);
+    if (bgmVolumeLevel > 0) {
+      FlameAudio.bgm.play(track, volume: _bgmVolume * volume);
       _isBgmInitialized = true; 
     } else {
       _isBgmInitialized = false;
@@ -27,7 +47,7 @@ class AudioManager {
   }
 
   static void stopBgm() {
-    _currentTrack = null;
+    currentTrack = null;
     _isBgmInitialized = false;
     _isBgmPausedInternally = false;
     FlameAudio.bgm.stop();
@@ -43,11 +63,11 @@ class AudioManager {
   static void resumeBgm() {
     _isBgmPausedInternally = false; 
 
-    if (!isMusicMuted && _currentTrack != null) {
+    if (!isMusicMuted && currentTrack != null) {
       if (_isBgmInitialized) {
         FlameAudio.bgm.resume();
       } else {
-        FlameAudio.bgm.play(_currentTrack!, volume: 0.3);
+        FlameAudio.bgm.play(currentTrack!, volume: 0.3);
         _isBgmInitialized = true;
       }
     }
@@ -65,14 +85,44 @@ class AudioManager {
     if (isMusicMuted) {
       FlameAudio.bgm.pause();
     } else {
-      if (_currentTrack != null && !_isBgmPausedInternally) {
+      if (currentTrack != null && !_isBgmPausedInternally) {
         if (_isBgmInitialized) {
           FlameAudio.bgm.resume();
         } else {
-          FlameAudio.bgm.play(_currentTrack!, volume: 0.3);
+          FlameAudio.bgm.play(currentTrack!, volume: 0.3);
           _isBgmInitialized = true;
         }
       }
     }
   }
+  static void changeSfxVolume(int delta) {
+    sfxVolumeLevel = (sfxVolumeLevel + delta).clamp(0, 10); // Mantém entre 0 e 10
+    applyVolumes();
+    SettingsManager.saveSfxVolume(sfxVolumeLevel);
+    
+    // Toca um som de feedback rápido ao ajustar o volume (se não estiver no 0)
+    if (delta != 0 && sfxVolumeLevel > 0) {
+      playSfx('sfx/hover.wav'); 
+    }
+  }
+
+  static void changeBgmVolume(int delta) {
+    bgmVolumeLevel = (bgmVolumeLevel + delta).clamp(0, 10);
+    applyVolumes();
+    SettingsManager.saveBgmVolume(bgmVolumeLevel);
+
+    if (bgmVolumeLevel == 0) {
+      FlameAudio.bgm.pause(); // Muta a música
+    } else {
+      if (currentTrack != null && !_isBgmPausedInternally) {
+        if (_isBgmInitialized) {
+          FlameAudio.bgm.resume(); 
+        } else {
+          FlameAudio.bgm.play(currentTrack!, volume: _bgmVolume);
+          _isBgmInitialized = true;
+        }
+      }
+    }
+  }
+
 }

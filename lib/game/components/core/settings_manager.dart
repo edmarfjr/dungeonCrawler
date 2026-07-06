@@ -8,6 +8,10 @@ class SettingsManager {
   // Carrega tudo quando o jogo abre
   static Future<void> init() async {
     prefs = await SharedPreferences.getInstance();
+
+    AudioManager.bgmVolumeLevel = prefs.getInt('bgmVolume') ?? 3; // Padrão: 3
+    AudioManager.sfxVolumeLevel = prefs.getInt('sfxVolume') ?? 10; // Padrão: 10
+    AudioManager.applyVolumes(); // Aplica a matemática para o motor de som
     
     // --- CARREGAR ÁUDIO ---
     // Se não encontrar o save (?? false), o padrão é começar ligado (false = não mutado)
@@ -20,6 +24,13 @@ class SettingsManager {
     I18n.currentLanguage = (savedLang == 'en') ? AppLanguage.en : AppLanguage.pt;
   }
 
+  static Future<void> saveBgmVolume(int level) async {
+    await prefs.setInt('bgmVolume', level);
+  }
+
+  static Future<void> saveSfxVolume(int level) async {
+    await prefs.setInt('sfxVolume', level);
+  }
   // Métodos para salvar cada alteração individualmente
   static Future<void> saveMusic(bool isMuted) async {
     await prefs.setBool('isMusicMuted', isMuted);

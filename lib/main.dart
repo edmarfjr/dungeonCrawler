@@ -2,10 +2,12 @@ import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/core/settings_manager.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
 import 'package:dungeon_crawler/game/overlays/gameover_overlay.dart';
+import 'package:dungeon_crawler/game/overlays/intro_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/main_menu_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/manual_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/pause_menu_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/settings_menu_overlay.dart';
+import 'package:dungeon_crawler/game/overlays/splash_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/vitory_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
@@ -63,7 +65,9 @@ class _GameScreenState extends State<GameScreen> {
                   game: _game,
                   // --- 1. MAPEAMENTO DOS MENUS ---
                   overlayBuilderMap: {
+                    'Splash': (context, game) => SplashOverlay(game: game as DungeonCrawlerGame),
                     'MainMenu': (context, game) => MainMenuOverlay(game: game as DungeonCrawlerGame),
+                    'Intro': (context, game) => IntroOverlay(game: game as DungeonCrawlerGame),
                     'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
                     'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
                     'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
@@ -71,7 +75,7 @@ class _GameScreenState extends State<GameScreen> {
                     'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
                   },
                   // Define qual menu aparece primeiro quando abre o app
-                  initialActiveOverlays: const ['MainMenu'],
+                  initialActiveOverlays: const ['Splash'],
                 ),
               ),
             ),
