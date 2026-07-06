@@ -169,7 +169,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
       'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
       'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
-      'sfx/landing.wav', 'sfx/denied.wav',
+      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav'
     ]);
     
     await images.loadAll([
@@ -182,7 +182,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/organ.png', 'itens/orcSword.png', 'itens/bracerNaga.png', 'itens/bracerFung.png',
       'itens/armorBug.png', 'itens/bola.png', 'itens/coin.png', 'itens/claymore.png', 'itens/warhammer.png',
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
-      'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png',
+      'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png',
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
@@ -1446,7 +1446,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro,ItemDatabase.armaduraAco,
             ItemDatabase.armaduraBronze, ItemDatabase.gambeson, ItemDatabase.chainMail,
             ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.escudoTorre,
-            ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+            ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm,
           ];
           List<Item> consumiveis = [
             ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
@@ -1463,13 +1463,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           runStartAnimTimer = 0.0;
           String dung = '';
           if(dungeon.level == 4){
-            dung = '\nHIVE';
+            dung = I18n.t('dung2');
           }else if(dungeon.level == 8){
-            dung = "\nNECROMANCER'S CASTLE";
+            dung = I18n.t('dung3');
           }else if(dungeon.level == 4){
-            dung = '\nOUTER WORLD';
+            dung = I18n.t('dung4');
           }
-          combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+          combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
 
           if(dungeon.level >= 13){ currentState = GameState.vitory; overlays.add('Vitory'); }
         });
@@ -1491,7 +1491,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           ItemDatabase.espadaLonga, ItemDatabase.zweihander, ItemDatabase.varinha, ItemDatabase.escudoTorre, ItemDatabase.warhammer,
           ItemDatabase.clava, ItemDatabase.claymore, ItemDatabase.lanca, ItemDatabase.armaduraCouro, ItemDatabase.chainMail,
           ItemDatabase.machado, ItemDatabase.firePillar, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro,
-          ItemDatabase.piercingShot, ItemDatabase.toxicCloud,
+          ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm,
         ];
 
         List<Item> unownedEquipments = allEquipments.where((equip) => !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name)).toList();
@@ -1640,7 +1640,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     shopInventory = [ ItemDatabase.clava, ItemDatabase.gambeson, ItemDatabase.escudoFerro, ItemDatabase.staminaPotion ];
     combatOverlay.enemies.clear();
-    combatOverlay.addFloatingText('-Floor ${dungeon.level}-\nDUNGEON',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
   }
 
   void startGame() {
@@ -1654,7 +1653,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void finishIntro() {
     currentState = GameState.exploration;
     overlays.remove('Intro');
-    combatOverlay.addFloatingText('-Floor ${dungeon.level}-\nDUNGEON',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+    combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
     isRunStartAnimating = true;
     runStartAnimTimer = 0.0;
   }

@@ -98,13 +98,13 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                     decoration: TextDecoration.none, 
                   )
                 ),
-                const SizedBox(height: 80),
+                const SizedBox(height: 260),
                 const Text(
-                  "BY EDMAUL POWERED BY FLAME FLUTTER",
+                  "By EDMAUL made with FLAME FLUTTER",
                   style: TextStyle(
                     fontFamily: 'pixelFont',
                     color: Palette.branco,
-                    fontSize: 18,
+                    fontSize: 12,
                     decoration: TextDecoration.none,
                   ),
                 ),

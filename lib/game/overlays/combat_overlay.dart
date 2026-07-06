@@ -67,8 +67,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   List<Enemy> enemies = [];
   double _walkTimer = 0.0;
 
-  void addFloatingText(String text, Rect targetRect, Color color,{double speedY = 60}) {
-    add(FloatingText(text, targetRect.center.dx, targetRect.top + 20, color,speedY: speedY));
+  void addFloatingText(String text, Rect targetRect, Color color,{double speedY = 60, double tmr = 1.5}) {
+    add(FloatingText(text, targetRect.center.dx, targetRect.top + 20, color,speedY: speedY, maxLifeTime: tmr));
   }
 
   CombatOverlay({

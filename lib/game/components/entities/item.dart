@@ -432,7 +432,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get firePillar => Item('firePillar', ItemType.spell, 'itens/fire.png', 5, manaCost: 15, value:6, cor: Colors.white, onUse: (item, game) async {
+  static Item get firePillar => Item('firePillar', ItemType.spell, 'itens/fire.png', 5, manaCost: 10, value:6, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
@@ -447,7 +447,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get piercingShot => Item('piercingShot', ItemType.spell, 'itens/piercing.png', 4, manaCost: 10, value:6, cor: Colors.white, onUse: (item, game) async {
+  static Item get piercingShot => Item('piercingShot', ItemType.spell, 'itens/piercing.png', 4, manaCost: 5, value:6, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
@@ -461,7 +461,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get toxicCloud => Item('toxicCloud', ItemType.spell, 'itens/poison.png', 1, manaCost: 15, value:6, cor: Palette.verde, onUse: (item, game) async {
+  static Item get toxicCloud => Item('toxicCloud', ItemType.spell, 'itens/poison.png', 1, manaCost: 10, value:6, cor: Palette.verde, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
       game.playerCombatStats.mana += item.manaCost; // Devolve a mana!
@@ -473,5 +473,28 @@ class ItemDatabase {
        game.playerCombatStats.strafePosition, 0.7, 0, item.power*game.playerCombatStats.wis, Palette.verde.withAlpha(180), width: 80, height: 180
       , isPiercing: true,hitCooldown: 0.5,img : img, isFlip: true
     ));
+  });
+
+  static Item get thunderStorm => Item('thunderStorm', ItemType.spell, 'itens/raio.png', 5, manaCost: 15, value:16,cor: Colors.white, quantity: 1, onUse: (item, game) {
+    if (game.currentState != GameState.combat) {
+      game.showMessage(I18n.t('guarda_batalha'));
+      item.quantity++;
+      return;
+    }
+    AudioManager.playSfx('sfx/thunder.wav');
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.amarelo;
+    for (var enemy in game.combatOverlay.enemies) {
+      if (enemy.isAlive) { 
+        enemy.hp -= item.power*game.playerCombatStats.wis; 
+        enemy.applyHitStun(0.6); 
+        if (enemy.hp <= 0) { 
+          enemy.hp = 0; 
+          enemy.isDying = true; 
+          game.encounterEssence += enemy.dropEssence; 
+          game.encounterDrop.addAll(enemy.drop);
+        } 
+      }
+    }
   });
 }
