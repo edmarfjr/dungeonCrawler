@@ -41,7 +41,7 @@ class _IntroOverlayState extends State<IntroOverlay> {
   }
 
   void _startTyping() {
-    typingTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+    typingTimer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
       if (!mounted) {
         timer.cancel();
         return;

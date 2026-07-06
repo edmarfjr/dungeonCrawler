@@ -311,7 +311,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     await FlameAudio.audioCache.loadAll([
       'music/8-bit-dungeon.mp3',
       'music/main-menu.ogg',
-      'music/boss-battle.mp3'
+      'music/boss-battle.mp3',
       'music/gameover.mp3'
     ]);
   }

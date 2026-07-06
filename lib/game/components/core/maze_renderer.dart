@@ -151,9 +151,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
            _drawFloorTile(canvas, cx, cz, doorImage, Colors.white);
         }
 
-        if (tile == TileType.entry) {
-           _drawCeiling(canvas, cx, cz, doorImage2, Colors.white);
-        }
+        //if (tile == TileType.entry) {
+        //   _drawCeiling(canvas, cx, cz, doorImage2, Colors.white);
+        //}
 
         
 
