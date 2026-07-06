@@ -99,6 +99,16 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                   )
                 ),
                 const SizedBox(height: 80),
+                const Text(
+                  "BY EDMAUL POWERED BY FLAME FLUTTER",
+                  style: TextStyle(
+                    fontFamily: 'pixelFont',
+                    color: Palette.branco,
+                    fontSize: 18,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                
                 /*
                 // Só exibe o "PRESSIONE QUALQUER BOTAO" se o jogo não estiver a fazer Fade-Out
                 if (!_isTransitioning)
