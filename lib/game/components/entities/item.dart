@@ -284,9 +284,7 @@ class ItemDatabase {
     game.playerCombatStats.vfxTimer = 0.5;
     game.playerCombatStats.vfxColor = Palette.verdeCla;
     game.showMessage(I18n.t('recupera_stamina'));
-    //if (game.currentState == GameState.exploration) {
-   // game.showMessage("Você recuperou ${item.power} de Stamina!");
-    //}
+    
   });
 
   static Item get reflexPotion => Item('potAmarela', ItemType.consumable, 'itens/potionAmarela.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
@@ -294,19 +292,15 @@ class ItemDatabase {
     game.showMessage(I18n.t('reflexo'));
     game.playerCombatStats.vfxTimer = 0.5;
     game.playerCombatStats.vfxColor = Palette.amarelo;
-    //if (game.currentState == GameState.exploration) {
-   // game.showMessage("Você recuperou ${item.power} de Stamina!");
-    //}
+    
   });
 
   static Item get strPotion => Item('potPreta', ItemType.consumable, 'itens/potionPreta.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.buffForcaTmr = 6;
-    game.showMessage(I18n.t('forca'));
+    game.showMessage(I18n.t('forcaBns'));
     game.playerCombatStats.vfxTimer = 0.5;
     game.playerCombatStats.vfxColor = Palette.cinzaEsc;
-    //if (game.currentState == GameState.exploration) {
-   // game.showMessage("Você recuperou ${item.power} de Stamina!");
-    //}
+    
   });
 
   static Item get bugOrgan => Item('orgao', ItemType.consumable, 'itens/organ.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
@@ -314,9 +308,7 @@ class ItemDatabase {
     game.playerCombatStats.vfxTimer = 0.5;
     game.playerCombatStats.vfxColor = Palette.vermelhoCla;
     game.showMessage("Você se sente melhor!");
-    //if (game.currentState == GameState.exploration) {
-   // game.showMessage("Você recuperou ${item.power} de Stamina!");
-    //}
+    
   });
 
   static Item get bomb => Item('bomba', ItemType.consumable, 'itens/bomb.png', cor: Colors.white, 30, quantity: 1, onUse: (item, game) {
@@ -389,7 +381,7 @@ class ItemDatabase {
   });
 
   
-  static Item get slimeEye => Item('olho_slime', ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Colors.white, onUse: (item, game) async {
+  static Item get slimeEye => Item('olhoSlime', ItemType.consumable, 'itens/slime_eye.png', 3, quantity: 1, cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
       item.quantity++;
