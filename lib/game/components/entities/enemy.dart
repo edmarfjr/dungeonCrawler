@@ -1021,8 +1021,10 @@ class OrcChefe extends Enemy {
 
   @override
   void render(Canvas canvas) {
-    if (currentPhase == CombatPhase.windup) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.windup2) {
       Paint? auraPaint;
+      double scaleToUse = (visualScale > 0) ? visualScale : 1.0;
+      double raio = hurtboxWidth * scaleToUse;
       
       if (isHeavyAttack && !isSummoning) {
         auraPaint = Paint()
@@ -1035,7 +1037,7 @@ class OrcChefe extends Enemy {
       }
 
       if (auraPaint != null) {
-        canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 0.5, auraPaint);
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), raio, auraPaint);
       }
     }
 
@@ -1946,10 +1948,7 @@ class NagaEnemy extends Enemy {
     width: 144, height: 144, speed: 0.45, damage: 20,
     hurtboxWidth: 100, hurtboxHeight: 170, hurtboxOffsetY: 0,
     hitboxWidth: 90, hitboxHeight: 90, hitboxOffsetY: 10,drop: [ItemDatabase.braceleteNaga]
-  ) {
-    isMelee = true;
-    damage = 5; 
-  }
+  );
 
   @override
   bool get isVulnerable => currentPhase != CombatPhase.guard;
@@ -2045,9 +2044,10 @@ class NagaEnemy extends Enemy {
 
   @override
   void render(Canvas canvas) {
-    if (currentPhase == CombatPhase.windup) {
+    if (currentPhase == CombatPhase.windup2) {
       Paint? auraPaint;
-      
+      double scaleToUse = (visualScale > 0) ? visualScale : 1.0;
+      double raio = hurtboxWidth * scaleToUse;
       if (isHeavyAttack) {
         auraPaint = Paint()
           ..color = Palette.vermelho.withOpacity(0.6)
@@ -2055,10 +2055,9 @@ class NagaEnemy extends Enemy {
       }
 
       if (auraPaint != null) {
-        canvas.drawCircle(Offset(size.x / 2, size.y / 2), size.x * 1.5, auraPaint);
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), raio, auraPaint);
       }
     }
-
     super.render(canvas); 
   }
 }
@@ -2601,6 +2600,26 @@ class AberraBrutoEnemy extends Enemy {
 
     strafePosition = strafePosition.clamp(-1.0, 1.0);
   }
+
+  @override
+  void render(Canvas canvas) {
+    if (currentPhase == CombatPhase.windup) {
+      Paint? auraPaint;
+      double scaleToUse = (visualScale > 0) ? visualScale : 1.0;
+      double raio = hurtboxWidth * scaleToUse;
+      if (isHeavyAttack) {
+        auraPaint = Paint()
+          ..color = Palette.vermelho.withOpacity(0.6)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      }
+
+      if (auraPaint != null) {
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), raio, auraPaint);
+      }
+    }
+    super.render(canvas); 
+  }
+  
 }
 
 class AberraVoaEnemy extends Enemy {
@@ -2743,6 +2762,25 @@ class AberraArvEnemy extends Enemy {
         else { currentPhase = CombatPhase.idle; }
       }
     }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (currentPhase == CombatPhase.windup) {
+      Paint? auraPaint;
+      double scaleToUse = (visualScale > 0) ? visualScale : 1.0;
+      double raio = hurtboxWidth * scaleToUse;
+      if (isHeavyAttack) {
+        auraPaint = Paint()
+          ..color = Palette.vermelho.withOpacity(0.6)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      }
+
+      if (auraPaint != null) {
+        canvas.drawCircle(Offset(size.x / 2, size.y / 2), raio, auraPaint);
+      }
+    }
+    super.render(canvas); 
   }
 }
 

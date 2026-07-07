@@ -44,7 +44,8 @@ class DungeonMap {
 
   bool _isWalkable(int x, int y) {
     TileType t = getTile(x, y);
-    return t == TileType.floor || t == TileType.spike || t == TileType.poison;
+    //return t == TileType.floor || t == TileType.spike || t == TileType.poison;
+    return t != TileType.wall;
   }
 
   void moveEnemies(Point<int> playerPos) {

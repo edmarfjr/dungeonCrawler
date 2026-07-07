@@ -21,10 +21,12 @@ class SaveManager {
         'width': game.dungeon.width, 'height': game.dungeon.height,
         'grid': gridJson, 'explored': exploredJson,
         'spikeState': game.dungeon.spikeState, 'poisonState': game.dungeon.poisonState, 'teleportState': game.dungeon.teleportState,
+
       },
       'player': {
         'x': game.player.x, 'y': game.player.y,
         'facing': game.player.facing.index, 'floorLevel': game.dungeon.level, 'hasKey': game.player.hasKey,
+        'runTime': game.runTime,
       },
       'stats': {
         'str': game.playerCombatStats.str, 'con': game.playerCombatStats.con, 'wis': game.playerCombatStats.wis,
@@ -66,6 +68,7 @@ class SaveManager {
     game.player.facing = Direction.values[pData['facing']];
     game.dungeon.level = pData['floorLevel'];
     game.player.hasKey = pData['hasKey'];
+    game.runTime = pData['runTime'];
 
     // Stats
     var sData = data['stats'];
@@ -88,7 +91,7 @@ class SaveManager {
       ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.braceleteFung, 
       ItemDatabase.braceleteNaga, ItemDatabase.escudoTorre,
       // pocoes
-      ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
+      ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion, ItemDatabase.strPotion,
       // itens
       ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
       ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin,

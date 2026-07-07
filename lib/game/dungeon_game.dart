@@ -183,7 +183,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/organ.png', 'itens/orcSword.png', 'itens/bracerNaga.png', 'itens/bracerFung.png',
       'itens/armorBug.png', 'itens/bola.png', 'itens/coin.png', 'itens/claymore.png', 'itens/warhammer.png',
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
-      'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png',
+      'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png', 'itens/potionPreta.png',
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
@@ -331,7 +331,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.adaga, 
       ItemDatabase.tanga, 
       ItemDatabase.bloquel, 
-      ItemDatabase.healthPotion,
+     // ItemDatabase.healthPotion,
+      ItemDatabase.strPotion,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -568,6 +569,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
             if (playerCombatStats.isHeavyAttack) damage *= 2.0;
             if(godMode) damage *= 5;
+
+            if(playerCombatStats.buffForcaTmr>0) damage *=2;
 
             if(enemy.isVulnerable || playerCombatStats.isHeavyAttack){
               playerCombatStats.reflex = false;
@@ -938,7 +941,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         godMode = !godMode;
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
       }
-      if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration) EncounterManager.triggerSpecificEncounter(this, EnemyType.boss4);
+      if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating) EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
       if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
 
       if (currentState == GameState.levelUp && activeMessage == null) {
@@ -1453,7 +1456,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           List<Item> consumiveis = [
             ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
             ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
-            ItemDatabase.bugOrgan, ItemDatabase.bola,
+            ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.strPotion
           ];
 
           List<Item> unownedItens = items.where((equip) => !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name)).toList();
@@ -1511,7 +1514,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else {
         List<Item> allConsumables = [
             ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.bomb, ItemDatabase.staminaPotion,
-            ItemDatabase.reflexPotion, ItemDatabase.meat, ItemDatabase.faca, ItemDatabase.bugOrgan,
+            ItemDatabase.reflexPotion, ItemDatabase.meat, ItemDatabase.faca, ItemDatabase.bugOrgan, ItemDatabase.strPotion
           ];
         Item droppedItem = allConsumables[Random().nextInt(allConsumables.length)];
         droppedItem.quantity = 1;
@@ -1627,7 +1630,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void resetGame() {
-    AudioManager.playBgm('music/8-bit-dungeon.mp3'); runTime=0;
+    runTime=0;
     for (var enemy in combatOverlay.enemies) enemy.removeFromParent(); 
     combatOverlay.enemies.clear(); _messageQueue.clear(); 
 
@@ -1658,6 +1661,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
     isRunStartAnimating = true;
     runStartAnimTimer = 0.0;
+    AudioManager.playBgm('music/8-bit-dungeon.mp3');
   }
 
   void handlePlayerDeath() async { 

@@ -12,6 +12,7 @@ class PlayerCombatStats {
   double staminaTmr = 0.0; 
   double staminaRegenDelay = 0.5;
   double staminaInfiniteTmr = 0;
+  double buffForcaTmr = 0;
   double strafePosition = 0.0; 
   bool isGuarding = false, attackHit = false;
   int comboCount = 0;
@@ -142,6 +143,10 @@ class PlayerCombatStats {
     if(staminaInfiniteTmr > 0) {
       staminaInfiniteTmr -= dt;
     }
+    if(buffForcaTmr > 0) {
+      buffForcaTmr -= dt;
+    }
+    
     if (cansado){
       if(moveSpeed != moveSpeedIni * 0.75) {
         moveSpeed = moveSpeedIni * 0.75;

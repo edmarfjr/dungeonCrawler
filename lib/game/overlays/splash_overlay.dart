@@ -37,7 +37,7 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
       }
     });
 
-    _autoAdvanceTimer = Timer(const Duration(seconds: 2), () {
+    _autoAdvanceTimer = Timer(const Duration(seconds: 5), () {
       _startFadeOut(autoAdvance: true);
     });
   }
@@ -83,52 +83,58 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
               widget.game.startInput(GameInput.buttonA);
             }
           },
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  "DUNGEON CRAWLER", 
-                  style: TextStyle(
-                    fontFamily: 'pixelFont', 
-                    color: Palette.vermelho, 
-                    fontSize: 40, 
-                    fontWeight: FontWeight.bold, 
-                    letterSpacing: 2,
-                    decoration: TextDecoration.none, 
-                  )
-                ),
-                const SizedBox(height: 260),
-                const Text(
-                  "By EDMAUL made with FLAME FLUTTER",
-                  style: TextStyle(
-                    fontFamily: 'pixelFont',
-                    color: Palette.branco,
-                    fontSize: 12,
-                    decoration: TextDecoration.none,
+          child: Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: const AssetImage('images/splash.png'), 
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const Text(
+                    "DUNGEON CRAWLER", 
+                    style: TextStyle(
+                      fontFamily: 'pixelFont', 
+                      color: Palette.vermelho, 
+                      fontSize: 40, 
+                      fontWeight: FontWeight.bold, 
+                      letterSpacing: 1,
+                      decoration: TextDecoration.none, 
+                    )
                   ),
-                ),
-                
-                /*
-                // Só exibe o "PRESSIONE QUALQUER BOTAO" se o jogo não estiver a fazer Fade-Out
-                if (!_isTransitioning)
-                  FadeTransition(
-                    opacity: _blinkController,
-                    child: const Text(
-                      "PRESSIONE QUALQUER BOTAO",
-                      style: TextStyle(
-                        fontFamily: 'pixelFont',
-                        color: Palette.branco,
-                        fontSize: 18,
-                        decoration: TextDecoration.none,
+                  const SizedBox(height: 430),
+                  const Text(
+                    "made by EDMAUL", 
+                    style: TextStyle(
+                      fontFamily: 'pixelFont', 
+                      color: Palette.branco, 
+                      fontSize: 12, 
+                      fontWeight: FontWeight.bold, 
+                      decoration: TextDecoration.none, 
+                    )
+                  ),
+                  /*
+                  if (!_isTransitioning)
+                    FadeTransition(
+                      opacity: _blinkController,
+                      child: const Text(
+                        "PRESSIONE QUALQUER BOTAO",
+                        style: TextStyle(
+                          fontFamily: 'pixelFont',
+                          color: Palette.branco,
+                          fontSize: 18,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
-                    ),
-                  )
-                else 
-                  // Mantém o espaço para o layout não dar "saltos" durante o Fade-Out
-                  const SizedBox(height: 18), 
+                    )
+                  else 
+                    const SizedBox(height: 18), 
                   */
-              ],
+                ],
+              ),
             ),
           ),
         ),

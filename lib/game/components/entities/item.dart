@@ -299,6 +299,16 @@ class ItemDatabase {
     //}
   });
 
+  static Item get strPotion => Item('potPreta', ItemType.consumable, 'itens/potionPreta.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
+    game.playerCombatStats.buffForcaTmr = 6;
+    game.showMessage(I18n.t('forca'));
+    game.playerCombatStats.vfxTimer = 0.5;
+    game.playerCombatStats.vfxColor = Palette.cinzaEsc;
+    //if (game.currentState == GameState.exploration) {
+   // game.showMessage("Você recuperou ${item.power} de Stamina!");
+    //}
+  });
+
   static Item get bugOrgan => Item('orgao', ItemType.consumable, 'itens/organ.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.poisonTmr = 0;
     game.playerCombatStats.vfxTimer = 0.5;

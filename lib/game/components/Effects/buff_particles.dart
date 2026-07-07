@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:flame/components.dart';
 
@@ -7,10 +6,13 @@ class BuffParticle extends PositionComponent {
   double speedY;
   double life;
   double maxLife;
+  Color cor;
 
-  BuffParticle(double startX, double startY, this.speedY, this.maxLife)
+  BuffParticle(double startX, double startY, this.speedY, this.maxLife,{this.cor = Palette.verdeCla})
       : life = maxLife,
-        super(position: Vector2(startX, startY), size: Vector2(8, 8), anchor: Anchor.center);
+        super(position: Vector2(startX, startY), size: Vector2(8, 8), anchor: Anchor.center){
+          priority = 500;
+        }
 
   @override
   void update(double dt) {
@@ -28,7 +30,7 @@ class BuffParticle extends PositionComponent {
       const Offset(0, 0), // Centro do componente
       4.0, 
       Paint()
-        ..color = Palette.verdeCla.withOpacity(opacity)
+        ..color = cor.withOpacity(opacity)
         ..isAntiAlias = false,
     );
   }

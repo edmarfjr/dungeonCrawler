@@ -308,6 +308,14 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       }
     }
 
+    if (playerStats.buffForcaTmr > 0 && gameRef.currentState == GameState.combat) {
+      if (Random().nextDouble() < 0.3) { 
+        double px = (size.x / 2) + (playerStats.strafePosition * size.x * 0.35) + (Random().nextDouble() * 100 - 50);
+        double py = size.y - 50 - (Random().nextDouble() * 50);
+        add(BuffParticle(px, py, 40 + Random().nextDouble() * 60, 0.8 + Random().nextDouble(),cor:Palette.cinzaMed));
+      }
+    }
+
     if (gameRef.currentState != GameState.combat) return;
     if (playerStats.currentPhase == CombatPhase.walk) _walkTimer += dt;
     _updateAnimationTimers(dt);
