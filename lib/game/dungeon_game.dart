@@ -331,8 +331,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.adaga, 
       ItemDatabase.tanga, 
       ItemDatabase.bloquel, 
-     // ItemDatabase.healthPotion,
-      ItemDatabase.strPotion,
+      ItemDatabase.healthPotion,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
