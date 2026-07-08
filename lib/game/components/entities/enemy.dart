@@ -2745,7 +2745,7 @@ class AberraArvEnemy extends Enemy {
 
   @override
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
-    checkAttackPadrao(dt,player,screenSize,windupTmr: 1);
+    checkAttackPadrao(dt,player,screenSize,windupTmr: 0.6);
   }
   
   @override 

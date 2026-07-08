@@ -86,7 +86,7 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
           child: Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: const AssetImage('images/splash.png'), 
+                image: const AssetImage('assets/images/splash.png'), 
                 fit: BoxFit.cover,
               ),
             ),

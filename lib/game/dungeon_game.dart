@@ -940,7 +940,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         godMode = !godMode;
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
       }
-      if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating) EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
+      if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
+        EncounterManager.triggerSpecificEncounter(this, EnemyType.aberraArv);
+      } 
       if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
 
       if (currentState == GameState.levelUp && activeMessage == null) {
@@ -1063,7 +1065,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         Item itemToPick = dungeon.droppedItems[currentPos]!.first;
         if (playerCombatStats.inventory.length < playerCombatStats.maxInventory) {
           dungeon.droppedItems[currentPos]!.removeAt(0); receiveItem(itemToPick); 
-        } else { showMessage("$I18n.t('inv_cheio') ${itemToPick.name}."); }
+        } else { showMessage("${I18n.t('inv_cheio')} ${itemToPick.name}."); }
         return; 
       }
       _interact(); 
