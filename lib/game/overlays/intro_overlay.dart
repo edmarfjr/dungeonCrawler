@@ -111,7 +111,7 @@ class _IntroOverlayState extends State<IntroOverlay> {
                   height: 1.5,
                   decoration: TextDecoration.none,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.start,
               ),
             ),
           ),

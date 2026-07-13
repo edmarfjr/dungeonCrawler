@@ -326,7 +326,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   // FUNÇÕES AUXILIARES DE INVENTÁRIO E SAVE
   // ===========================================================================
-  void _initializeInventory() {
+  Future<void> _initializeInventory() async {
     playerCombatStats.inventory = [
       ItemDatabase.adaga, 
       ItemDatabase.tanga, 
@@ -337,6 +337,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
     playerCombatStats.equippedShield = playerCombatStats.inventory[2];
     selectedConsumableIndex = 0;
+
+    String fileName = playerCombatStats.equippedWeapon!.imagePath.split('/').last;
+    await changeWeaponSprite('actors/$fileName');
+
+    fileName = playerCombatStats.equippedArmor!.imagePath.split('/').last;
+    await changeArmorSprite('actors/$fileName');
+
+    fileName = playerCombatStats.equippedShield!.imagePath.split('/').last;
+    await changeShieldSprite('actors/$fileName');
   }
 
   void receiveItem(Item newItem) {
@@ -635,10 +644,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       bool shieldWalkFast = playerCombatStats.equippedShield?.walkFast ?? false;
       int peso = playerCombatStats.equippedArmor?.peso ?? 0;
       double moveSpeedPenalty = 0;
+      double moveSpd = 0;
 
-      if(shieldWalkSlow || armorWalkSlow) moveSpeedPenalty = 1;
-      if(shieldWalkFast) moveSpeedPenalty = -1;
+      if(shieldWalkSlow || armorWalkSlow) moveSpeedPenalty = 0.6;
+      if(shieldWalkFast) moveSpeedPenalty = -0.6;
+      if(armorWalkSlow && shieldWalkFast)  moveSpeedPenalty = 0;
       moveSpeedPenalty += peso*0.2;
+
+      moveSpd = playerCombatStats.moveSpeed - moveSpeedPenalty;
+
+      if(playerCombatStats.cansado) moveSpd *= 0.75;
 
       if (downPressed && !playerCombatStats.cansado && !noShield) {
         playerCombatStats.isGuarding = true; 
@@ -649,8 +664,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           dashTimer -= dt;
           playerCombatStats.strafePosition += dashDirection * dashVel * dt; 
         } else {
-          if (leftPressed) { playerCombatStats.strafePosition -= (playerCombatStats.moveSpeed - moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
-          else if (rightPressed) { playerCombatStats.strafePosition += (playerCombatStats.moveSpeed - moveSpeedPenalty) * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+          if (leftPressed) { playerCombatStats.strafePosition -= moveSpd * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
+          else if (rightPressed) { playerCombatStats.strafePosition += moveSpd * dt; playerCombatStats.currentPhase = CombatPhase.walk; } 
           else { playerCombatStats.currentPhase = CombatPhase.idle; }
         }
         playerCombatStats.strafePosition = playerCombatStats.strafePosition.clamp(-1.0, 1.0);

@@ -86,10 +86,10 @@ class ItemDatabase {
 
   });
 
-  static Item get espadaCurta => Item('espadaCurta', ItemType.weapon, 'itens/sword.png', 7,value:4, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaCurta => Item('espada_curta', ItemType.weapon, 'itens/sword.png', 7,value:4, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.05;
     game.playerCombatStats.activeTime = 0.1;
-    game.playerCombatStats.recoveryTime = 0.05;
+    game.playerCombatStats.recoveryTime = 0.1;
     game.playerCombatStats.staminaCost = 3.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 1.5;
@@ -97,7 +97,7 @@ class ItemDatabase {
 
   });
 
-  static Item get espadaLonga => Item('espadaLonga', ItemType.weapon, 'itens/longSword.png', 10, str:6,value:6, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaLonga => Item('espada_longa', ItemType.weapon, 'itens/longSword.png', 10, str:6,value:6, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;

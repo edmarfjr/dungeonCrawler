@@ -146,7 +146,7 @@ class PlayerCombatStats {
     if(buffForcaTmr > 0) {
       buffForcaTmr -= dt;
     }
-    
+    /*
     if (cansado){
       if(moveSpeed != moveSpeedIni * 0.75) {
         moveSpeed = moveSpeedIni * 0.75;
@@ -156,6 +156,7 @@ class PlayerCombatStats {
         moveSpeed = moveSpeedIni;
       }
     }
+  */
     if (vfxTimer > 0){
       vfxTimer -= dt;
       if (vfxTimer <= 0 && currentPhase == CombatPhase.hit) {

@@ -63,7 +63,7 @@ class AudioManager {
   static void resumeBgm() {
     _isBgmPausedInternally = false; 
 
-    if (!isMusicMuted && currentTrack != null) {
+    if (bgmVolumeLevel > 0 && currentTrack != null) {
       if (_isBgmInitialized) {
         FlameAudio.bgm.resume();
       } else {
