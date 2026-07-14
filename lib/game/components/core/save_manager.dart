@@ -93,7 +93,7 @@ class SaveManager {
       // pocoes
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion, ItemDatabase.strPotion,
       // itens
-      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
+      ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.meat2, ItemDatabase.web, ItemDatabase.slimeEye,
       ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin,
       // magias
       ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm,

@@ -44,6 +44,7 @@ class EncounterManager {
         case EnemyType.goblin: newEnemy = GoblinEnemy(); break;
         case EnemyType.spider: newEnemy = SpiderEnemy(); break;
         case EnemyType.orc: newEnemy = OrcEnemy(); break;
+        case EnemyType.bat: newEnemy = BatEnemy(); break;
         case EnemyType.mimic: 
           game.isMimic = true;
           List<Item> allEquipments = [

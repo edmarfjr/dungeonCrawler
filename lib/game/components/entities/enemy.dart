@@ -787,6 +787,8 @@ class OrcEnemy extends Enemy {
 
 class BatEnemy extends Enemy {
   double currentDir = 1.0;
+
+  bool chegouAlvo = false;
   
   final double flightHeight = 0.3; 
   final double attackHeight = 0.75;   
@@ -825,7 +827,8 @@ class BatEnemy extends Enemy {
    
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 0.5; 
+      animTimer = 999; 
+      chegouAlvo = false;
       targetY = attackHeight; 
       attackCooldown = maxAttackCooldown;
       targetStrafe = gameRef.playerCombatStats.strafePosition;
@@ -853,6 +856,11 @@ class BatEnemy extends Enemy {
 
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
+      }else {
+        if(!chegouAlvo){
+          chegouAlvo = true;
+          animTimer = 0.3;
+        }
       }
 
     } else {
@@ -2202,6 +2210,7 @@ class DollEnemy extends Enemy {
   final double flightHeight = 0.5; 
   final double attackHeight = 0.75;   
   double targetStrafe = 0;
+  bool chegouAlvo = false;
 
   DollEnemy() : super(
     type: EnemyType.doll, name: 'doll',
@@ -2236,7 +2245,8 @@ class DollEnemy extends Enemy {
    
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 0.5;
+      animTimer = 999;
+      chegouAlvo = false;
       targetY = attackHeight; 
       attackCooldown = maxAttackCooldown;
       targetStrafe = gameRef.playerCombatStats.strafePosition;
@@ -2264,6 +2274,11 @@ class DollEnemy extends Enemy {
 
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
+      }else{
+        if(!chegouAlvo){
+          chegouAlvo = true;
+          animTimer = 0.3;
+        }
       }
 
     } else {
@@ -2289,6 +2304,7 @@ class GoblinShopEnemy extends Enemy {
   final double flightHeight = 0.5; 
   final double attackHeight = 0.75;   
   double targetStrafe = 0;
+  bool chegouAlvo = true;
 
   GoblinShopEnemy() : super(
     type: EnemyType.goblinShop, name: 'vendedor',
@@ -2323,7 +2339,8 @@ class GoblinShopEnemy extends Enemy {
       if(Random().nextBool()){
         isMelee = true;
         currentPhase = CombatPhase.windup; 
-        animTimer = 0.8;
+        animTimer = 999;
+        chegouAlvo = false;
         targetY = attackHeight;
         attackCooldown = maxAttackCooldown;
         targetStrafe = gameRef.playerCombatStats.strafePosition;
@@ -2357,6 +2374,11 @@ class GoblinShopEnemy extends Enemy {
 
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
+      }else{
+        if(!chegouAlvo){
+          chegouAlvo = true;
+          animTimer = 0.3;
+        }
       }
     } 
     else {
@@ -2564,7 +2586,7 @@ class AberraBrutoEnemy extends Enemy {
   AberraBrutoEnemy() : super(name: 'aberraBruto',
     type: EnemyType.aberraBruto, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144
     , speed: 0.6, damage: 30,hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 3.0,drop: []
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 3.0,drop: [ItemDatabase.meat2]
   ){
     naoInterrompe = true;
     isHeavyAttack = true;
@@ -2634,7 +2656,7 @@ class AberraVoaEnemy extends Enemy {
     type: EnemyType.aberraVoa, color: Palette.vermelhoEsc, hp: 80, maxHp: 80, dropEssence: 15, width: 144, height: 144, speed: 0.4,
     hurtboxWidth: 100, hurtboxHeight: 100, hurtboxOffsetY: 0, damage: 20,
     hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0, isMelee: false,maxAttackCooldown: 4,
-    drop: []
+    drop: [ItemDatabase.meat2]
   );
 
   @override
@@ -2686,7 +2708,7 @@ class AberraBestaEnemy extends Enemy {
   AberraBestaEnemy() : super(name: 'aberraBesta',
     type: EnemyType.aberraBesta, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
     hurtboxWidth: 100, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: []
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: [ItemDatabase.meat2]
   );
 
   @override 
@@ -2731,7 +2753,7 @@ class AberraArvEnemy extends Enemy {
   AberraArvEnemy() : super(name: 'aberraArv',
     type: EnemyType.aberraArv, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 192, height: 192
     , speed: 0, damage: 30,hurtboxWidth: 120, hurtboxHeight: 180, hurtboxOffsetY: 0,
-    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 50, hitboxOffsetX: -10, maxAttackCooldown: 2.0,drop: []
+    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 50, hitboxOffsetX: -10, maxAttackCooldown: 2.0,drop: [ItemDatabase.meat2]
   ){
     naoInterrompe = true;
     isHeavyAttack = true;
@@ -2790,7 +2812,7 @@ class AberraCultistaEnemy extends Enemy {
   AberraCultistaEnemy() : super(name: 'aberraCult',
     type: EnemyType.aberraCult, color: Palette.verde, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
     hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 35, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: []
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 35, hitboxOffsetX: -20, maxAttackCooldown: 4.0,drop: [ItemDatabase.meat2]
   ){
     isFrontRow = false;
   }
@@ -2913,7 +2935,7 @@ class AberraOvoEnemy extends Enemy {
     color: Palette.cinza,
     hp: 100, maxHp: 100, dropEssence: 15, width: 144, height: 144, speed: 0.6,
     hurtboxWidth: 80, hurtboxHeight: 100, hurtboxOffsetY: 0,
-    hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0,drop: [],
+    hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0,drop: [ItemDatabase.meat2],
     maxAttackCooldown: 8, isMelee: false
   ){
     isFrontRow = true;
@@ -3165,6 +3187,7 @@ class TentaculoEnemy extends Enemy {
   final double flightHeight = 0.5; 
   final double attackHeight = 0.75;   
   double targetStrafe = 0;
+  bool  chegouAlvo = false;
 
   TentaculoEnemy() : super(
     type: EnemyType.tentaculo, name: 'tentaculo',
@@ -3201,16 +3224,17 @@ class TentaculoEnemy extends Enemy {
    
     if (attackCooldown <= 0 && currentPhase == CombatPhase.idle && (yPosition - flightHeight).abs() < 0.05 && isFrontRow) {
       currentPhase = CombatPhase.windup; 
-      animTimer = 0.5; 
+      animTimer = 999; 
+      chegouAlvo = false;
       targetY = attackHeight; 
-      attackCooldown = maxAttackCooldown * (0.8 + Random().nextDouble() * 0.4); 
+      attackCooldown = maxAttackCooldown;
       targetStrafe = gameRef.playerCombatStats.strafePosition;
     }
   }
 
   @override
   void update(double dt) {
-    super.update(dt);
+    super.update(dt); 
 
     if (currentPhase == CombatPhase.windup) {
       priority = 15;
@@ -3218,16 +3242,22 @@ class TentaculoEnemy extends Enemy {
 
       double dx = targetStrafe - strafePosition;
       double dy = targetY - yPosition;
+      
       double distance = sqrt(dx * dx + dy * dy);
 
       if (distance > 0.01) {
-        double diveSpeed = speed*5; 
+        double diveSpeed = speed*3; 
         double moveStep = diveSpeed * dt;
 
         if (moveStep > distance) moveStep = distance;
 
         strafePosition += (dx / distance) * moveStep;
         yPosition += (dy / distance) * moveStep;
+      }else {
+        if(!chegouAlvo){
+          chegouAlvo = true;
+          animTimer = 0.3;
+        }
       }
 
     } else {

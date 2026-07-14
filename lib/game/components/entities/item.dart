@@ -268,6 +268,24 @@ class ItemDatabase {
     //}
   });
 
+  static Item get meat2 => Item('carne2', ItemType.consumable, 'itens/meat2.png', cor: Colors.white, 50, quantity: 1, onUse: (item, game) {
+    if(Random().nextBool()){
+      game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
+      game.playerCombatStats.vfxTimer = 0.5;
+      game.playerCombatStats.vfxColor = Palette.vermelho;
+      //if (game.currentState == GameState.exploration) {
+      game.showMessage(I18n.t('recupera_hp').replaceFirst('[hp]', item.power.toString()));
+    }else{
+      game.playerCombatStats.hp /= 2;
+      game.playerCombatStats.vfxTimer = 0.5;
+      game.playerCombatStats.vfxColor = Palette.vermelho;
+      //if (game.currentState == GameState.exploration) {
+      game.showMessage(I18n.t('perde_metade_hp'));
+    }
+    
+    //}
+  });
+
   static Item get manaPotion => Item('potAzul', ItemType.consumable, 'itens/potionAzul.png', cor: Colors.white, 100, quantity: 1, onUse: (item, game) {
     game.playerCombatStats.mana = min(game.playerCombatStats.wis*3, game.playerCombatStats.mana + item.power);
     game.playerCombatStats.vfxTimer = 0.5;

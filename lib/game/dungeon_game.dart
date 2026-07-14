@@ -179,7 +179,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/sword.png', 'itens/longSword.png', 'itens/lanca.png', 'itens/axe.png', 'itens/bomb.png',
       'itens/leatherArmor.png', 'itens/scroll.png', 'itens/woodShield.png', 'itens/ironShield.png',
       'itens/buckler.png', 'itens/slime_eye.png', 'itens/club.png', 'itens/clubOrc.png', 'itens/web.png',
-      'itens/meat.png', 'itens/faca.png', 'itens/fire.png', 'itens/poison.png', 'itens/piercing.png',
+      'itens/meat.png','itens/meat2.png', 'itens/faca.png', 'itens/fire.png', 'itens/poison.png', 'itens/piercing.png',
       'itens/organ.png', 'itens/orcSword.png', 'itens/bracerNaga.png', 'itens/bracerFung.png',
       'itens/armorBug.png', 'itens/bola.png', 'itens/coin.png', 'itens/claymore.png', 'itens/warhammer.png',
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
@@ -956,7 +956,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        EncounterManager.triggerSpecificEncounter(this, EnemyType.aberraArv);
+        //EncounterManager.triggerSpecificEncounter(this, EnemyType.bat);
+        EncounterManager.triggerRandomEncounter(this);
       } 
       if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
 
