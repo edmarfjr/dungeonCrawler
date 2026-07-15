@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:dungeon_crawler/game/components/entities/item.dart';
 
-enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font, fontPoison, teleport }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font, fontPoison, teleport, secretWall }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {
@@ -45,7 +45,7 @@ class DungeonMap {
   bool _isWalkable(int x, int y) {
     TileType t = getTile(x, y);
     //return t == TileType.floor || t == TileType.spike || t == TileType.poison;
-    return t != TileType.wall;
+    return t != TileType.wall && t != TileType.secretWall;
   }
 
   void moveEnemies(Point<int> playerPos) {
@@ -234,7 +234,31 @@ class DungeonMap {
         roamingEnemies.add(floorTiles.removeAt(index)); // Ocupa blocos livres aleatórios
       }
     }
+
+    bool isDark = false;
+
+    if(level == 2 || level == 5 || level == 8 || level == 11) isDark = true;
+
+    if (isDark) {
+      List<Point<int>> paredesValidas = [];
+      for (int y = 1; y < height - 1; y++) {
+        for (int x = 1; x < width - 1; x++) {
+          if (grid[y][x] == TileType.wall) {
+            // Garante que a parede está virada para o chão
+            if (grid[y+1][x] == TileType.floor || grid[y-1][x] == TileType.floor ||
+                grid[y][x+1] == TileType.floor || grid[y][x-1] == TileType.floor) {
+              paredesValidas.add(Point(x, y));
+            }
+          }
+        }
+      }
+      if (paredesValidas.isNotEmpty) {
+        var salaPoint = paredesValidas[random.nextInt(paredesValidas.length)];
+        grid[salaPoint.y][salaPoint.x] = TileType.secretWall;
+      }
+    }
   }
+
 
   TileType getTile(int x, int y) { if (x < 0 || x >= width || y < 0 || y >= height) return TileType.wall; return grid[y][x]; }
   void markExplored(int x, int y) { if (x >= 0 && x < width && y >= 0 && y < height) explored[y][x] = true; }

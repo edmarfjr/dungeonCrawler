@@ -40,7 +40,7 @@ class PlayerState {
     int nextX = x + dx;
     int nextY = y + dy;
 
-    if (map.getTile(nextX, nextY) != TileType.wall) {
+    if (map.getTile(nextX, nextY) != TileType.wall && map.getTile(nextX, nextY) != TileType.secretWall ) {
       x = nextX;
       y = nextY;
       

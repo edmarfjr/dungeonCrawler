@@ -12,6 +12,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   DungeonMap map;
   PlayerState player;
   final List <ui.Image> wallImage;
+  final List <ui.Image> secretWallImage;
   final List <ui.Image> floorImage;
   final ui.Image doorImage;
   final ui.Image doorImage2;
@@ -25,16 +26,20 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image shopImage;
   final ui.Image shrineImage;
   final ui.Image fontImage;
+  final List <ui.Image> darkRoomImage;
 
   double _bumpTimer = 0.0;
   double _maxBumpTime = 0.18; 
   bool _bumpForward = true;
   double yOffsetAnim = 0.0;
 
+  int darkRoomIdx = 0;
+
   MazeRenderer({
     required this.map,
     required this.player,
     required this.wallImage,
+    required this.secretWallImage,
     required this.floorImage,
     required this.doorImage, 
     required this.doorImage2, 
@@ -48,6 +53,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.crateImage,
     required this.shopImage,
     required this.fontImage,
+    required this.darkRoomImage,
   });
 
   void triggerWallBump({required bool forward}) {
@@ -99,173 +105,191 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     // Fundo preto (teto e o vazio distante)
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black );
 
-    // Vetores de direção
-    int dx = 0, dy = 0;
-    int sideDx = 0, sideDy = 0;
 
-    switch (player.facing) {
-      case Direction.north: dy = -1; sideDx = 1; break;
-      case Direction.south: dy = 1;  sideDx = -1; break;
-      case Direction.east:  dx = 1;  sideDy = 1; break;
-      case Direction.west:  dx = -1; sideDy = -1; break;
-    }
+    if(gameRef.isDarkRoom){
+       canvas.drawImageRect(
+        darkRoomImage[darkRoomIdx],
+        Rect.fromLTWH(0, 0, darkRoomImage[darkRoomIdx].width.toDouble(), darkRoomImage[darkRoomIdx].height.toDouble()),
+        Rect.fromLTWH(0, 0, size.x, size.y),
+        Paint(),
+      );
+    }else{
+     // Vetores de direção
+      int dx = 0, dy = 0;
+      int sideDx = 0, sideDy = 0;
 
-    // Renderiza do fundo para a frente
-    for (int cz = 4; cz >= 0; cz--) {
-      for (int cx in [-3, 3, -2, 2, -1, 1, 0]) {
-        int mapX = player.x + (dx * cz) + (sideDx * cx);
-        int mapY = player.y + (dy * cz) + (sideDy * cx);
-        
-        TileType tile = map.getTile(mapX, mapY);
+      switch (player.facing) {
+        case Direction.north: dy = -1; sideDx = 1; break;
+        case Direction.south: dy = 1;  sideDx = -1; break;
+        case Direction.east:  dx = 1;  sideDy = 1; break;
+        case Direction.west:  dx = -1; sideDy = -1; break;
+      }
 
-        int tileIdx = 0;
-        Color corChao = Colors.white;
-        Color corParede = Colors.white;
+      // Renderiza do fundo para a frente
+      for (int cz = 4; cz >= 0; cz--) {
+        for (int cx in [-3, 3, -2, 2, -1, 1, 0]) {
+          int mapX = player.x + (dx * cz) + (sideDx * cx);
+          int mapY = player.y + (dy * cz) + (sideDy * cx);
+          
+          TileType tile = map.getTile(mapX, mapY);
 
-        if (map.level >= 4){
-          tileIdx = 1;
-        }
+          int tileIdx = 0;
+          Color corChao = Colors.white;
+          Color corParede = Colors.white;
 
-        if (map.level >= 7){
-          tileIdx = 2;
-        }
+          if (map.level >= 4){
+            tileIdx = 1;
+          }
 
-        if (map.level >= 10){
-          tileIdx = 3;
-        }
+          if (map.level >= 7){
+            tileIdx = 2;
+          }
 
-        // Sempre desenha o chão
-        _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
-        _drawCeiling(canvas, cx, cz,floorImage[tileIdx], corChao);
+          if (map.level >= 10){
+            tileIdx = 3;
+          }
 
-        // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
-        if (tile == TileType.wall) {
-          if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
-          if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
-          if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage[tileIdx], corParede);
-        }
-
-        // --- 2. LÓGICA DA PORTA ---
-        if (tile == TileType.door) {
-          // A porta vai do chão (0.5) até quase o teto (-0.1)
-           _drawFloorTile(canvas, cx, cz, doorImage, Colors.white);
-        }
-
-        //if (tile == TileType.entry) {
-        //   _drawCeiling(canvas, cx, cz, doorImage2, Colors.white);
-        //}
-
-        
-
-        // --- 3. LÓGICA DA CHAVE ---
-        if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
-          // A chave vai do chão (0.5) até uma altura menor (0.1)
-          _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
-        }
-
-        if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
-        }
-
-        if (tile == TileType.font && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
-        }
-
-        if (tile == TileType.fontPoison && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
-        }
-
-        if (tile == TileType.crate && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Palette.marrom);
-        }
-
-        if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Palette.vermelho);
-        }
-
-         if (tile == TileType.shop && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, shopImage, 0.6, 0.0, Colors.white);
-        }
-
-        if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, openChestImage, 0.5, 0.1, Palette.amarelo);
-        }
-
-        if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
-          _drawBillboardItem(canvas, cx, cz, shrineImage, 0.5, 0.1, Colors.white);
-        }
-
-        if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
-          // Sempre desenha o chão normal debaixo da armadilha
+          // Sempre desenha o chão
           _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+          _drawCeiling(canvas, cx, cz,floorImage[tileIdx], corChao);
 
-          // Calcula a largura de 1 frame (divide a spritesheet por 4)
-          double frameWidth = trapImage[0].width / 4;
+          // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
+          if (tile == TileType.wall) {
+            if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
+            if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
+            if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage[tileIdx], corParede);
+          }
+
+          if (tile == TileType.secretWall) {
+            if (cx > 0) _drawLeftFace(canvas, cx, cz, secretWallImage[tileIdx], corParede); 
+            if (cx < 0) _drawRightFace(canvas, cx, cz, secretWallImage[tileIdx], corParede); 
+            if (cz > 0) _drawFrontFace(canvas, cx, cz, secretWallImage[tileIdx], corParede);
+          }
+
+          // --- 2. LÓGICA DA PORTA ---
+          if (tile == TileType.door) {
+            // A porta vai do chão (0.5) até quase o teto (-0.1)
+            _drawFloorTile(canvas, cx, cz, doorImage, Colors.white);
+          }
+
+          //if (tile == TileType.entry) {
+          //   _drawCeiling(canvas, cx, cz, doorImage2, Colors.white);
+          //}
+
           
-          // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
-          Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, trapImage[0].height.toDouble());
 
-          // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
-          _drawBillboardItem(canvas, cx, cz, trapImage[0], 0.7, 0.1,Colors.white, srcRect: frameRect);
-        }
+          // --- 3. LÓGICA DA CHAVE ---
+          if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
+            // A chave vai do chão (0.5) até uma altura menor (0.1)
+            _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
+          }
 
-        if (tile == TileType.poison && gameRef.currentState == GameState.exploration) {
-          // Sempre desenha o chão normal debaixo da armadilha
-          _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+          if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
+          }
 
-          // Calcula a largura de 1 frame (divide a spritesheet por 5)
-          double frameWidth = trapImage[1].width / 5;
-          
-          Rect frameRect = Rect.fromLTWH(map.poisonState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
+          if (tile == TileType.font && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
+          }
 
-          // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
-          _drawBillboardItem(canvas, cx, cz, trapImage[1], 0.7, 0.1,Colors.white, srcRect: frameRect);
-        }
+          if (tile == TileType.fontPoison && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, fontImage, 0.6, 0.1, Colors.white);
+          }
 
-        if (tile == TileType.teleport && gameRef.currentState == GameState.exploration) {
-          // Sempre desenha o chão normal debaixo da armadilha
-          _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+          if (tile == TileType.crate && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Palette.marrom);
+          }
 
-          // Calcula a largura de 1 frame (divide a spritesheet por 5)
-          double frameWidth = trapImage[2].width / 5;
-          
-          Rect frameRect = Rect.fromLTWH(map.teleportState * frameWidth, 0, frameWidth, trapImage[2].height.toDouble());
+          if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Palette.vermelho);
+          }
 
-          // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
-          _drawBillboardItem(canvas, cx, cz, trapImage[2], 0.6, 0.1,Colors.white, srcRect: frameRect);
-        }
+          if (tile == TileType.shop && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, shopImage, 0.6, 0.0, Colors.white);
+          }
 
-        Point<int> currentMapPos = Point(mapX, mapY);
-        if (map.droppedItems.containsKey(currentMapPos) && map.droppedItems[currentMapPos]!.isNotEmpty && gameRef.currentState == GameState.exploration) {
-          
-          for(var item in map.droppedItems[currentMapPos]!.reversed){
-            try {
-            // Puxa a imagem verdadeira do item usando o cache do Flame!
-            ui.Image itemImg = gameRef.images.fromCache(item.imagePath);
+          if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, openChestImage, 0.5, 0.1, Palette.amarelo);
+          }
+
+          if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, shrineImage, 0.5, 0.1, Colors.white);
+          }
+
+          if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
+            // Sempre desenha o chão normal debaixo da armadilha
+            _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+
+            // Calcula a largura de 1 frame (divide a spritesheet por 4)
+            double frameWidth = trapImage[0].width / 4;
             
-            // Desenha usando o Billboarding. O item flutua da altura 0.5 (chão) até a 0.2
-            _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, item.cor);
-          } catch (e) {
-            // Fallback de segurança: Se a imagem falhar ao carregar, desenha uma caixinha/baú
-            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, item.cor);
+            // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
+            Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, trapImage[0].height.toDouble());
+
+            // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
+            _drawBillboardItem(canvas, cx, cz, trapImage[0], 0.7, 0.1,Colors.white, srcRect: frameRect);
           }
+
+          if (tile == TileType.poison && gameRef.currentState == GameState.exploration) {
+            // Sempre desenha o chão normal debaixo da armadilha
+            _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+
+            // Calcula a largura de 1 frame (divide a spritesheet por 5)
+            double frameWidth = trapImage[1].width / 5;
+            
+            Rect frameRect = Rect.fromLTWH(map.poisonState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
+
+            // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
+            _drawBillboardItem(canvas, cx, cz, trapImage[1], 0.7, 0.1,Colors.white, srcRect: frameRect);
           }
-          // Pega sempre o item que está no topo da pilha do chão (last)
-         // var dropItem = map.droppedItems[currentMapPos]!.last;
+
+          if (tile == TileType.teleport && gameRef.currentState == GameState.exploration) {
+            // Sempre desenha o chão normal debaixo da armadilha
+            _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
+
+            // Calcula a largura de 1 frame (divide a spritesheet por 5)
+            double frameWidth = trapImage[2].width / 5;
+            
+            Rect frameRect = Rect.fromLTWH(map.teleportState * frameWidth, 0, frameWidth, trapImage[2].height.toDouble());
+
+            // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
+            _drawBillboardItem(canvas, cx, cz, trapImage[2], 0.6, 0.1,Colors.white, srcRect: frameRect);
+          }
+
+          Point<int> currentMapPos = Point(mapX, mapY);
+          if (map.droppedItems.containsKey(currentMapPos) && map.droppedItems[currentMapPos]!.isNotEmpty && gameRef.currentState == GameState.exploration) {
+            
+            for(var item in map.droppedItems[currentMapPos]!.reversed){
+              try {
+              // Puxa a imagem verdadeira do item usando o cache do Flame!
+              ui.Image itemImg = gameRef.images.fromCache(item.imagePath);
+              
+              // Desenha usando o Billboarding. O item flutua da altura 0.5 (chão) até a 0.2
+              _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, item.cor);
+            } catch (e) {
+              // Fallback de segurança: Se a imagem falhar ao carregar, desenha uma caixinha/baú
+              _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, item.cor);
+            }
+            }
+            // Pega sempre o item que está no topo da pilha do chão (last)
+          // var dropItem = map.droppedItems[currentMapPos]!.last;
+            
+            
+          }
           
-          
-        }
-        
-        for (var enemy in map.roamingEnemies) {
-          
-          // Se o inimigo estiver na coordenada que o laço está varrendo agora...
-          if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
-            // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
-            _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelho);
+          for (var enemy in map.roamingEnemies) {
+            
+            // Se o inimigo estiver na coordenada que o laço está varrendo agora...
+            if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
+              // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
+              _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelho);
+            }
           }
         }
       }
     }
+
+    
 
     canvas.restore();
   }

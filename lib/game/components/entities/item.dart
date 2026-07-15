@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:dungeon_crawler/game/components/core/i18n.dart';
 
   
-enum ItemType { weapon, armor, shield, consumable, spell, coin }
+enum ItemType { weapon, armor, shield, consumable, spell, coin, gem }
 
 class Item {
   final String name;
@@ -93,6 +93,17 @@ class ItemDatabase {
     game.playerCombatStats.staminaCost = 3.0;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 1.5;
+    game.playerCombatStats.offYWeapon = 0;
+
+  });
+
+  static Item get espadaMagica => Item('espada_magica', ItemType.weapon, 'itens/magicSword.png', 10,projetil:true,hasChargeAttack:true,value:20, cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.staminaCost = 8.0;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 3;
     game.playerCombatStats.offYWeapon = 0;
 
   });
@@ -395,7 +406,15 @@ class ItemDatabase {
   });
 
   static Item get coin => Item('moeda', ItemType.coin, 'itens/coin.png', cor: Colors.white, 3, quantity: 1, onUse: (item, game) {
-  
+  });
+
+  static Item get rubi => Item('rubi', ItemType.gem, 'itens/ruby.png', cor: Colors.white, 3, quantity: 1, onUse: (item, game) {
+  });
+
+  static Item get esmeralda => Item('esmeralda', ItemType.gem, 'itens/esmeralda.png', cor: Colors.white, 3, quantity: 1, onUse: (item, game) {
+  });
+
+  static Item get safira => Item('safira', ItemType.gem, 'itens/safira.png', cor: Colors.white, 3, quantity: 1, onUse: (item, game) {
   });
 
   

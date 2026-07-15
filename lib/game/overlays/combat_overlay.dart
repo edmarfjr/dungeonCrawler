@@ -372,17 +372,36 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black);
       }
     }
-    super.renderTree(canvas);
 
+    // 1. Renderiza a base do componente (caso exista algo no render padrão)
+    render(canvas);
+
+    // 2. Desenha TODOS os filhos normais ATRÁS do jogador (Sombras, Textos, Projéteis)
+    for (var child in children) {
+      if (child.runtimeType.toString() != 'BuffParticle') {
+        child.renderTree(canvas);
+      }
+    }
+
+    // 3. Desenha o Jogador e os Efeitos de Ataque (agora por cima das sombras/projéteis)
     if (gameRef.currentState == GameState.combat) {
       _drawAttackEffects(canvas);
       _drawPlayer(canvas);
       if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
     }
+
+    // 4. Desenha APENAS as partículas de Buff NA FRENTE do jogador
+    for (var child in children) {
+      if (child.runtimeType.toString() == 'BuffParticle') {
+        child.renderTree(canvas);
+      }
+    }
+
+    // 5. Interface de Usuário e HUD (Sempre por cima de tudo)
     _drawPlayerUI(canvas);
     _drawBottomBarBackground(canvas);
 
-    if (gameRef.currentState == GameState.combat)_drawEnemyUI(canvas);
+    if (gameRef.currentState == GameState.combat) _drawEnemyUI(canvas);
 
     _drawEffects(canvas);
   }

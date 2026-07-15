@@ -156,7 +156,7 @@ class _MapPainter extends CustomPainter {
     required this.map, 
     required this.playerX, 
     required this.playerY,
-    required this.playerFacing, // <-- NOVO
+    required this.playerFacing, 
   });
 
   @override
@@ -182,7 +182,8 @@ class _MapPainter extends CustomPainter {
     final paintShrine = Paint()..color = Palette.roxo;
     final paintCrate = Paint()..color = Palette.marrom;
     final paintShop = Paint()..color = Palette.azulCla;
-    final fontShop = Paint()..color = Palette.azul;
+    final paintFont = Paint()..color = Palette.azul;
+    final paintSecretWall = Paint()..color = Palette.marromCla;
 
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
@@ -207,7 +208,8 @@ class _MapPainter extends CustomPainter {
         else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
         else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
         else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
-        else if (tile == TileType.font || tile == TileType.fontPoison) canvas.drawRect(tileRect, fontShop);
+        else if (tile == TileType.secretWall) canvas.drawRect(tileRect, paintSecretWall);
+        else if (tile == TileType.font || tile == TileType.fontPoison) canvas.drawRect(tileRect, paintFont);
 
         if (map.keyPosition != null && map.keyPosition!.x == x && map.keyPosition!.y == y){
           canvas.drawRect(tileRect, paintKey);

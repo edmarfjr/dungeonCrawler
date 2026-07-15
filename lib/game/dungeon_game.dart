@@ -84,6 +84,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   int mapSize = 30;
   List<Item> encounterDrop = [];
 
+  // --- VARIÁVEIS DA DARK ROOM E SALA SECRETA ---
+  bool isDarkRoom = false;
+  bool isInvestigationPromptOpen = false;
+  bool investigationRoomCleared = false;
+  int investigationAttempts = 0;
+
   // --- MENUS ---
   ScrollController? manualScrollController;
   final ValueNotifier<int> mainMenuCursor = ValueNotifier<int>(0);
@@ -184,6 +190,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/armorBug.png', 'itens/bola.png', 'itens/coin.png', 'itens/claymore.png', 'itens/warhammer.png',
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
       'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png', 'itens/potionPreta.png',
+      'itens/potionLaranja.png', 'itens/ruby.png', 'itens/esmeralda.png', 'itens/safira.png', 'itens/magicSword.png'
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
@@ -196,6 +203,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final ui.Image floorImg4 = await images.load('tilesets/tile4.png');
     final ui.Image shopImg = await images.load('tilesets/shop.png');
     final ui.Image fontImg = await images.load('tilesets/fonte.png');
+
+    final ui.Image sWallImg1 = await images.load('tilesets/wallSecret.png');
+    final ui.Image sWallImg2 = await images.load('tilesets/wallSecret2.png');
+    final ui.Image sWallImg3 = await images.load('tilesets/wallSecret3.png');
+    final ui.Image sWallImg4 = await images.load('tilesets/wallSecret4.png');
+
+    final ui.Image darkRoomImg = await images.load('tilesets/darkRoom.png');
+    final ui.Image darkRoomImg2 = await images.load('tilesets/darkRoom2.png');
+    final ui.Image darkRoomImg3 = await images.load('tilesets/darkRoom3.png');
 
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
@@ -289,7 +305,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       doorImage: doorTexture, doorImage2: doorTexture2, keyImage: keySprite, chestImage: chestSprite,
       trapImage: [trapImage,trapImage2,trapImage3], roamerImage: roamerSprite, bossImage: bossSprite,
       shrineImage: shrineSprite, openChestImage: openChestSprite, crateImage: crateSprite,
-      shopImage: shopImg, fontImage: fontImg,
+      shopImage: shopImg, fontImage: fontImg, secretWallImage: [sWallImg1,sWallImg2,sWallImg3,sWallImg4],
+      darkRoomImage: [darkRoomImg,darkRoomImg2,darkRoomImg3],
     );
     renderer.size = size; 
     add(renderer);
@@ -699,8 +716,151 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       default: break;
     }
 
-    if (currentState == GameState.exploration && isPassTurnPromptOpen) _renderPassTurnPrompt(canvas);
+    if (currentState == GameState.exploration) {
+      if (isPassTurnPromptOpen) _renderPassTurnPrompt(canvas);
+      if (isInvestigationPromptOpen) _renderInvestigationPrompt(canvas);
+    }
     if (activeMessage != null) _renderMessageQueue(canvas);
+  }
+
+  void _renderInvestigationPrompt(Canvas canvas) {
+    if (activeMessage != null) return;
+    final rect = Rect.fromCenter(center: size.toOffset() / 2 - Offset(0, size.y * 0.2), width: size.x * 0.8, height: size.y * 0.4);
+    canvas.drawRect(rect, Paint()..color = Palette.preto);
+    canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+
+    String promptText = "";
+    if (dungeon.level == 11) {
+      promptText = "Um altar ancestral com 3 encaixes vazios...\nO poder pulsa neste lugar.\n\n[A] COLOCAR GEMAS   [B] SAIR";
+    } else {
+      promptText = "Voce entrou na sala escura.\nO que deseja fazer?\n\n[A] INVESTIGAR   [B] SAIR";
+    }
+
+    const textStyle = TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16);
+    final textSpan = TextSpan(text: promptText, style: textStyle);
+    
+    final textPainter = TextPainter(text: textSpan, textAlign: TextAlign.center, textDirection: TextDirection.ltr);
+    textPainter.layout(maxWidth: rect.width - 20);
+    textPainter.paint(canvas, Offset(rect.center.dx - (textPainter.width / 2), rect.center.dy - (textPainter.height / 2)));
+  }
+
+  void openInvestigationRoom() {
+    // Agora o jogador SEMPRE "entra" na sala primeiro, independente de estar vazia
+    isInvestigationPromptOpen = true;
+    isDarkRoom = true;
+    AudioManager.playSfx('sfx/hover.wav');
+  }
+
+  void _performInvestigation() {
+    isInvestigationPromptOpen = false;
+    // NÃO mudamos o isDarkRoom aqui! O jogador continua a ver o fundo da sala.
+
+    if (investigationRoomCleared) {
+      AudioManager.playSfx('sfx/decline.wav');
+      if (dungeon.level == 11) {
+        showMessage("O altar esta sem brilho agora.", onDismiss: () {
+          // Reabre o menu após o jogador ler a mensagem
+          isInvestigationPromptOpen = true;
+        });
+      } else {
+        showMessage("A sala esta vazia. Voce ja encontrou tudo aqui.", onDismiss: () {
+          isInvestigationPromptOpen = true;
+        });
+      }
+      return; 
+    }
+
+    if (dungeon.level == 11) {
+      int totalGemas = 0;
+      
+      for (var item in playerCombatStats.inventory) {
+        if (item.type == ItemType.gem) {
+          totalGemas += 1;
+        }
+      }
+
+      if (totalGemas >= 3) {
+        investigationRoomCleared = true;
+        renderer.darkRoomIdx = 2;
+        
+        int gemasRemovidas = 0;
+        for (int i = playerCombatStats.inventory.length - 1; i >= 0; i--) {
+          var item = playerCombatStats.inventory[i];
+          if (item.type == ItemType.gem) {
+            while (item.quantity > 0 && gemasRemovidas < 3) {
+              item.quantity--;
+              gemasRemovidas++;
+            }
+            if (item.quantity <= 0) {
+              playerCombatStats.inventory.removeAt(i);
+            }
+          }
+          if (gemasRemovidas >= 3) break;
+        }
+
+        Item armaLendaria = ItemDatabase.espadaMagica; 
+
+        AudioManager.playSfx('sfx/confirm.wav');
+        showMessage("A sala se ilumina! O altar absorve as gemas e revela uma Arma Divina!", onDismiss: () {
+          receiveItem(armaLendaria);
+          isInvestigationPromptOpen = true; // Volta para o menu do altar
+        });
+      } else {
+        AudioManager.playSfx('sfx/decline.wav');
+        showMessage("O altar recusa. Voce precisa de 3 gemas. (Voce tem $totalGemas/3)", onDismiss: () {
+          isInvestigationPromptOpen = true; // Volta para o menu do altar
+        });
+      }
+      return;
+    }
+
+    investigationAttempts++;
+
+    bool achouGema = (investigationAttempts >= 3) || (Random().nextDouble() < 0.25);
+
+    if (achouGema) {
+      investigationRoomCleared = true; 
+      
+      Item gema = ItemDatabase.rubi; 
+      if(dungeon.level == 5) {
+        gema = ItemDatabase.esmeralda;
+      } else if(dungeon.level == 8){
+        gema = ItemDatabase.safira; 
+      } 
+      
+      AudioManager.playSfx('sfx/confirm.wav');
+      showMessage("Sucesso! Voce encontrou uma gema no fundo da sala!", onDismiss: () {
+        receiveItem(gema);  
+        isInvestigationPromptOpen = true; // Retorna para o menu da sala
+      });
+    } else {
+      bool isAmbush = Random().nextBool();
+      if (isAmbush) {
+        AudioManager.playSfx('sfx/decline.wav'); 
+        showMessage("Uma armadilha! Monstros saltam das sombras!", onDismiss: () {
+          isInvestigationPromptOpen = true; // Garante que o menu vai reaparecer após o combate acabar!
+          EncounterManager.triggerRandomEncounter(this);
+        });
+      } else {
+        AudioManager.playSfx('sfx/confirm.wav');
+        List<Item> allConsumables = [
+            ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.bomb, ItemDatabase.staminaPotion,
+            ItemDatabase.reflexPotion, ItemDatabase.meat, ItemDatabase.faca, ItemDatabase.bugOrgan, ItemDatabase.strPotion
+          ];
+        Item droppedItem = allConsumables[Random().nextInt(allConsumables.length)];
+        droppedItem.quantity = 1;
+
+        showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(droppedItem.name)), onDismiss: () {
+          var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
+          if (existingItems.isNotEmpty) {
+            existingItems.first.quantity += droppedItem.quantity;
+          } else {
+            receiveItem(droppedItem);
+          }
+          isInvestigationPromptOpen = true; // Retorna ao menu
+        });
+      }
+    }
   }
 
   void _renderShop(Canvas canvas) {
@@ -895,7 +1055,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
       canvas.drawRect(rect, Paint()..color = Palette.preto);
       canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      final textSpan = TextSpan(text: '$activeMessage\n\n${I18n.t('a_continuar')}', style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+      final textSpan = TextSpan(text: '$activeMessage\n\n${I18n.t('a_continuar')}', style: const TextStyle(color: Palette.branco, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: boxWidth, maxWidth: boxWidth);
       textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
   }
@@ -944,8 +1104,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     upPressed = keysPressed.contains(LogicalKeyboardKey.arrowUp);
     
     if (event.logicalKey == LogicalKeyboardKey.keyZ) {
-      if (event is KeyDownEvent) startInput(GameInput.buttonA);
-      else if (event is KeyUpEvent) stopInput(GameInput.buttonA); 
+      if (event is KeyDownEvent) {
+        startInput(GameInput.buttonA);
+      } else if (event is KeyUpEvent) stopInput(GameInput.buttonA); 
     }
 
     if (event is KeyDownEvent) {
@@ -984,14 +1145,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void startInput(GameInput input) {
-    //if (!_hasStartedMenuMusic && currentState == GameState.mainMenu) {
-    //  _hasStartedMenuMusic = true;
-      //AudioManager.playBgm('music/main-menu.ogg');
-      //quitToMainMenu(); 
-    //}
     if (isRunStartAnimating && currentState == GameState.exploration) return;
 
     if (activeMessage != null) { if (input == GameInput.buttonA) dismissMessage(); return; }
+
+    // CORREÇÃO: Usa isInvestigationPromptOpen como trava em vez do isDarkRoom,
+    // garantindo que os botões voltem ao normal após o fechamento do painel!
+    if (isInvestigationPromptOpen && currentState == GameState.exploration) {
+      if (input == GameInput.buttonA) {
+        _performInvestigation();
+      } else if (input == GameInput.buttonB) {
+        isInvestigationPromptOpen = false;
+        isDarkRoom = false; // Tira a imagem da sala
+        AudioManager.playSfx('sfx/decline.wav');
+      }
+      return; 
+    }
 
     switch (currentState) {
       case GameState.splash: _handleSplashInput(input); break;
@@ -1048,6 +1217,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   // SUB-MÉTODOS DE INPUT (Isolados e Limpos)
   // ===========================================================================
+  Point<int> _getTargetPosition(bool forward) {
+    int dx = 0, dy = 0;
+    switch (player.facing) {
+      case Direction.north: dy = forward ? -1 : 1; break;
+      case Direction.south: dy = forward ? 1 : -1; break;
+      case Direction.east: dx = forward ? 1 : -1; break;
+      case Direction.west: dx = forward ? -1 : 1; break;
+    }
+    return Point(player.x + dx, player.y + dy);
+  }
+
   void _handleSplashInput(GameInput input) {
     
     currentState = GameState.mainMenu;
@@ -1066,10 +1246,20 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     if (input == GameInput.up) { 
+      Point<int> target = _getTargetPosition(true);
+      if (dungeon.getTile(target.x, target.y) == TileType.secretWall) {
+        openInvestigationRoom();
+        return; 
+      }
       if (player.move(true, dungeon)){ _onPlayerStepped(); AudioManager.playSfx('sfx/step.wav'); } 
       else { renderer.triggerWallBump(forward: true); AudioManager.playSfx('sfx/landing.wav'); } 
     }
     else if (input == GameInput.down) { 
+      Point<int> target = _getTargetPosition(false);
+      if (dungeon.getTile(target.x, target.y) == TileType.secretWall) {
+        openInvestigationRoom();
+        return; 
+      }
       if (player.move(false, dungeon)){ _onPlayerStepped(); AudioManager.playSfx('sfx/step.wav'); } 
       else { renderer.triggerWallBump(forward: true); AudioManager.playSfx('sfx/landing.wav'); } 
     }
@@ -1136,8 +1326,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (input == GameInput.down) { shopCursor++; AudioManager.playSfx('sfx/hover.wav'); }
 
     int maxCursor = 0;
-    if (currentShopPhase == ShopPhase.main) maxCursor = 3; 
-    else if (currentShopPhase == ShopPhase.buy || currentShopPhase == ShopPhase.steal) maxCursor = max(0, shopInventory.length - 1);
+    if (currentShopPhase == ShopPhase.main) {
+      maxCursor = 3;
+    } else if (currentShopPhase == ShopPhase.buy || currentShopPhase == ShopPhase.steal) maxCursor = max(0, shopInventory.length - 1);
     else if (currentShopPhase == ShopPhase.sell) maxCursor = max(0, playerCombatStats.inventory.length - 1);
     else if (currentShopPhase == ShopPhase.confirmSell) maxCursor = 1; 
 
@@ -1258,15 +1449,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     // NOVO: Setas para os lados controlam as barras de volume e idioma!
     if (input == GameInput.left) {
-      if (settingsCursor.value == 0) AudioManager.changeBgmVolume(-1);
-      else if (settingsCursor.value == 1) AudioManager.changeSfxVolume(-1);
+      if (settingsCursor.value == 0) {
+        AudioManager.changeBgmVolume(-1);
+      } else if (settingsCursor.value == 1) AudioManager.changeSfxVolume(-1);
       else if (settingsCursor.value == 2) { I18n.toggleLanguage(); AudioManager.playSfx('sfx/hover.wav'); }
       settingsRefresh.value = !settingsRefresh.value; 
     }
     
     if (input == GameInput.right) {
-      if (settingsCursor.value == 0) AudioManager.changeBgmVolume(1);
-      else if (settingsCursor.value == 1) AudioManager.changeSfxVolume(1);
+      if (settingsCursor.value == 0) {
+        AudioManager.changeBgmVolume(1);
+      } else if (settingsCursor.value == 1) AudioManager.changeSfxVolume(1);
       else if (settingsCursor.value == 2) { I18n.toggleLanguage(); AudioManager.playSfx('sfx/hover.wav'); }
       settingsRefresh.value = !settingsRefresh.value; 
     }
@@ -1329,8 +1522,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); pauseMenuCursor.value = (pauseMenuCursor.value + 1) % 3; }
     if (input == GameInput.buttonA) {
       AudioManager.playSfx('sfx/confirm.wav');
-      if (pauseMenuCursor.value == 0) togglePause();
-      else if (pauseMenuCursor.value == 1) quitToMainMenu();
+      if (pauseMenuCursor.value == 0) {
+        togglePause();
+      } else if (pauseMenuCursor.value == 1) quitToMainMenu();
       else if (pauseMenuCursor.value == 2) openSettings(); 
     }
   }
@@ -1364,8 +1558,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
     if (input == GameInput.buttonA) {
       AudioManager.playSfx('sfx/confirm.wav');
-      if (mainMenuCursor.value == 0) startGame();
-      else if (mainMenuCursor.value == 1) quitToMainMenu();
+      if (mainMenuCursor.value == 0) {
+        startGame();
+      } else if (mainMenuCursor.value == 1) quitToMainMenu();
     }
   }
 
@@ -1423,6 +1618,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _interact() {
+    Point<int> frontPos = _getTargetPosition(true);
+    if (dungeon.getTile(frontPos.x, frontPos.y) == TileType.secretWall) {
+      openInvestigationRoom();
+      return;
+    }
+
     TileType playerTile = dungeon.getTile(player.x, player.y);
 
     if ([TileType.floor, TileType.entry, TileType.openChest, TileType.spike, TileType.poison, TileType.teleport].contains(playerTile)) {
@@ -1480,6 +1681,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           unownedItens.addAll(consumiveis); unownedItens.shuffle();
           shopInventory = [unownedItens[0], unownedItens[1], unownedItens[2], unownedItens[3]];
 
+          investigationAttempts = 0;
+          isDarkRoom = false; // Garante o reset
+
           await SaveManager.saveGame(this); // MANAGER AQUI
           isRunStartAnimating = true;
           runStartAnimTimer = 0.0;
@@ -1490,6 +1694,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             dung = I18n.t('dung3');
           }else if(dungeon.level == 4){
             dung = I18n.t('dung4');
+          }
+          if(dungeon.level >=10){
+            renderer.darkRoomIdx = 1;
           }
           combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
 
@@ -1538,8 +1745,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
         showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(droppedItem.name)), onDismiss: () {
           var existingItems = playerCombatStats.inventory.where((i) => i.name == droppedItem.name).toList();
-          if (existingItems.isNotEmpty) existingItems.first.quantity += droppedItem.quantity; 
-          else receiveItem(droppedItem);
+          if (existingItems.isNotEmpty) {
+            existingItems.first.quantity += droppedItem.quantity;
+          } else {
+            receiveItem(droppedItem);
+          }
         });
       }
     }
@@ -1601,12 +1811,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     else if (item.type == ItemType.armor) { 
       playerCombatStats.equippedArmor = item; if (item.onUse != null) item.onUse!(item, this); await changeArmorSprite('actors/$fileName'); 
       int peso = playerCombatStats.equippedArmor?.peso ?? 0;
-      double staminaDelay = 0.5; if (peso == 2) staminaDelay = 0.6; else if(peso == 3) staminaDelay = 1.0;
+      double staminaDelay = 0.5; if (peso == 2) {
+        staminaDelay = 0.6;
+      } else if(peso == 3) staminaDelay = 1.0;
       playerCombatStats.staminaRegenDelay = staminaDelay;
     }
     else if (item.type == ItemType.shield) { playerCombatStats.equippedShield = item; if (item.onUse != null) item.onUse!(item, this); await changeShieldSprite('actors/$fileName'); }
     else if (item.type == ItemType.consumable) { if (item.onUse != null) item.onUse!(item, this); AudioManager.playSfx('sfx/use_item.wav'); _consumeItem(item); }
-    else if (item.type == ItemType.coin) { showMessage(I18n.t('guarda_batalha')); }
+    else if (item.type == ItemType.coin || item.type == ItemType.gem) { showMessage(I18n.t('guarda_batalha')); }
   }
 
   void _useCombatConsumable(Item item) {
@@ -1648,7 +1860,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void resetGame() {
     runTime=0;
-    for (var enemy in combatOverlay.enemies) enemy.removeFromParent(); 
+    for (var enemy in combatOverlay.enemies) {
+      enemy.removeFromParent();
+    } 
     combatOverlay.enemies.clear(); _messageQueue.clear(); 
 
     playerCombatStats.str = 5; playerCombatStats.con = 5; playerCombatStats.wis = 5;
@@ -1656,9 +1870,21 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.currentPhase = CombatPhase.idle;
 
     _initializeInventory();
-    dungeon.level = 1; player.hasKey = false;
-    dungeon.width = mapSize; dungeon.height = mapSize; dungeon.generateProceduralMap();
-    player.x = dungeon.playerSpawn.x; player.y = dungeon.playerSpawn.y; player.facing = Direction.north;
+    dungeon.level = 1;
+    player.hasKey = false;
+    dungeon.width = mapSize; 
+    dungeon.height = mapSize; 
+    renderer.darkRoomIdx = 0;
+    
+    isDarkRoom = false; // Garante o reset
+    isInvestigationPromptOpen = false;
+    investigationRoomCleared = false;
+    investigationAttempts = 0;
+
+    dungeon.generateProceduralMap();
+    player.x = dungeon.playerSpawn.x; 
+    player.y = dungeon.playerSpawn.y; 
+    player.facing = Direction.north;
 
     shopInventory = [ ItemDatabase.clava, ItemDatabase.gambeson, ItemDatabase.escudoFerro, ItemDatabase.staminaPotion ];
     combatOverlay.enemies.clear();
@@ -1685,7 +1911,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance(); await prefs.remove('save_game');
     hasSavedGame = false;
     AudioManager.playBgm('music/gameover.mp3');
-    for (var e in combatOverlay.enemies) e.isAlive = false;
+    for (var e in combatOverlay.enemies) {
+      e.isAlive = false;
+    }
     currentState = GameState.gameOver; overlays.add('GameOver');
   }
 }

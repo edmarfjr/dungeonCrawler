@@ -83,7 +83,7 @@ class SaveManager {
       // armas
       ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado, ItemDatabase.clava,
       ItemDatabase.espadaOrc, ItemDatabase.lanca, ItemDatabase.claymore, ItemDatabase.clavaOrc, ItemDatabase.warhammer,
-      ItemDatabase.varinha, ItemDatabase.zweihander,
+      ItemDatabase.varinha, ItemDatabase.zweihander,  ItemDatabase.espadaMagica,
       // armaduras
       ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug, ItemDatabase.armaduraAco,
       ItemDatabase.armaduraBronze, ItemDatabase.gambeson, ItemDatabase.chainMail,
@@ -94,7 +94,7 @@ class SaveManager {
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion, ItemDatabase.strPotion,
       // itens
       ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.meat2, ItemDatabase.web, ItemDatabase.slimeEye,
-      ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin,
+      ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin, ItemDatabase.rubi,  ItemDatabase.esmeralda, ItemDatabase.safira,
       // magias
       ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm,
     ];
