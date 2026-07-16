@@ -55,29 +55,25 @@ class _CrtOverlayWidgetState extends State<CrtOverlayWidget> with SingleTickerPr
     double contrast = 1.2; // Aumento de contraste para o fósforo
     double brightness = 15; // Brilho aditivo puro
     
-    // Usamos o LayoutBuilder para saber o tamanho exato da tela atual
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          children:[
-            // 1. O JOGO INTEIRO RODA AQUI NO FUNDO (Livre do filtro global)
-            widget.child,
-            
-            // 2. A PELÍCULA CRT E FILTROS DE COR (Aplicados apenas nos 2/3 superiores)
-            ValueListenableBuilder<bool>(
-              valueListenable: crtFilterEnabled,
-              builder: (context, crtOn, child) {
-                if (crtOn && _program != null) {
-                  
-                  // Reserva exatament 1/3 da tela na parte de baixo para os controles
-                  final controlsHeight = constraints.maxHeight / 3;
-
-                  return Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: controlsHeight, // Corta o filtro na base para não cobrir os botões!
-                    child: ClipRect( // O ClipRect impede que o filtro vaze para o resto da tela
+    return Stack(
+      children:[
+        // 1. O JOGO INTEIRO RODA AQUI NO FUNDO (Livre do filtro global)
+        widget.child,
+        
+        // 2. A PELÍCULA CRT E FILTROS DE COR
+        ValueListenableBuilder<bool>(
+          valueListenable: crtFilterEnabled,
+          builder: (context, crtOn, child) {
+            if (crtOn && _program != null) {
+              
+              // O TRUQUE MÁGICO:
+              // Usamos uma Column com flex 4 e 2 para "imitar" a estrutura
+              // exata da sua UI. Isto garante alinhamento milimétrico!
+              return Column(
+                children: [
+                  Expanded(
+                    flex: 4, // 4 partes de tela para o Filtro CRT (Tela do Jogo)
+                    child: ClipRect( 
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -107,14 +103,20 @@ class _CrtOverlayWidgetState extends State<CrtOverlayWidget> with SingleTickerPr
                         ],
                       ),
                     ),
-                  );
-                }
-                return const SizedBox.shrink(); 
-              },
-            ),
-          ],
-        );
-      }
+                  ),
+                  
+                  // 2 partes de tela totalmente VAZIAS E LIMPAS para os Controles!
+                  const Expanded(
+                    flex: 2, 
+                    child: SizedBox.shrink(),
+                  ),
+                ],
+              );
+            }
+            return const SizedBox.shrink(); 
+          },
+        ),
+      ],
     );
   }
 }
@@ -146,7 +148,7 @@ class CrtPainter extends CustomPainter {
 
     var paint = Paint()..shader = shader;
     
-    // Pinta a área permitida (neste caso, os 2/3 superiores definidos no Positioned)
+    // Pinta a área permitida (neste caso, as flex=4 definidos pela Column)
     canvas.drawRect(Offset.zero & size, paint);
   }
 
