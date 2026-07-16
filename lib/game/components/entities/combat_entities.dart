@@ -40,6 +40,7 @@ class PlayerCombatStats {
 
   double hitFlashTimer = 0.0;
   Color flashColor = Palette.vermelho;
+  double flashTimer = 0;
 
   //variaveis da arma
   double windupTime = 0.1;
@@ -71,6 +72,7 @@ class PlayerCombatStats {
 
   bool isCharging = false;
   double chargeTimer = 0.0;
+  double chargeTime = 0.3;
   bool isHeavyAttack = false;
 
   //List<PlayerProjectile> activeProjectiles = [];
@@ -134,6 +136,11 @@ class PlayerCombatStats {
     vfxTimer = duration;
   }
 
+  void applyFlashEffect(double duration, Color cor){
+    flashColor = cor;
+    flashTimer = duration;
+  }
+
   void updatePhase(double dt) {
 
     if(invencibleTmr > 0) {
@@ -163,6 +170,10 @@ class PlayerCombatStats {
         currentPhase = CombatPhase.idle; // Acordou da paralisia
       }
       return;
+    } 
+
+    if (flashTimer > 0){
+      flashTimer -= dt;
     } 
     
     /*

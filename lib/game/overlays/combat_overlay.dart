@@ -512,7 +512,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     final shieldPaint = Paint();
     shieldPaint.colorFilter =  ColorFilter.mode(corEscudo, BlendMode.modulate); 
 
-    if (playerStats.vfxTimer > 0) { 
+    if (playerStats.flashTimer > 0) { 
       playerPaint.colorFilter =  ColorFilter.mode(playerStats.flashColor, BlendMode.modulate); 
     }
     if(playerStats.cansado) {

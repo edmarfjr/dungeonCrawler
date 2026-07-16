@@ -83,6 +83,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   double encounterEssence = 0;
   int mapSize = 30;
   List<Item> encounterDrop = [];
+  bool finalBom = false;
 
   // --- VARIÁVEIS DA DARK ROOM E SALA SECRETA ---
   bool isDarkRoom = false;
@@ -97,6 +98,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   ValueNotifier<int> settingsCursor = ValueNotifier<int>(0);
   ValueNotifier<bool> settingsRefresh = ValueNotifier<bool>(false);
   final ValueNotifier<int> introInputNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<int> victoryInputNotifier = ValueNotifier<int>(0);
 
   // --- HELPERS DA UI PRÉ-COMPILADOS (Otimização) ---
   late final TextPaint _normalTextPaint;
@@ -118,6 +120,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     int totalLevel = (playerCombatStats.str + playerCombatStats.con + playerCombatStats.wis).toInt();
     return 50 + (totalLevel * 15);
   }
+
 
   int _getPlayerCoins() {
     try { return playerCombatStats.inventory.firstWhere((i) => i.name == "moeda").quantity; } 
@@ -349,6 +352,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga, 
       ItemDatabase.bloquel, 
       ItemDatabase.healthPotion,
+      ItemDatabase.strPotion,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -553,8 +557,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (hasHeavyAttackShield || hasHeavyAttackWeapon) {
         playerCombatStats.chargeTimer += dt;
         playerCombatStats.animTimer = 0.5; 
-        if (playerCombatStats.chargeTimer >= 1.0 && (playerCombatStats.chargeTimer - dt) < 1.0) {
-          playerCombatStats.applyEffect(0.1, Palette.vermelhoCla);
+        if (playerCombatStats.chargeTimer >= playerCombatStats.chargeTime && (playerCombatStats.chargeTimer - dt) < playerCombatStats.chargeTime) {
+          playerCombatStats.applyFlashEffect(0.1, Palette.azul);
         }
         return; 
       }
@@ -731,9 +735,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     String promptText = "";
     if (dungeon.level == 11) {
-      promptText = "Um altar ancestral com 3 encaixes vazios...\nO poder pulsa neste lugar.\n\n[A] COLOCAR GEMAS   [B] SAIR";
+      promptText = I18n.t('monolito');
     } else {
-      promptText = "Voce entrou na sala escura.\nO que deseja fazer?\n\n[A] INVESTIGAR   [B] SAIR";
+      promptText = I18n.t('darkRoom');
     }
 
     const textStyle = TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16);
@@ -745,7 +749,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void openInvestigationRoom() {
-    // Agora o jogador SEMPRE "entra" na sala primeiro, independente de estar vazia
     isInvestigationPromptOpen = true;
     isDarkRoom = true;
     AudioManager.playSfx('sfx/hover.wav');
@@ -753,17 +756,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _performInvestigation() {
     isInvestigationPromptOpen = false;
-    // NÃO mudamos o isDarkRoom aqui! O jogador continua a ver o fundo da sala.
 
     if (investigationRoomCleared) {
       AudioManager.playSfx('sfx/decline.wav');
       if (dungeon.level == 11) {
-        showMessage("O altar esta sem brilho agora.", onDismiss: () {
+        showMessage(I18n.t('monolito_fim'), onDismiss: () {
           // Reabre o menu após o jogador ler a mensagem
           isInvestigationPromptOpen = true;
         });
       } else {
-        showMessage("A sala esta vazia. Voce ja encontrou tudo aqui.", onDismiss: () {
+        showMessage(I18n.t('darkRoom_fim'), onDismiss: () {
           isInvestigationPromptOpen = true;
         });
       }
@@ -801,13 +803,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         Item armaLendaria = ItemDatabase.espadaMagica; 
 
         AudioManager.playSfx('sfx/confirm.wav');
-        showMessage("A sala se ilumina! O altar absorve as gemas e revela uma Arma Divina!", onDismiss: () {
+        showMessage(I18n.t('darkRoom_resolve'), onDismiss: () {
           receiveItem(armaLendaria);
           isInvestigationPromptOpen = true; // Volta para o menu do altar
         });
       } else {
         AudioManager.playSfx('sfx/decline.wav');
-        showMessage("O altar recusa. Voce precisa de 3 gemas. (Voce tem $totalGemas/3)", onDismiss: () {
+        showMessage(I18n.t('monolito_recusa'), onDismiss: () {
           isInvestigationPromptOpen = true; // Volta para o menu do altar
         });
       }
@@ -829,7 +831,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       } 
       
       AudioManager.playSfx('sfx/confirm.wav');
-      showMessage("Sucesso! Voce encontrou uma gema no fundo da sala!", onDismiss: () {
+      showMessage(I18n.t('darkRoom_resolve'), onDismiss: () {
         receiveItem(gema);  
         isInvestigationPromptOpen = true; // Retorna para o menu da sala
       });
@@ -837,7 +839,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       bool isAmbush = Random().nextBool();
       if (isAmbush) {
         AudioManager.playSfx('sfx/decline.wav'); 
-        showMessage("Uma armadilha! Monstros saltam das sombras!", onDismiss: () {
+        showMessage(I18n.t('darkRoom_trap'), onDismiss: () {
           isInvestigationPromptOpen = true; // Garante que o menu vai reaparecer após o combate acabar!
           EncounterManager.triggerRandomEncounter(this);
         });
@@ -1001,7 +1003,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       TextPainter(text:  TextSpan(text: "${I18n.t('a_confirma')}\n${I18n.t('b_cancelar')}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
     }
     if (isItemActionMenuOpen) {
-      double menuWidth = 200, menuHeight = 130;
+      double menuWidth = 250, menuHeight = 130;
       double menuX = (size.x - menuWidth) / 2 + 50, menuY = (size.y - menuHeight) / 2;
       final menuRect = Rect.fromLTWH(menuX, menuY, menuWidth, menuHeight);
       canvas.drawRect(menuRect, Paint()..color = Palette.preto);
@@ -1179,7 +1181,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.paused: _handlePauseInput(input); break;
       case GameState.mainMenu: _handleMainMenuInput(input); break;
       case GameState.gameOver: 
-      case GameState.vitory: _handleGameOverInput(input); break;
+      case GameState.vitory: 
+        if (input == GameInput.buttonA || input == GameInput.buttonB) {
+          victoryInputNotifier.value++; 
+        } 
+        break;
       case GameState.manual: 
         if (input == GameInput.buttonB) { AudioManager.playSfx('sfx/decline.wav'); closeManual(); }
         break;
@@ -1199,7 +1205,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.isCharging = false;
         double custoStaminaBase = playerCombatStats.staminaCost;
 
-        if (playerCombatStats.chargeTimer >= 1.0) {
+        if (playerCombatStats.chargeTimer >= playerCombatStats.chargeTime) {
           playerCombatStats.isHeavyAttack = true;
           playerCombatStats.stamina = max(playerCombatStats.stamina - (custoStaminaBase * 1.5), 0.0);
         } else {
@@ -1859,6 +1865,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void resetGame() {
+    finalBom = false;
     runTime=0;
     for (var enemy in combatOverlay.enemies) {
       enemy.removeFromParent();

@@ -74,6 +74,9 @@ flutter:
     - family: pixelFont
       fonts:
         - asset: assets/fonts/pixel.ttf
+  
+  shaders:
+    - shaders/crt_overlay.frag
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

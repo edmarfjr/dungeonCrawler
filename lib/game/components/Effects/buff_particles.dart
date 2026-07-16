@@ -26,12 +26,18 @@ class BuffParticle extends PositionComponent {
   @override
   void render(Canvas canvas) {
     double opacity = (life / maxLife).clamp(0.0, 1.0);
-    canvas.drawCircle(
-      const Offset(0, 0), // Centro do componente
-      4.0, 
-      Paint()
-        ..color = cor.withOpacity(opacity)
-        ..isAntiAlias = false,
+    //canvas.drawCircle(
+    //  const Offset(0, 0), // Centro do componente
+    //  4.0, 
+    //  Paint()
+    //    ..color = cor.withOpacity(opacity)
+    //    ..isAntiAlias = false,
+    //);
+    canvas.drawRect(
+          Rect.fromCenter(center: Offset(0, 0), width: 6, height: 6), 
+          Paint()
+            ..color = cor.withOpacity(opacity)
+            ..isAntiAlias = false
     );
   }
 }

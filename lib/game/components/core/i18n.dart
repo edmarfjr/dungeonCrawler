@@ -165,7 +165,15 @@ class I18n {
       'aberraOvo':'Utero Aberrante',
       'antigo':'O Antigo',
       'tantaculo':'Tantáculo',
-
+      'monolito':'Um monolito ancestral com 3 encaixes vazios...\nO poder pulsa neste lugar.\n\n[A] COLOCAR GEMAS   [B] SAIR',
+      'darkRoom':'Voce entrou em uma sala escura.\nO que deseja fazer?\n\n[A] INVESTIGAR   [B] SAIR',
+      'monolito_fim':'O monolito esta sem brilho agora.',
+      'darkRoom_fim':'A sala esta vazia. Voce ja encontrou tudo aqui.',
+      'monolito_resolve':'A sala se ilumina! O altar absorve as gemas e revela uma Arma Divina!',
+      'monolito_recusa':'O altar recusa. Voce precisa das 3 gemas.',
+      'darkRoom_resolve':'Voce encontrou uma gema no fundo da sala!',
+      'darkRoom_trap':'Uma armadilha! Monstros saltam das sombras!',
+      '':'',
     },
     AppLanguage.en: {
       'menu_continue': 'CONTINUE GAME',
@@ -325,6 +333,14 @@ class I18n {
       'aberraOvo':'Aberrant Uterus',
       'antigo':'The Old One',
       'tantaculo':'Tantacle',
+      'monolito':'An ancient monolith with 3 empty slots...\nPower pulses in this place.\n\n[A] PLACE GEMS   [B] LEAVE',
+      'darkRoom':'You entered a dark room.\nWhat do you want to do?\n\n[A] INVESTIGATE   [B] LEAVE',
+      'monolito_fim':'The monolith is dull now.',
+      'darkRoom_fim':'The room is empty. You have already found everything here.',
+      'monolito_resolve':'The room lights up! The altar absorbs the gems and reveals a Divine Weapon!',
+      'monolito_recusa':'The altar refuses. You need all 3 gems.',
+      'darkRoom_resolve':'You found a gem at the back of the room!',
+      'darkRoom_trap':'A trap! Monsters jump from the shadows!',
     }
   };
 

@@ -1,6 +1,7 @@
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/core/settings_manager.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:dungeon_crawler/game/overlays/crt_overlay_widget.dart';
 import 'package:dungeon_crawler/game/overlays/gameover_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/intro_overlay.dart';
 import 'package:dungeon_crawler/game/overlays/main_menu_overlay.dart';
@@ -29,6 +30,11 @@ class DungeonApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
+      builder: (context, child) {
+        return CrtOverlayWidget(
+          child: child!,
+        );
+      },
       home: const GameScreen(),
     );
   }
@@ -71,7 +77,7 @@ class _GameScreenState extends State<GameScreen> {
                     'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
                     'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
                     'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
-                    'Vitory': (context, game) => VitoryOverlay(game: game as DungeonCrawlerGame),
+                    'Vitory': (context, game) => VictoryCutsceneOverlay(game: game as DungeonCrawlerGame),
                     'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
                   },
                   // Define qual menu aparece primeiro quando abre o app

@@ -192,6 +192,9 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
         if(isBoss){
           gameRef.player.hasKey = true;
           gameRef.showMessage("Você encontrou a Chave da Masmorra!");
+          if(type == EnemyType.boss4 && gameRef.playerCombatStats.equippedWeapon?.name == 'espada_magica'){
+            gameRef.finalBom = true;
+          }
         }
 
         isAlive = false; 
@@ -2940,21 +2943,21 @@ class AberraOvoEnemy extends Enemy {
   ){
     isFrontRow = true;
   }
-  @override
-  bool get canChangeRow => false;
+ // @override
+ // bool get canChangeRow => false;
 
-  late bool _fixedRow;
+ // late bool _fixedRow;
 
   @override
   void update(double dt) {
-    isFrontRow = _fixedRow; 
+    //isFrontRow = _fixedRow; 
     super.update(dt);
   }
 
   @override
   void onMount() {
     super.onMount();
-    _fixedRow = isFrontRow; 
+    //_fixedRow = isFrontRow; 
   }
 
 
