@@ -22,15 +22,15 @@ class VictoryCutsceneOverlay extends StatefulWidget {
 class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
   // === DEFINA AQUI AS CENAS DO SEU FINAL ===
   final List<CutsceneFrame> framesRuim = [
-    CutsceneFrame('assets/images/tilesets/boss.png', "Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda"),
-    CutsceneFrame('assets/images/tilesets/chest.png', "A luz começa a entrar em seus olhos, revelando uma paisagem aterradora."),
-    CutsceneFrame('assets/images/tilesets/font.png', '"ONDE ESTOU?"\n\nVoce sobreviveu a masmorra.\nMas sua aventura está apenas começando...'),
+    CutsceneFrame('assets/images/tilesets/tunel.png', "Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda"),
+    CutsceneFrame('assets/images/tilesets/paisagemAlien.png', "A luz começa a entrar em seus olhos, revelando uma paisagem aterradora."),
+    CutsceneFrame('assets/images/tilesets/retratoAssustada.png', '"ONDE ESTOU?"\n\nVoce sobreviveu a masmorra.\nMas sua aventura está apenas começando...'),
   ];
 
   final List<CutsceneFrame> framesBom = [
-    CutsceneFrame('assets/images/tilesets/boss.png', "Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda"),
-    CutsceneFrame('assets/images/tilesets/chest.png', "A luz começa a entrar em seus olhos, revelando uma paisagem conhecida."),
-    CutsceneFrame('assets/images/tilesets/font.png', '"ESTOU DE VOLTA!"\n\nVoce sobreviveu a masmorra.\nO mundo finalmente está salvo...'),
+    CutsceneFrame('assets/images/tilesets/tunel.png', "Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda"),
+    CutsceneFrame('assets/images/tilesets/paisagem.png', "A luz começa a entrar em seus olhos, revelando uma paisagem conhecida."),
+    CutsceneFrame('assets/images/tilesets/retratoFeliz.png', '"ESTOU DE VOLTA!"\n\nVoce sobreviveu a masmorra.\nO mundo finalmente está salvo...'),
   ];
 
   List<CutsceneFrame> frames =[];
@@ -135,6 +135,7 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
           onEnd: () {
             if (_opacity == 0.0 && mounted) {
               // Quando o fade out terminar, reseta e vai para o menu principal
+              widget.game.apagaSave();
               widget.game.quitToMainMenu();
             }
           },

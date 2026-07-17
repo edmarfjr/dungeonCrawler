@@ -30,11 +30,6 @@ class DungeonApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      builder: (context, child) {
-        return CrtOverlayWidget(
-          child: child!,
-        );
-      },
       home: const GameScreen(),
     );
   }
@@ -67,21 +62,24 @@ class _GameScreenState extends State<GameScreen> {
             Expanded(
               flex: 4,
               child: ClipRect(
-                child: GameWidget(
-                  game: _game,
-                  // --- 1. MAPEAMENTO DOS MENUS ---
-                  overlayBuilderMap: {
-                    'Splash': (context, game) => SplashOverlay(game: game as DungeonCrawlerGame),
-                    'MainMenu': (context, game) => MainMenuOverlay(game: game as DungeonCrawlerGame),
-                    'Intro': (context, game) => IntroOverlay(game: game as DungeonCrawlerGame),
-                    'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
-                    'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
-                    'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
-                    'Vitory': (context, game) => VictoryCutsceneOverlay(game: game as DungeonCrawlerGame),
-                    'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
-                  },
-                  // Define qual menu aparece primeiro quando abre o app
-                  initialActiveOverlays: const ['Splash'],
+                child: CrtOverlayWidget(
+                  crtFilterEnabled: _game.crtFilterEnabled,
+                  child: GameWidget(
+                    game: _game,
+                    // --- 1. MAPEAMENTO DOS MENUS ---
+                    overlayBuilderMap: {
+                      'Splash': (context, game) => SplashOverlay(game: game as DungeonCrawlerGame),
+                      'MainMenu': (context, game) => MainMenuOverlay(game: game as DungeonCrawlerGame),
+                      'Intro': (context, game) => IntroOverlay(game: game as DungeonCrawlerGame),
+                      'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
+                      'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
+                      'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
+                      'Victory': (context, game) => VictoryCutsceneOverlay(game: game as DungeonCrawlerGame),
+                      'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
+                    },
+                    // Define qual menu aparece primeiro quando abre o app
+                    initialActiveOverlays: const ['Splash'],
+                  ),
                 ),
               ),
             ),

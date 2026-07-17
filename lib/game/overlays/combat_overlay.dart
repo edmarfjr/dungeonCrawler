@@ -549,9 +549,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 75), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
     //double barWidth = (size.x - 40) / 3;
-    _drawHorizontalBar(canvas, 10, 10, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
-    _drawHorizontalBar(canvas, 10, 25, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
-    _drawHorizontalBar(canvas, 10, 40, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
+    _drawHorizontalBar(canvas, 10, 13, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
+    _drawHorizontalBar(canvas, 10, 30, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
+    _drawHorizontalBar(canvas, 10, 47, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
     
     //inventario
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {

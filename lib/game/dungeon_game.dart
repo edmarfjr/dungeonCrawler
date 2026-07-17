@@ -22,7 +22,7 @@ import 'package:dungeon_crawler/game/components/entities/player_projectile.dart'
 import 'package:dungeon_crawler/game/overlays/combat_overlay.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
-enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, vitory, settings, splash }
+enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, victory, settings, splash }
 enum ShopPhase { main, buy, sell, confirmSell, steal }
 
 class GameMessage {
@@ -99,6 +99,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   ValueNotifier<bool> settingsRefresh = ValueNotifier<bool>(false);
   final ValueNotifier<int> introInputNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> victoryInputNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> crtFilterEnabled = ValueNotifier<bool>(true);
 
   // --- HELPERS DA UI PRÉ-COMPILADOS (Otimização) ---
   late final TextPaint _normalTextPaint;
@@ -1089,8 +1090,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       currentState = previousState; AudioManager.resumeBgm(); overlays.remove('PauseMenu');
     }
   }
+
+  void toggleCRT(){
+    crtFilterEnabled.value = !crtFilterEnabled.value;
+  }
+
   void quitToMainMenu() {
-    AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver');
+    AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver'); overlays.remove('Victory');
     currentState = GameState.mainMenu; overlays.add('MainMenu');
     //AudioManager.playBgm('music/main-menu.ogg');
   }
@@ -1181,7 +1187,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.paused: _handlePauseInput(input); break;
       case GameState.mainMenu: _handleMainMenuInput(input); break;
       case GameState.gameOver: 
-      case GameState.vitory: 
+      case GameState.victory: 
         if (input == GameInput.buttonA || input == GameInput.buttonB) {
           victoryInputNotifier.value++; 
         } 
@@ -1191,7 +1197,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         break;
       //default: break;
     }
-    if(input == GameInput.pause && !(currentState == GameState.settings || currentState == GameState.mainMenu || currentState == GameState.gameOver || currentState == GameState.vitory)) togglePause();
+    if(input == GameInput.pause && !(currentState == GameState.settings || currentState == GameState.mainMenu || currentState == GameState.gameOver || currentState == GameState.victory)) togglePause();
   }
 
   void stopInput(GameInput input) {
@@ -1450,8 +1456,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _handleSettingsInput(GameInput input) {
-    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); settingsCursor.value = (settingsCursor.value - 1 + 4) % 4; }
-    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); settingsCursor.value = (settingsCursor.value + 1) % 4; }
+    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); settingsCursor.value = (settingsCursor.value - 1 + 5) % 5; }
+    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); settingsCursor.value = (settingsCursor.value + 1) % 5; }
     
     // NOVO: Setas para os lados controlam as barras de volume e idioma!
     if (input == GameInput.left) {
@@ -1477,6 +1483,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         settingsRefresh.value = !settingsRefresh.value; 
       }
       else if (settingsCursor.value == 3) { 
+        AudioManager.playSfx('sfx/confirm.wav');
+        toggleCRT(); 
+      }
+      else if (settingsCursor.value == 4) { 
         AudioManager.playSfx('sfx/confirm.wav');
         closeSettings(); 
       }
@@ -1706,7 +1716,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           }
           combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
 
-          if(dungeon.level >= 13){ currentState = GameState.vitory; overlays.add('Vitory'); }
+          if(dungeon.level >= 13){ currentState = GameState.victory; overlays.add('Victory'); }
         });
       } else { showMessage(I18n.t('door_locked')); }
     } 
@@ -1915,12 +1925,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void handlePlayerDeath() async { 
-    final prefs = await SharedPreferences.getInstance(); await prefs.remove('save_game');
-    hasSavedGame = false;
+    apagaSave();
     AudioManager.playBgm('music/gameover.mp3');
     for (var e in combatOverlay.enemies) {
       e.isAlive = false;
     }
     currentState = GameState.gameOver; overlays.add('GameOver');
+  }
+
+  void apagaSave() async{
+    final prefs = await SharedPreferences.getInstance(); await prefs.remove('save_game');
+    hasSavedGame = false;
   }
 }

@@ -16,6 +16,15 @@ class SettingsMenuOverlay extends StatelessWidget {
     return "< $bars >";
   }
 
+  String _crtStatus(bool status) {
+    String crtStatus = '[ON]';
+
+    if (status == false) {
+      crtStatus = '[OFF]';
+    }
+    return crtStatus;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -26,7 +35,7 @@ class SettingsMenuOverlay extends StatelessWidget {
           builder: (context, child) {
             
             int cursorIndex = game.settingsCursor.value;
-
+            
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -59,9 +68,21 @@ class SettingsMenuOverlay extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 
+                ValueListenableBuilder<bool>(
+                  valueListenable: game.crtFilterEnabled, 
+                  builder: (context, crtOn, child) {
+                    return _buildMenuOption(
+                      title: "CRT: ${_crtStatus(crtOn)}", 
+                      index: 3, 
+                      currentIndex: cursorIndex,
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
                 _buildMenuOption(
                   title: I18n.t('opt_back'),
-                  index: 3, currentIndex: cursorIndex,
+                  index: 4, currentIndex: cursorIndex,
                 ),
               ],
             );
