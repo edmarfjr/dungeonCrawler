@@ -33,6 +33,14 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   bool _bumpForward = true;
   double yOffsetAnim = 0.0;
 
+  double _smoothMoveTimer = 0.0;
+  final double _maxSmoothMoveTime = 0.20;
+  bool _smoothMoveForward = true;
+
+  double _smoothTurnTimer = 0.0;
+  final double _maxSmoothTurnTime = 0.18;
+  bool _smoothTurnRight = true;
+
   int darkRoomIdx = 0;
 
   MazeRenderer({
@@ -61,11 +69,27 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     _bumpForward = forward;
   }
 
+    void triggerSmoothMove({required bool forward}) {
+    _smoothMoveTimer = _maxSmoothMoveTime;
+    _smoothMoveForward = forward;
+  }
+
+  void triggerSmoothTurn({required bool right}) {
+    _smoothTurnTimer = _maxSmoothTurnTime;
+    _smoothTurnRight = right;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     if (_bumpTimer > 0) {
       _bumpTimer -= dt;
+    }
+    if (_smoothMoveTimer > 0) {
+      _smoothMoveTimer -= dt;
+    }
+    if (_smoothTurnTimer > 0) {
+      _smoothTurnTimer -= dt;
     }
   }
 
@@ -102,9 +126,49 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       }
     }
 
-    // Fundo preto (teto e o vazio distante)
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black );
+    // ===============================================================
+    // 3. APLICA O MOVIMENTO SUAVE (ZOOM IN / ZOOM OUT)
+    // ===============================================================
+    if (_smoothMoveTimer > 0) {
+      double progress = (_smoothMoveTimer / _maxSmoothMoveTime).clamp(0.0, 1.0);
+      double ease = progress * progress; // Inicia rápido, suaviza no final
+      
+      if (_smoothMoveForward) {
+        double scale = 1.0 - (0.4 * ease); // Cena começa em 0.6 e cresce para 1.0
+        double yJolt = 20.0 * ease; // Head bob (Câmera baixa levemente e sobe)
+        
+        canvas.translate(size.x / 2, size.y / 2);
+        canvas.scale(scale);
+        canvas.translate(-size.x / 2, (-size.y / 2) + yJolt);
+      } else {
+        double scale = 1.0 + (0.4 * ease); // Cena começa em 1.4 e encolhe para 1.0
+        double yJolt = -20.0 * ease; 
+        
+        canvas.translate(size.x / 2, size.y / 2);
+        canvas.scale(scale);
+        canvas.translate(-size.x / 2, (-size.y / 2) + yJolt);
+      }
+    }
 
+    // ===============================================================
+    // 4. APLICA A ROTAÇÃO SUAVE (DESLIZE HORIZONTAL)
+    // ===============================================================
+    if (_smoothTurnTimer > 0) {
+      double progress = (_smoothTurnTimer / _maxSmoothTurnTime).clamp(0.0, 1.0);
+      double ease = progress * progress; 
+      
+      double offset = size.x * 0.6 * ease; // Desliza ocupando 60% da tela
+      
+      if (_smoothTurnRight) {
+        canvas.translate(offset, 0); // Nova cena desliza da direita para a esquerda
+      } else {
+        canvas.translate(-offset, 0); // Nova cena desliza da esquerda para a direita
+      }
+    }
+
+    // Fundo preto (teto e o vazio distante)
+   // canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black );
+    canvas.drawRect(Rect.fromLTWH(-size.x, -size.y, size.x * 3, size.y * 3), Paint()..color = Palette.preto );
 
     if(gameRef.isDarkRoom){
        canvas.drawImageRect(

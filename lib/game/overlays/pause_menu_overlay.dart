@@ -15,7 +15,7 @@ class PauseMenuOverlay extends StatelessWidget {
     final tempoAtual = game.getFormattedRunTime();
     
     return Container(
-      color: Palette.preto.withOpacity(0.8),
+      color: Palette.preto.withValues(alpha: 0.8),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -197,19 +197,33 @@ class _MapPainter extends CustomPainter {
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
 
         TileType tile = map.grid[y][x];
-        if (tile == TileType.wall) canvas.drawRect(tileRect, paintWall);
-        else if (tile == TileType.floor) canvas.drawRect(tileRect, paintFloor);
-        else if (tile == TileType.door) canvas.drawRect(tileRect, paintDoor);
-        else if (tile == TileType.chest) canvas.drawRect(tileRect, paintChest);
-        else if (tile == TileType.shrine) canvas.drawRect(tileRect, paintShrine);
-        else if (tile == TileType.spike) canvas.drawRect(tileRect, paintSpike);
-        else if (tile == TileType.poison) canvas.drawRect(tileRect, paintPoison);
-        else if (tile == TileType.teleport) canvas.drawRect(tileRect, paintTele);
-        else if (tile == TileType.boss) canvas.drawRect(tileRect, paintBoss);
-        else if (tile == TileType.crate) canvas.drawRect(tileRect, paintCrate);
-        else if (tile == TileType.shop) canvas.drawRect(tileRect, paintShop);
-        else if (tile == TileType.secretWall) canvas.drawRect(tileRect, paintSecretWall);
-        else if (tile == TileType.font || tile == TileType.fontPoison) canvas.drawRect(tileRect, paintFont);
+        if (tile == TileType.wall) {
+          canvas.drawRect(tileRect, paintWall);
+        } else if (tile == TileType.floor) {
+          canvas.drawRect(tileRect, paintFloor);
+        } else if (tile == TileType.door) {
+          canvas.drawRect(tileRect, paintDoor);
+        } else if (tile == TileType.chest) {
+          canvas.drawRect(tileRect, paintChest);
+        } else if (tile == TileType.shrine) {
+          canvas.drawRect(tileRect, paintShrine);
+        } else if (tile == TileType.spike) {
+          canvas.drawRect(tileRect, paintSpike);
+        } else if (tile == TileType.poison) {
+          canvas.drawRect(tileRect, paintPoison);
+        } else if (tile == TileType.teleport) {
+          canvas.drawRect(tileRect, paintTele);
+        } else if (tile == TileType.boss) {
+          canvas.drawRect(tileRect, paintBoss);
+        } else if (tile == TileType.crate) {
+          canvas.drawRect(tileRect, paintCrate);
+        } else if (tile == TileType.shop) {
+          canvas.drawRect(tileRect, paintShop);
+        } else if (tile == TileType.secretWall) {
+          canvas.drawRect(tileRect, paintSecretWall);
+        } else if (tile == TileType.font || tile == TileType.fontPoison) {
+          canvas.drawRect(tileRect, paintFont);
+        }
 
         if (map.keyPosition != null && map.keyPosition!.x == x && map.keyPosition!.y == y){
           canvas.drawRect(tileRect, paintKey);
