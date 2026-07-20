@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dungeon_crawler/game/components/core/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
@@ -22,15 +23,15 @@ class VictoryCutsceneOverlay extends StatefulWidget {
 class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
   // === DEFINA AQUI AS CENAS DO SEU FINAL ===
   final List<CutsceneFrame> framesRuim = [
-    CutsceneFrame('assets/images/tilesets/tunel.png', "Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda"),
-    CutsceneFrame('assets/images/tilesets/paisagemAlien.png', "A luz começa a entrar em seus olhos, revelando uma paisagem aterradora."),
-    CutsceneFrame('assets/images/tilesets/retratoAssustada.png', '"ONDE ESTOU?"\n\nVoce sobreviveu a masmorra.\nMas sua aventura está apenas começando...'),
+    CutsceneFrame('assets/images/tilesets/tunel.png', "finalRuim1"),
+    CutsceneFrame('assets/images/tilesets/paisagemAlien.png', "finalRuim2"),
+    CutsceneFrame('assets/images/tilesets/retratoAssustada.png', 'finalRuim3'),
   ];
 
   final List<CutsceneFrame> framesBom = [
-    CutsceneFrame('assets/images/tilesets/tunel.png', "Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda"),
-    CutsceneFrame('assets/images/tilesets/paisagem.png', "A luz começa a entrar em seus olhos, revelando uma paisagem conhecida."),
-    CutsceneFrame('assets/images/tilesets/retratoFeliz.png', '"ESTOU DE VOLTA!"\n\nVoce sobreviveu a masmorra.\nO mundo finalmente está salvo...'),
+    CutsceneFrame('assets/images/tilesets/tunel.png', "finalBom1"),
+    CutsceneFrame('assets/images/tilesets/paisagem.png', "finalBom2"),
+    CutsceneFrame('assets/images/tilesets/retratoFeliz.png', 'finalBom3'),
   ];
 
   List<CutsceneFrame> frames =[];
@@ -68,7 +69,7 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
     isTyping = true;
     visibleText = "";
     charIndex = 0;
-    String fullText = frames[currentFrame].text;
+    String fullText = I18n.t(frames[currentFrame].text);
 
     typingTimer?.cancel();
     typingTimer = Timer.periodic(const Duration(milliseconds: 40), (timer) {

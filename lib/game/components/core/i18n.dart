@@ -222,6 +222,12 @@ class I18n {
       "d_piercingShot": "Livro: Raio Perfurante.\nProjétil que atravessa escudos e múltiplos inimigos.\nCusto: 5 MP",
       "d_toxicCloud": "Livro: Nuvem Tóxica.\nDeixa fumaça venenosa constante na área.\nCusto: 10 MP",
       "d_thunderStorm": "Livro: Tempestade de Raios.\nCausa dano elétrico pesado em toda a sala.\nCusto: 15 MP",
+      'finalRuim1':"Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda",
+      'finalRuim2':"A luz começa a entrar em seus olhos, revelando uma paisagem aterradora.",
+      'finalRuim3':'"ONDE ESTOU?"\n\nVoce sobreviveu a masmorra.\nMas sua aventura está apenas começando...',
+      'finalBom1':"Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda",
+      'finalBom2':"A luz começa a entrar em seus olhos, revelando uma paisagem conhecida.",
+      'finalBom3':'"ESTOU DE VOLTA!"\n\nVoce sobreviveu a masmorra.\nO mundo finalmente está salvo...',
     },
     AppLanguage.en: {
       'menu_continue': 'CONTINUE GAME',

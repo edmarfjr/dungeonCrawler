@@ -1228,7 +1228,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.levelUp: _handleLevelUpInput(input); break;
       case GameState.paused: _handlePauseInput(input); break;
       case GameState.mainMenu: _handleMainMenuInput(input); break;
-      case GameState.gameOver: 
+      case GameState.gameOver: _handleGameOverInput(input); break;
       case GameState.victory: 
         if (input == GameInput.buttonA || input == GameInput.buttonB) {
           victoryInputNotifier.value++; 
@@ -1627,6 +1627,20 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
+ void _handleGameOverInput(GameInput input) {
+    int maxOptions = 2; 
+    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
+    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
+    if (input == GameInput.buttonA) {
+      AudioManager.playSfx('sfx/confirm.wav');
+      if (mainMenuCursor.value == 0) {
+        startGame();
+      } else if (mainMenuCursor.value == 1) {
+        quitToMainMenu();
+      }
+    }
+  }
+
   void _handleMainMenuInput(GameInput input) {
     //if (AudioManager.currentTrack != 'music/main-menu.ogg') {
     //  AudioManager.playBgm('music/main-menu.ogg');
@@ -1646,20 +1660,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         if (mainMenuCursor.value == 0) { startGame(); } 
         else if (mainMenuCursor.value == 1) { openSettings(); } 
         else if (mainMenuCursor.value == 2) { openManual(); }
-      }
-    }
-  }
-
-  void _handleGameOverInput(GameInput input) {
-    int maxOptions = 2; 
-    if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
-    if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
-    if (input == GameInput.buttonA) {
-      AudioManager.playSfx('sfx/confirm.wav');
-      if (mainMenuCursor.value == 0) {
-        startGame();
-      } else if (mainMenuCursor.value == 1) {
-        quitToMainMenu();
       }
     }
   }
@@ -1955,7 +1955,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     encounterEssence = 0; encounterDrop.clear(); victoryProcessed = false;
     currentState = GameState.combat;
     combatOverlay.startEncounter(enemies);
-    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 1.5;
+    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 1.0;
     if(isBoss){
       AudioManager.playBgm('music/boss-battle.mp3');
     }

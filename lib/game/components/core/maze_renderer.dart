@@ -134,15 +134,15 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       double ease = progress * progress; // Inicia rápido, suaviza no final
       
       if (_smoothMoveForward) {
-        double scale = 1.0 - (0.4 * ease); // Cena começa em 0.6 e cresce para 1.0
-        double yJolt = 20.0 * ease; // Head bob (Câmera baixa levemente e sobe)
+        double scale = 1.0 - (0.2 * ease); // Cena começa em 0.6 e cresce para 1.0
+        double yJolt = 15.0 * ease; // Head bob (Câmera baixa levemente e sobe)
         
         canvas.translate(size.x / 2, size.y / 2);
         canvas.scale(scale);
         canvas.translate(-size.x / 2, (-size.y / 2) + yJolt);
       } else {
-        double scale = 1.0 + (0.4 * ease); // Cena começa em 1.4 e encolhe para 1.0
-        double yJolt = -20.0 * ease; 
+        double scale = 1.0 + (0.2 * ease); // Cena começa em 1.4 e encolhe para 1.0
+        double yJolt = -15.0 * ease; 
         
         canvas.translate(size.x / 2, size.y / 2);
         canvas.scale(scale);
@@ -157,7 +157,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       double progress = (_smoothTurnTimer / _maxSmoothTurnTime).clamp(0.0, 1.0);
       double ease = progress * progress; 
       
-      double offset = size.x * 0.6 * ease; // Desliza ocupando 60% da tela
+      double offset = size.x * 0.5 * ease; // Desliza ocupando 60% da tela
       
       if (_smoothTurnRight) {
         canvas.translate(offset, 0); // Nova cena desliza da direita para a esquerda
