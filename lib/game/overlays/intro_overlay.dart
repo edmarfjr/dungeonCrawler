@@ -107,7 +107,7 @@ class _IntroOverlayState extends State<IntroOverlay> {
                 style: const TextStyle(
                   fontFamily: 'pixelFont',
                   color: Palette.branco,
-                  fontSize: 20,
+                  fontSize: 14,
                   height: 1.5,
                   decoration: TextDecoration.none,
                 ),

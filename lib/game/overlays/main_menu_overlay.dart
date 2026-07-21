@@ -65,11 +65,11 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "DUNGEON CRAWLER", 
+                    "A BLADE IN THE ABYSS", 
                     style: TextStyle(
                       fontFamily: 'pixelFont', 
                       color: Palette.branco, 
-                      fontSize: 32, 
+                      fontSize: 30, 
                       fontWeight: FontWeight.bold, 
                       letterSpacing: 2,
                       decoration: TextDecoration.none, 

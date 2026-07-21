@@ -95,11 +95,11 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   const Text(
-                    "DUNGEON CRAWLER", 
+                    "A BLADE IN THE ABYSS", 
                     style: TextStyle(
                       fontFamily: 'pixelFont', 
-                      color: Palette.vermelho, 
-                      fontSize: 40, 
+                      color: Palette.vermelhoEsc, 
+                      fontSize: 32, 
                       fontWeight: FontWeight.bold, 
                       letterSpacing: 1,
                       decoration: TextDecoration.none, 

@@ -355,7 +355,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga, 
       ItemDatabase.bloquel, 
       ItemDatabase.healthPotion,
-      ItemDatabase.strPotion,
     ];
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
@@ -1167,8 +1166,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        //EncounterManager.triggerSpecificEncounter(this, EnemyType.bat);
-        EncounterManager.triggerRandomEncounter(this);
+        EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
+        //EncounterManager.triggerRandomEncounter(this);
       } 
       if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
 

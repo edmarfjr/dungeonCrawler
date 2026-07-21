@@ -920,7 +920,7 @@ class OrcChefe extends Enemy {
                            currentPhase == CombatPhase.active2 || 
                            currentPhase == CombatPhase.recovery2;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.34) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
