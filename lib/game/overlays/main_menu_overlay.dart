@@ -69,7 +69,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
                     style: TextStyle(
                       fontFamily: 'pixelFont', 
                       color: Palette.branco, 
-                      fontSize: 30, 
+                      fontSize: 28, 
                       fontWeight: FontWeight.bold, 
                       letterSpacing: 2,
                       decoration: TextDecoration.none, 

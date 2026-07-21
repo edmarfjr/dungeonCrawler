@@ -99,7 +99,7 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                     style: TextStyle(
                       fontFamily: 'pixelFont', 
                       color: Palette.vermelhoEsc, 
-                      fontSize: 32, 
+                      fontSize: 30, 
                       fontWeight: FontWeight.bold, 
                       letterSpacing: 1,
                       decoration: TextDecoration.none, 
