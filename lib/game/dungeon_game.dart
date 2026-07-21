@@ -1955,7 +1955,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     encounterEssence = 0; encounterDrop.clear(); victoryProcessed = false;
     currentState = GameState.combat;
     combatOverlay.startEncounter(enemies);
-    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 1.0;
+    playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 0.5;
     if(isBoss){
       AudioManager.playBgm('music/boss-battle.mp3');
     }

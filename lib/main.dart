@@ -1,3 +1,4 @@
+import 'package:dungeon_crawler/game/components/core/game_button.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/components/core/settings_manager.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
@@ -110,10 +111,10 @@ class _GameScreenState extends State<GameScreen> {
                                 children: [
                                   Align(alignment: Alignment.center, child: Container(width: 63, height: 110, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
                                   Align(alignment: Alignment.center, child: Container(width: 110, height: 63, decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle))),
-                                  Align(alignment: Alignment.topCenter, child: _buildStaticArrow(Icons.arrow_upward)),
-                                  Align(alignment: Alignment.bottomCenter, child: _buildStaticArrow(Icons.arrow_downward)),
-                                  Align(alignment: Alignment.centerLeft, child: _buildStaticArrow(Icons.arrow_back)),
-                                  Align(alignment: Alignment.centerRight, child: _buildStaticArrow(Icons.arrow_forward)),
+                                  Align(alignment: Alignment.topCenter, child: _buildStaticArrow(Icons.arrow_upward, GameInput.up)),
+                                  Align(alignment: Alignment.bottomCenter, child: _buildStaticArrow(Icons.arrow_downward, GameInput.down)),
+                                  Align(alignment: Alignment.centerLeft, child: _buildStaticArrow(Icons.arrow_back, GameInput.left)),
+                                  Align(alignment: Alignment.centerRight, child: _buildStaticArrow(Icons.arrow_forward, GameInput.right)),
                                 ],
                               ),
                             );
@@ -128,8 +129,12 @@ class _GameScreenState extends State<GameScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
-                          GestureDetector(
-                            onTapDown: (_) => {_game.startInput(GameInput.pause), HapticFeedback.mediumImpact() },
+                          GameButton(
+                            onDown: () {
+                              HapticFeedback.mediumImpact();
+                              _game.startInput(GameInput.pause);
+                            },
+                            onUp: () => _game.stopInput(GameInput.pause),
                             child: Container(
                               width: 50, height: 20,
                               decoration: BoxDecoration(color: Palette.cinzaEsc, borderRadius: BorderRadius.circular(15)),
@@ -188,8 +193,11 @@ class _GameScreenState extends State<GameScreen> {
 
     // Só avisa o jogo se a direção mudar (ex: escorregou do Cima pro Lado)
     if (newInput != _currentDPadInput) {
-      if (_currentDPadInput != null) _game.stopInput(_currentDPadInput!);
-      _currentDPadInput = newInput;
+      setState(() { // <-- NOVO: Força o ecrã a redesenhar para animar a seta do D-Pad
+        if (_currentDPadInput != null) _game.stopInput(_currentDPadInput!);
+        _currentDPadInput = newInput;
+      });
+      
       if (_currentDPadInput != null){
         HapticFeedback.lightImpact();
         _game.startInput(_currentDPadInput!);
@@ -200,39 +208,41 @@ class _GameScreenState extends State<GameScreen> {
 
   void _handleDPadEnd() {
     if (_currentDPadInput != null) {
-      _game.stopInput(_currentDPadInput!);
-      _currentDPadInput = null;
+      setState(() { // <-- NOVO: Redesenha o D-Pad fazendo a seta voltar ao normal
+        _game.stopInput(_currentDPadInput!);
+        _currentDPadInput = null;
+      });
     }
   }
 
   // Desenha os botões do D-Pad apenas como visual (quem controla a ação agora é o Listener invisível em cima deles)
-  Widget _buildStaticArrow(IconData icon) {
-    return Container(
-      width: 80, height: 80,
-      decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
-      child: Icon(icon, color: Palette.preto, size: 30),
+  Widget _buildStaticArrow(IconData icon, GameInput direction) {
+    bool isPressed = _currentDPadInput == direction; // Verifica se o dedo está nesta direção
+
+    return AnimatedScale(
+      scale: isPressed ? 0.85 : 1.0, 
+      duration: const Duration(milliseconds: 50),
+      curve: Curves.easeOut,
+      child: AnimatedOpacity(
+        opacity: isPressed ? 0.6 : 1.0, 
+        duration: const Duration(milliseconds: 50),
+        child: Container(
+          width: 80, height: 80,
+          decoration: const BoxDecoration(color: Palette.cinzaEsc, shape: BoxShape.rectangle, borderRadius: BorderRadius.all(Radius.circular(8))),
+          child: Icon(icon, color: Palette.preto, size: 30),
+        ),
+      ),
     );
   }
 
   // Os botões A e B continuam iguais, pois geralmente você bate o dedo neles
   Widget _buildActionButton(String label, GameInput input, Color color) {
-    // 1. Trocamos GestureDetector por Listener
-    return Listener(
-      // 2. Garante que o botão deteta o toque mesmo se o dedo deslizar um pouco
-      behavior: HitTestBehavior.opaque, 
-      
-      // 3. onPointerDown é INSTANTÂNEO (ocorre no milissegundo em que o dedo toca no vidro)
-      onPointerDown: (_) {
+    return GameButton(
+      onDown: () {
         HapticFeedback.mediumImpact(); 
         _game.startInput(input);
       },
-      
-      // 4. onPointerUp é quando o dedo levanta
-      onPointerUp: (_) => _game.stopInput(input),
-      
-      // 5. onPointerCancel é quando o sistema interrompe o toque (ex: abrir uma notificação)
-      onPointerCancel: (_) => _game.stopInput(input),
-      
+      onUp: () => _game.stopInput(input),
       child: Container(
         width: 80, height: 80,
         decoration: BoxDecoration(

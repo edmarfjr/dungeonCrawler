@@ -7,7 +7,7 @@ import 'package:dungeon_crawler/game/dungeon_game.dart';
 
 class EncounterManager {
   static void triggerRandomEncounter(DungeonCrawlerGame game) {
-    game.playerCombatStats.applyEffect(2,Palette.preto);
+    game.playerCombatStats.applyEffect(0.5,Palette.branco);
     AudioManager.playSfx('sfx/encounter.wav');
     int level = game.dungeon.level;
     List<Enemy Function()> iniPool = [];
@@ -40,7 +40,7 @@ class EncounterManager {
   }
 
   static void triggerSpecificEncounter(DungeonCrawlerGame game, EnemyType type) {
-    game.playerCombatStats.applyEffect(2,Palette.preto);
+    game.playerCombatStats.applyEffect(0.5,Palette.branco);
     AudioManager.playSfx('sfx/encounter.wav');
     game.encounterEssence = 0; game.maxHp = game.playerCombatStats.hp; game.encounterDrop.clear(); game.victoryProcessed = false;
     game.isMimic = false; game.isBoss = false; game.currentState = GameState.combat; Enemy newEnemy;
