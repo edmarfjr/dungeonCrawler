@@ -17,9 +17,7 @@ import 'package:flutter/services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); 
-
   await SettingsManager.init();
-  
   runApp(const DungeonApp());
 }
 
@@ -45,11 +43,32 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final DungeonCrawlerGame _game;
+  
+  // CACHE DO JOGO: 
+  // Colocamos o GameWidget numa variável para que o Flutter 
+  // NÃO o destrua e recrie a cada vez que você aperta o D-Pad!
+  late final GameWidget _gameWidget; 
 
   @override
   void initState() {
     super.initState();
     _game = DungeonCrawlerGame();
+    
+    // Configuramos o jogo aqui dentro do initState (só roda 1 vez!)
+    _gameWidget = GameWidget(
+      game: _game,
+      overlayBuilderMap: {
+        'Splash': (context, game) => SplashOverlay(game: game as DungeonCrawlerGame),
+        'MainMenu': (context, game) => MainMenuOverlay(game: game as DungeonCrawlerGame),
+        'Intro': (context, game) => IntroOverlay(game: game as DungeonCrawlerGame),
+        'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
+        'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
+        'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
+        'Victory': (context, game) => VictoryCutsceneOverlay(game: game as DungeonCrawlerGame),
+        'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
+      },
+      initialActiveOverlays: const ['Splash'],
+    );
   }
 
   @override
@@ -65,22 +84,8 @@ class _GameScreenState extends State<GameScreen> {
               child: ClipRect(
                 child: CrtOverlayWidget(
                   crtFilterEnabled: _game.crtFilterEnabled,
-                  child: GameWidget(
-                    game: _game,
-                    // --- 1. MAPEAMENTO DOS MENUS ---
-                    overlayBuilderMap: {
-                      'Splash': (context, game) => SplashOverlay(game: game as DungeonCrawlerGame),
-                      'MainMenu': (context, game) => MainMenuOverlay(game: game as DungeonCrawlerGame),
-                      'Intro': (context, game) => IntroOverlay(game: game as DungeonCrawlerGame),
-                      'PauseMenu': (context, game) => PauseMenuOverlay(game: game as DungeonCrawlerGame),
-                      'GameOver': (context, game) => GameOverOverlay(game: game as DungeonCrawlerGame),
-                      'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
-                      'Victory': (context, game) => VictoryCutsceneOverlay(game: game as DungeonCrawlerGame),
-                      'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
-                    },
-                    // Define qual menu aparece primeiro quando abre o app
-                    initialActiveOverlays: const ['Splash'],
-                  ),
+                  // Agora passamos a variável protegida no lugar de recriar o widget:
+                  child: _gameWidget, 
                 ),
               ),
             ),
@@ -102,7 +107,6 @@ class _GameScreenState extends State<GameScreen> {
                         child: LayoutBuilder(
                           builder: (context, constraints) {
                             return Listener(
-                              // Detecta quando o dedo toca, move ou sai da tela
                               onPointerDown: (event) => _handleDPadSlide(event.localPosition, constraints.biggest),
                               onPointerMove: (event) => _handleDPadSlide(event.localPosition, constraints.biggest),
                               onPointerUp: (_) => _handleDPadEnd(),
@@ -174,26 +178,24 @@ class _GameScreenState extends State<GameScreen> {
   GameInput? _currentDPadInput;
 
   void _handleDPadSlide(Offset localPosition, Size dpadSize) {
-    // Encontra o centro do D-Pad
     double dx = localPosition.dx - (dpadSize.width / 2);
     double dy = localPosition.dy - (dpadSize.height / 2);
 
     GameInput? newInput;
 
-    // Cria uma "Zona Morta" no meio para o jogador poder descansar o dedo sem andar
     if (dx.abs() < 15 && dy.abs() < 15) {
       newInput = null; 
     } 
-    // Divide o D-pad em 4 triângulos invisíveis formando um "X"
     else if (dx.abs() > dy.abs()) {
       newInput = dx > 0 ? GameInput.right : GameInput.left;
     } else {
       newInput = dy > 0 ? GameInput.down : GameInput.up;
     }
 
-    // Só avisa o jogo se a direção mudar (ex: escorregou do Cima pro Lado)
     if (newInput != _currentDPadInput) {
-      setState(() { // <-- NOVO: Força o ecrã a redesenhar para animar a seta do D-Pad
+      // Como o GameWidget agora está salvo em cache no initState, 
+      // este setState vai animar APENAS o D-Pad, sem afetar o jogo rodando!
+      setState(() {
         if (_currentDPadInput != null) _game.stopInput(_currentDPadInput!);
         _currentDPadInput = newInput;
       });
@@ -208,16 +210,15 @@ class _GameScreenState extends State<GameScreen> {
 
   void _handleDPadEnd() {
     if (_currentDPadInput != null) {
-      setState(() { // <-- NOVO: Redesenha o D-Pad fazendo a seta voltar ao normal
+      setState(() {
         _game.stopInput(_currentDPadInput!);
         _currentDPadInput = null;
       });
     }
   }
 
-  // Desenha os botões do D-Pad apenas como visual (quem controla a ação agora é o Listener invisível em cima deles)
   Widget _buildStaticArrow(IconData icon, GameInput direction) {
-    bool isPressed = _currentDPadInput == direction; // Verifica se o dedo está nesta direção
+    bool isPressed = _currentDPadInput == direction;
 
     return AnimatedScale(
       scale: isPressed ? 0.85 : 1.0, 
@@ -235,7 +236,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  // Os botões A e B continuam iguais, pois geralmente você bate o dedo neles
   Widget _buildActionButton(String label, GameInput input, Color color) {
     return GameButton(
       onDown: () {
