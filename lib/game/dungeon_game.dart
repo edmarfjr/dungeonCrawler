@@ -930,7 +930,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         int valorVenda = (itemToSell!.value * 0.5).floor();
         if (valorVenda < 1) valorVenda = 1;
 
-        _titleTextPaint.render(canvas, "${I18n.t('vender')} ${I18n.t(itemToSell!.name)}: \$$valorVenda?", Vector2(20, startY));
+        final TextPaint questionTextPaint = TextPaint(
+          style: const TextStyle(
+            fontFamily: 'pixelFont',
+            color: Palette.amarelo,
+            fontSize: 16, //
+          ),
+        );
+
+        questionTextPaint.render(canvas, "${I18n.t('vender')} ${I18n.t(itemToSell!.name)}: \$$valorVenda?", Vector2(20, startY));
+        
         List<String> options = [I18n.t('vender'), I18n.t('sair')];
         for (int i = 0; i < options.length; i++) {
           (i == shopCursor ? _selectTextPaint : _normalTextPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + 40 + (i * 30)));
