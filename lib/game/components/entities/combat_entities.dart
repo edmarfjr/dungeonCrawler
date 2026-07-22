@@ -97,6 +97,14 @@ class PlayerCombatStats {
     }
   }
 
+  void recalculateMaxInventory() {
+    int pontosAdicionados = str - base;
+    int blocosDeCinco = pontosAdicionados ~/ 5; 
+    int inventarioOriginal = 8;
+
+    maxInventory = inventarioOriginal + (blocosDeCinco);
+  }
+
   void recoverStamina(double dt) {
     if(staminaTmr > 0) {
       staminaTmr -= dt;

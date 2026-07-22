@@ -890,8 +890,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
           Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
-          String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
-          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+          //String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
+          //String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
           
           TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
 
@@ -902,7 +902,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           } catch (e) {
             canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
         }
       }
       else if (currentShopPhase == ShopPhase.sell) {
@@ -989,23 +989,23 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
 
-    double startY = 80;
+    double startY = 75;
     for (int i = 0; i < playerCombatStats.inventory.length; i++) {
       Item item = playerCombatStats.inventory[i];
       Color textColor = i == inventoryCursor ? Palette.branco : Palette.cinzaCla;
       String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
       String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
       
-      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 12));
 
       try {
         ui.Image itemImg = images.fromCache(item.imagePath);
         final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint );
+        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), tintPaint );
       } catch (e) {
-        canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+        canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
       }
-      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 12));
     }
 
     //descriçao do item
@@ -1458,7 +1458,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             if (shopInventory.isEmpty) { currentShopPhase = ShopPhase.main; shopCursor = 0; }
           }
           AudioManager.playSfx('sfx/confirm.wav');
-        } else { AudioManager.playSfx('sfx/denied.wav'); }
+        } else {
+          AudioManager.playSfx('sfx/denied.wav'); 
+          showMessage(I18n.t('vend_sem_moedas'));
+        }
       }
       else if (currentShopPhase == ShopPhase.sell) {
         if (playerCombatStats.inventory.isEmpty) return;
@@ -1611,6 +1614,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.essence -= levelUpCost;
         playerCombatStats.str += tempStr; playerCombatStats.con += tempCon; playerCombatStats.wis += tempWis;
         playerCombatStats.recalculateMaxHp();
+        playerCombatStats.recalculateMaxInventory();
         dungeon.grid[player.y][player.x] = TileType.floor;
         showMessage(I18n.t('atrib_melhorados'));
         currentState = GameState.exploration;

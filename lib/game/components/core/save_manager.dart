@@ -76,6 +76,7 @@ class SaveManager {
     game.playerCombatStats.wis = sData['wis']; game.playerCombatStats.hp = sData['hp'];
     game.playerCombatStats.essence = sData['essence'];
     game.playerCombatStats.recalculateMaxHp();
+    game.playerCombatStats.recalculateMaxInventory();
 
     // Inv
     game.playerCombatStats.inventory.clear();
