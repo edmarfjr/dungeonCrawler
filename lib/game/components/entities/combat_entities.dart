@@ -102,7 +102,10 @@ class PlayerCombatStats {
     int blocosDeCinco = pontosAdicionados ~/ 5; 
     int inventarioOriginal = 8;
 
-    maxInventory = inventarioOriginal + (blocosDeCinco);
+    if(maxInventory < 10){
+      maxInventory = inventarioOriginal + (blocosDeCinco);
+    }
+    
   }
 
   void recoverStamina(double dt) {
