@@ -94,7 +94,7 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  const Text(
+                 /* const Text(
                     "A BLADE IN THE ABYSS", 
                     style: TextStyle(
                       fontFamily: 'pixelFont', 
@@ -104,8 +104,8 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                       letterSpacing: 1,
                       decoration: TextDecoration.none, 
                     )
-                  ),
-                  const SizedBox(height: 430),
+                  ), */
+                  const SizedBox(height: 500),
                   const Text(
                     "made by EDMAUL", 
                     style: TextStyle(

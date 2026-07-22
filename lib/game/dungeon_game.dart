@@ -731,7 +731,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _renderInvestigationPrompt(Canvas canvas) {
     if (activeMessage != null) return;
-    final rect = Rect.fromCenter(center: size.toOffset() / 2 - Offset(0, size.y * 0.2), width: size.x * 0.8, height: size.y * 0.4);
+    final rect = Rect.fromCenter(center: size.toOffset() / 2 - Offset(0, size.y * 0.2), width: size.x * 0.8, height: size.y * 0.3);
     canvas.drawRect(rect, Paint()..color = Palette.preto);
     canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
@@ -930,7 +930,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         int valorVenda = (itemToSell!.value * 0.5).floor();
         if (valorVenda < 1) valorVenda = 1;
 
-        _titleTextPaint.render(canvas, "${I18n.t('vender')} ${itemToSell!.name} por \$$valorVenda?", Vector2(20, startY));
+        _titleTextPaint.render(canvas, "${I18n.t('vender')} ${I18n.t(itemToSell!.name)}: \$$valorVenda?", Vector2(20, startY));
         List<String> options = [I18n.t('vender'), I18n.t('sair')];
         for (int i = 0; i < options.length; i++) {
           (i == shopCursor ? _selectTextPaint : _normalTextPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + 40 + (i * 30)));

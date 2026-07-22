@@ -64,19 +64,26 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "A BLADE IN THE ABYSS", 
-                    style: TextStyle(
-                      fontFamily: 'pixelFont', 
-                      color: Palette.branco, 
-                      fontSize: 28, 
-                      fontWeight: FontWeight.bold, 
-                      letterSpacing: 2,
-                      decoration: TextDecoration.none, 
+                   Image.asset(
+                      'assets/images/title.png', 
+                      width: MediaQuery.of(context).size.width * 0.65, 
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          "A BLADE IN THE ABYSS", 
+                          style: TextStyle(
+                            fontFamily: 'pixelFont', 
+                            color: Palette.branco, 
+                            fontSize: 28, 
+                            fontWeight: FontWeight.bold, 
+                            letterSpacing: 2,
+                            decoration: TextDecoration.none, 
+                          ),
+                        );
+                      },
                     ),
-                  ),
                   
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 20),
 
                   if (widget.game.hasSavedGame) ...[
                     _buildMenuOption(
