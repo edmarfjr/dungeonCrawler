@@ -12,7 +12,7 @@ class GameOverOverlay extends StatelessWidget {
     final tempoAtual = game.getFormattedRunTime();
 
     return Container(
-      color: Palette.vermelho.withOpacity(0.9),
+      color: Palette.vermelho.withOpacity(0.5),
       child: Center(
         child: ValueListenableBuilder<int>(
           valueListenable: game.mainMenuCursor,

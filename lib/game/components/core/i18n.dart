@@ -3,7 +3,7 @@ import 'package:dungeon_crawler/game/components/core/settings_manager.dart';
 enum AppLanguage { pt, en }
 
 class I18n {
-  static AppLanguage currentLanguage = AppLanguage.pt;
+  static AppLanguage currentLanguage = AppLanguage.en;
 
   // Dicionário de traduções
   static final Map<AppLanguage, Map<String, String>> _translations = {
