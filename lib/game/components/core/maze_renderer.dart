@@ -26,6 +26,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image shopImage;
   final ui.Image shrineImage;
   final ui.Image fontImage;
+  final ui.Image loreImage;
   final List <ui.Image> darkRoomImage;
 
   double _bumpTimer = 0.0;
@@ -61,6 +62,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.crateImage,
     required this.shopImage,
     required this.fontImage,
+    required this.loreImage,
     required this.darkRoomImage,
   });
 
@@ -278,6 +280,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
           if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
             _drawBillboardItem(canvas, cx, cz, shrineImage, 0.5, 0.1, Colors.white);
+          }
+
+          if (tile == TileType.lore && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, loreImage, 0.5, 0.1, Colors.white);
           }
 
           if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {

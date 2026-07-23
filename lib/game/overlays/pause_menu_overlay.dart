@@ -184,6 +184,7 @@ class _MapPainter extends CustomPainter {
     final paintShop = Paint()..color = Palette.azulCla;
     final paintFont = Paint()..color = Palette.azul;
     final paintSecretWall = Paint()..color = Palette.marromCla;
+    final paintLore = Paint()..color = Palette.bege;
 
     for (int y = 0; y < rows; y++) {
       for (int x = 0; x < cols; x++) {
@@ -191,7 +192,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-          continue;
+        //  continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -221,6 +222,8 @@ class _MapPainter extends CustomPainter {
           canvas.drawRect(tileRect, paintShop);
         } else if (tile == TileType.secretWall) {
           canvas.drawRect(tileRect, paintSecretWall);
+        } else if (tile == TileType.lore) {
+          canvas.drawRect(tileRect, paintLore);
         } else if (tile == TileType.font || tile == TileType.fontPoison) {
           canvas.drawRect(tileRect, paintFont);
         }

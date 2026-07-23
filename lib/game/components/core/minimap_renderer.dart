@@ -93,16 +93,16 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             break;
           case TileType.chest:
             tilePaint.color = Palette.amarelo;
-            canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
+            canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.boss:
             tilePaint.color = Palette.vermelho;
-            canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
+            canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break; 
           case TileType.openChest:
             tilePaint.color = Palette.amarelo;
             tilePaint.style = PaintingStyle.stroke;
-            canvas.drawRect(Rect.fromLTWH(renderX + 1, renderY + 1, tileSize, tileSize), tilePaint);
+            canvas.drawRect(Rect.fromLTWH(renderX, renderY , tileSize, tileSize), tilePaint);
             break;
           case TileType.spike:
             tilePaint.color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinza;
@@ -136,7 +136,12 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
           case TileType.secretWall:
             tilePaint.color = Palette.marromCla;
             tilePaint.style = PaintingStyle.stroke;
-            canvas.drawRect(Rect.fromLTWH(renderX +1, renderY+1, tileSize, tileSize), tilePaint);
+            canvas.drawRect(Rect.fromLTWH(renderX , renderY, tileSize, tileSize), tilePaint);
+            break;
+          case TileType.lore:
+            tilePaint.color = Palette.bege;
+            tilePaint.style = PaintingStyle.stroke;
+            canvas.drawRect(Rect.fromLTWH(renderX , renderY, tileSize, tileSize), tilePaint);
             break;
           
         }

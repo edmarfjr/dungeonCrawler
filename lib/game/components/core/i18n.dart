@@ -229,6 +229,16 @@ class I18n {
       'finalBom1':"Com a derrocata do Antigo, você se aproxima da saída, imaginando o que lhe aguarda",
       'finalBom2':"A luz começa a entrar em seus olhos, revelando uma paisagem conhecida.",
       'finalBom3':'"ESTOU DE VOLTA!"\n\nVoce sobreviveu a masmorra.\nO mundo finalmente está salvo...',
+      'lore1':'O papel está manchado de terra e sangue seco. A caligrafia é trêmula.\n\n"Eu sobrevivi à queda. Os ossos dos que vieram antes de mim amorteceram o impacto. Os cultistas lá em cima cantavam sobre purificação, mas aqui embaixo só há o cheiro de podridão e desespero. Encontrei uma adaga cega presa na costela de um esqueleto. Se eu vou morrer neste buraco, levarei algumas destas sombras comigo."',
+      'lore2':'A escrita parece mais apressada, quase frenética.\n\n"Minhas rações acabaram há dias. Tentei comer a carne de um daqueles morcegos gigantes. O gosto era cinzas e enxofre. Mas quando o sangue deles tocou minha pele, eu senti... força. A Essência deles. Está me curando. Está me mudando. Eu não sinto mais fome. Só sinto sede dessa energia maldita."',
+      'lore3':'O papel tem marcas de unhas e arranhões.\n\n"Meus olhos estão me enganando? Ouvi sussurros vindo de uma parede de pedra sólida. Quando encostei minha mão, ela atravessou. É uma ilusão. Há salas inteiras escondidas onde a luz das tochas não alcança. A escuridão lá dentro é tão densa que parece viva. Há tesouros lá... mas há coisas que nos observam de volta."',
+      'lore4':'Há um desenho tosco de três pedras preciosas no topo da página.\n\n"Encontrei antigas inscrições gravadas em um pedestal quebrado. O Mestre deste lugar, a criatura que os cultistas idolatram... ele não pode ser morto por aço comum. As inscrições falam de um Rubi, uma Esmeralda e uma Safira. Se reunidas no Altar Ancestral, elas podem forjar uma luz capaz de rasgar o abismo."',
+      'lore5':'A caligrafia é agressiva, rasgando o papel em alguns pontos.\n\n"Não sei mais há quanto tempo estou aqui. A escuridão já não me assusta, ela me acolhe. Eu durmo entre os corpos dos monstros que abato. Eles não são os verdadeiros prisioneiros daqui, eu sou. O Mestre sussurra no meu ouvido enquanto durmo. Ele diz que estou quase pronto. Pronto para quê?"',
+      'lore6':'O papel está encharcado e quase ilegível.\n\n"Eu encontrei as gemas. Eu vi o Altar. Mas minhas mãos tremeram. A arma... a Arma Divina exige um portador de alma pura. Minha alma já está manchada com a Essência desta masmorra. Se eu a tocar, eu queimarei. Deixarei as pedras para trás. Para o próximo tolo que cair do teto."',
+      'lore7':'Esta página está escrita com sangue.\n\n"O 12º andar. Não desça. Ele está esperando. A sombra que rasteja nas paredes, o olho que tudo vê na escuridão. Eu não posso mais fugir. Eu serei consumido e me tornarei parte do labirinto. Se você está lendo isso e ainda tem sua humanidade... empunhe a Arma Divina ou morra tentando. Acabe com nosso sofrimento."',
+      'lore8':'',
+      'lore9':'',
+      'lore10':'',
     },
     AppLanguage.en: {
       'menu_continue': 'CONTINUE GAME',
@@ -446,6 +456,16 @@ class I18n {
       "d_piercingShot": "Book: Piercing Ray.\nProjectile that pierces shields and multiple enemies.\nCost: 5 MP",
       "d_toxicCloud": "Book: Toxic Cloud.\nLeaves constant poisonous smoke in the area.\nCost: 10 MP",
       "d_thunderStorm": "Book: Thunderstorm.\nDeals heavy electric damage to the entire room.\nCost: 15 MP",
+      'lore1':'The paper is stained with dirt and dried blood. The handwriting is shaky.\n\n"I survived the fall. The bones of those who came before me cushioned the impact. The cultists up there chanted about purification, but down here there is only the stench of rot and despair. I found a dull dagger stuck in the ribs of a skeleton. If I am going to die in this hole, I will take some of these shadows with me."',
+      'lore2':'The writing seems more hurried, almost frantic.\n\n"My rations ran out days ago. I tried eating the flesh of one of those giant bats. It tasted like ash and sulfur. But when their blood touched my skin, I felt... strength. Their Essence. It is healing me. It is changing me. I no longer feel hunger. I only thirst for this cursed energy."',
+      'lore3':'The paper has fingernail marks and scratches.\n\n"Are my eyes deceiving me? I heard whispers coming from a solid stone wall. When I touched it, my hand went right through. It is an illusion. There are entire hidden rooms where the torchlight doesn\'t reach. The darkness inside is so thick it feels alive. There are treasures there... but there are things watching us back."',
+      'lore4':'There is a crude drawing of three gemstones at the top of the page.\n\n"I found ancient inscriptions carved into a broken pedestal. The Master of this place, the creature the cultists idolize... he cannot be killed by ordinary steel. The inscriptions speak of a Ruby, an Emerald, and a Sapphire. If brought together at the Ancient Altar, they can forge a light capable of tearing through the abyss."',
+      'lore5':'The handwriting is aggressive, tearing the paper in some places.\n\n"I don\'t know how long I\'ve been here anymore. The darkness no longer frightens me, it welcomes me. I sleep among the bodies of the monsters I slay. They are not the true prisoners here, I am. The Master whispers in my ear while I sleep. He says I am almost ready. Ready for what?"',
+      'lore6':'The paper is soaked and almost illegible.\n\n"I found the gems. I saw the Altar. But my hands trembled. The weapon... the Divine Weapon requires a pure-souled wielder. My soul is already stained with the Essence of this dungeon. If I touch it, I will burn. I will leave the stones behind. For the next fool who falls from the ceiling."',
+      'lore7':'This page is written in blood.\n\n"The 12th floor. Do not go down. He is waiting. The shadow that crawls on the walls, the all-seeing eye in the darkness. I can no longer run. I will be consumed and become part of the labyrinth. If you are reading this and still have your humanity... wield the Divine Weapon or die trying. End our suffering."',
+      'lore8':'',
+      'lore9':'',
+      'lore10':'',
     }
   };
 

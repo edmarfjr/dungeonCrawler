@@ -107,6 +107,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late final TextPaint _selectTextPaint;
   late final TextPaint _dangerTextPaint;
 
+  // --- lista de lore ---
+
+   List<String> loreTxt = ['lore1','lore2','lore3','lore4','lore5','lore6','lore7','lore8','lore9','lore10'];
+
+
+
   // ===========================================================================
   // GETTERS AUXILIARES
   // ===========================================================================
@@ -219,6 +225,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final ui.Image darkRoomImg2 = await images.load('tilesets/darkRoom2.png');
     final ui.Image darkRoomImg3 = await images.load('tilesets/darkRoom3.png');
 
+    final ui.Image loreImg = await images.load('itens/scroll.png');
+
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
     shrineSprite = await images.load('tilesets/altar.png');
@@ -312,7 +320,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       trapImage: [trapImage,trapImage2,trapImage3], roamerImage: roamerSprite, bossImage: bossSprite,
       shrineImage: shrineSprite, openChestImage: openChestSprite, crateImage: crateSprite,
       shopImage: shopImg, fontImage: fontImg, secretWallImage: [sWallImg1,sWallImg2,sWallImg3,sWallImg4],
-      darkRoomImage: [darkRoomImg,darkRoomImg2,darkRoomImg3],
+      darkRoomImage: [darkRoomImg,darkRoomImg2,darkRoomImg3], loreImage: loreImg,
     );
     renderer.size = size; 
     add(renderer);
@@ -868,16 +876,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _renderShop(Canvas canvas) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-
-      _titleTextPaint.render(canvas, I18n.t('loja'), Vector2(20, 20));
-      _normalTextPaint.render(canvas, "${I18n.t('moedas')}${_getPlayerCoins()}", Vector2(20, 50));
+      _titleTextPaint.render(canvas, I18n.t('loja'), Vector2((size.x  / 2.0)-I18n.t('loja').length*12, 15));
+      _normalTextPaint.render(canvas, "${I18n.t('moedas')}${_getPlayerCoins()}", Vector2((size.x  / 2.0)-I18n.t('moedas').toString().length*8, 45));
 
       double startY = 90;
 
       if (currentShopPhase == ShopPhase.main) {
         List<String> options = [I18n.t('comprar'), I18n.t('vender'), I18n.t('roubar'), I18n.t('sair')];
+        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, options.length * 40 ), Paint()..color = Palette.preto);
+        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, options.length * 40 - 3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
         for (int i = 0; i < options.length; i++) {
           TextPaint paintToUse = _normalTextPaint;
           if (i == shopCursor){ paintToUse = _selectTextPaint; }
@@ -886,27 +893,31 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         }
       }
       else if (currentShopPhase == ShopPhase.buy) {
-        _titleTextPaint.render(canvas, I18n.t('comprar'), Vector2(20, startY - 15));
+        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, shopInventory.length * 40 + 40), Paint()..color = Palette.preto);
+        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, shopInventory.length * 40 + 37), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+        _titleTextPaint.render(canvas, I18n.t('comprar'), Vector2((size.x  / 2.0)-I18n.t('comprar').toString().length*8, startY - 10));
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
           Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
           //String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
           //String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
           
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 22));
 
           try {
             ui.Image itemImg = images.fromCache(item.imagePath);
             final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint);
+            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 12, 40, 40), tintPaint);
           } catch (e) {
-            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
         }
       }
       else if (currentShopPhase == ShopPhase.sell) {
-        _titleTextPaint.render(canvas, I18n.t('vender'), Vector2(20, startY - 15));
+        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, playerCombatStats.inventory.length * 40 + 40), Paint()..color = Palette.preto);
+        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, playerCombatStats.inventory.length * 40 + 37), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+        _titleTextPaint.render(canvas, I18n.t('vender'), Vector2((size.x  / 2.0)-I18n.t('vender').toString().length*8, startY - 10));
         for (int i = 0; i < playerCombatStats.inventory.length; i++) {
           Item item = playerCombatStats.inventory[i];
           bool itEqp = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item);
@@ -914,19 +925,21 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           String equipTag = itEqp ? " ${I18n.t('equipado')}" : "";
           String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
           
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 22));
 
           try {
             ui.Image itemImg = images.fromCache(item.imagePath);
             final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint);
+            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 12, 40, 40), tintPaint);
           } catch (e) {
-            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
+            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
         }
       }
       else if (currentShopPhase == ShopPhase.confirmSell && itemToSell != null) {
+        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, playerCombatStats.inventory.length * 40 + 20), Paint()..color = Palette.preto);
+        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, playerCombatStats.inventory.length * 40 + 17), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
         int valorVenda = (itemToSell!.value * 0.5).floor();
         if (valorVenda < 1) valorVenda = 1;
 
@@ -934,7 +947,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           style: const TextStyle(
             fontFamily: 'pixelFont',
             color: Palette.amarelo,
-            fontSize: 16, //
+            fontSize: 18, //
           ),
         );
 
@@ -946,20 +959,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         }
       }
       else if (currentShopPhase == ShopPhase.steal) {
-        _dangerTextPaint.render(canvas, I18n.t('roubar'), Vector2(20, startY - 15));
+        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, shopInventory.length * 40 + 40), Paint()..color = Palette.preto);
+        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, shopInventory.length * 40 + 37), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+        _dangerTextPaint.render(canvas, I18n.t('roubar'), Vector2((size.x  / 2.0)-I18n.t('roubar').toString().length*8, startY - 10));
         for (int i = 0; i < shopInventory.length; i++) {
           Item item = shopInventory[i];
           Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 22));
 
           try {
             ui.Image itemImg = images.fromCache(item.imagePath);
             final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), tintPaint);
+            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 12, 40, 40), tintPaint);
           } catch (e) {
             canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: I18n.t(item.name), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 50) + 12));
+          TextPainter(text: TextSpan(text: I18n.t(item.name), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
         }
       }
   }
@@ -984,12 +999,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _renderInventory(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(2, 2, size.x-3, size.y-3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    double startY = 75;
+    canvas.drawRect(Rect.fromLTWH(0, startY, size.x, playerCombatStats.maxInventory * 40 + 10), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(2, startY+2, size.x-3, playerCombatStats.maxInventory * 40 + 7), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
 
-    double startY = 75;
     for (int i = 0; i < playerCombatStats.inventory.length; i++) {
       Item item = playerCombatStats.inventory[i];
       Color textColor = i == inventoryCursor ? Palette.branco : Palette.cinzaCla;
@@ -1014,12 +1029,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       String desc = selectedItem.description.isNotEmpty ? I18n.t(selectedItem.description) : "Sem descricao.";
       
       double boxH = 90; 
-      double boxY = size.y - boxH - 10;
-      double boxWidth = size.x - 20;
-      Rect descRect = Rect.fromLTWH(10, boxY, size.x - 20, boxH);
+      double boxY = playerCombatStats.maxInventory * 40 + 10 + startY;
+      double boxWidth = size.x;
+      Rect descRect = Rect.fromLTWH(0, boxY, size.x , boxH);
+      Rect descRectBorda = Rect.fromLTWH(2, boxY+2, size.x - 2, boxH - 2);
       
       canvas.drawRect(descRect, Paint()..color = Palette.preto);
-      canvas.drawRect(descRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(descRectBorda, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
       TextPainter(
         text: TextSpan(
@@ -1087,13 +1103,27 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _renderMessageQueue(Canvas canvas) {
-      double boxWidth = size.x * 0.8, boxHeight = 100;
-      double boxX = (size.x - boxWidth) / 2, boxY = size.y - boxHeight - 80; 
+      double boxWidth = size.x * 0.8;
+
+      final textSpan = TextSpan(
+        text: '$activeMessage\n\n${I18n.t('a_continuar')}', 
+        style: const TextStyle(color: Palette.branco, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)
+      );
+      
+      final textPainter = TextPainter(
+        text: textSpan, 
+        textDirection: TextDirection.ltr, 
+        textAlign: TextAlign.center
+      )..layout(minWidth: boxWidth, maxWidth: boxWidth);
+
+      double textHeightWithPadding = textPainter.height + 40;
+      double boxHeight = textHeightWithPadding > 100 ? textHeightWithPadding : 100;
+      double boxX = (size.x - boxWidth) / 2;
+      double boxY = size.y - boxHeight - 80; 
+      
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
       canvas.drawRect(rect, Paint()..color = Palette.preto);
       canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-      final textSpan = TextSpan(text: '$activeMessage\n\n${I18n.t('a_continuar')}', style: const TextStyle(color: Palette.branco, fontSize: 14, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
-      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: boxWidth, maxWidth: boxWidth);
       textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
   }
 
@@ -1746,6 +1776,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     if (playerTile == TileType.shop) openShop();
+
+    if (playerTile == TileType.lore) {
+      int loreIdx = dungeon.level-1;
+      if (loreIdx >= loreTxt.length-1) loreIdx = loreTxt.length-1;
+      showMessage(I18n.t(loreTxt[loreIdx]));
+    }
 
     if (playerTile == TileType.font) {
       playerCombatStats.hp = playerCombatStats.maxHp; playerCombatStats.mana = playerCombatStats.wis*3;
