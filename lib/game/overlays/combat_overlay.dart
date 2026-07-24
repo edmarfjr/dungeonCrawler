@@ -685,9 +685,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   // Inventário
       //_drawText(canvas, "INVENTÁRIO", panelWidth / 2, 200, 20, Palette.amarelo, alignCenter: true);
       
-      //if(playerStats.reflex){
+      if(playerStats.reflex){
         _drawText(canvas, "REFLEXO ATIVO", panelWidth / 2, logicalHeight - 80, 14, Palette.amarelo, alignCenter: true);
-      //}
+      }
     }
 
     // --- PAINEL DIREITO (INIMIGOS / INFO) ---

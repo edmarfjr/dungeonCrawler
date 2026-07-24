@@ -11,95 +11,121 @@ class PauseMenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
     final tempoAtual = game.getFormattedRunTime();
+    final bool isDesktop = game.isDesktopLayout;
     
     return Container(
-      color: Palette.preto.withValues(alpha: 0.8),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "JOGO PAUSADO", 
-              style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 28, fontWeight: FontWeight.bold, decoration: TextDecoration.none)
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Andar Atual: ${game.dungeon.level}", 
-              style: const TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 18, decoration: TextDecoration.none)
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Essências: ${game.playerCombatStats.essence.toInt()}", 
-              style: const TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: 18, decoration: TextDecoration.none)
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'TEMPO: $tempoAtual',
-              style: const TextStyle(
-                fontFamily: 'pixelFont',
-                color: Palette.branco,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 10),
-            // --- O MAPA ---
-            Container(
-              width: screenSize.width * 0.50,  
-              height: screenSize.height * 0.25,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                border: Border.all(color: Palette.cinza, width: 3), 
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(5),
-                child: CustomPaint(
-                  painter: _MapPainter(
-                    map: game.dungeon,
-                    playerX: game.player.x,
-                    playerY: game.player.y,
-                    playerFacing: game.player.facing,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+      color: Palette.preto.withOpacity(0.85),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double availableW = constraints.maxWidth;
+          final double availableH = constraints.maxHeight;
 
-            ValueListenableBuilder<int>(
-              valueListenable: game.pauseMenuCursor,
-              builder: (context, cursorIndex, child) {
-                return Column(
-                  children: [
-                    _buildMenuOption(
-                      title: I18n.t('pause_continue'),
-                      index: 0,
-                      currentIndex: cursorIndex,
+          // Fontes responsivas
+          final double titleSize = (availableW * 0.07).clamp(20.0, 36.0);
+          final double subtitleSize = (availableW * 0.04).clamp(14.0, 20.0);
+          final double optionSize = (availableW * 0.045).clamp(16.0, 24.0);
+          final double spacing = (availableH * 0.02).clamp(5.0, 20.0);
+
+          // Tamanho do mapa adaptativo
+          final double mapWidth = (availableW * 0.6).clamp(150.0, 400.0);
+          final double mapHeight = (availableH * 0.3).clamp(100.0, 250.0);
+
+          return Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "JOGO PAUSADO", 
+                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: titleSize, fontWeight: FontWeight.bold, decoration: TextDecoration.none)
+                  ),
+                  SizedBox(height: spacing),
+                  Text(
+                    "Andar Atual: ${game.dungeon.level}", 
+                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: subtitleSize, decoration: TextDecoration.none)
+                  ),
+                  SizedBox(height: spacing * 0.5),
+                  Text(
+                    "Essências: ${game.playerCombatStats.essence.toInt()}", 
+                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: subtitleSize, decoration: TextDecoration.none)
+                  ),
+                  SizedBox(height: spacing * 0.5),
+                  Text(
+                    'TEMPO: $tempoAtual',
+                    style: TextStyle(
+                      fontFamily: 'pixelFont',
                       color: Palette.branco,
+                      fontSize: subtitleSize,
+                      decoration: TextDecoration.none
                     ),
-                    const SizedBox(height: 15),
-                    
-                    _buildMenuOption(
-                      title: I18n.t('pause_main_menu'),
-                      index: 1,
-                      currentIndex: cursorIndex,
-                      color: Palette.branco,
+                  ),
+                  SizedBox(height: spacing),
+                  
+                  // --- O MAPA ---
+                  Container(
+                    width: mapWidth,  
+                    height: mapHeight,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      border: Border.all(color: Palette.cinza, width: 3), 
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: 15),
-                    
-                    _buildMenuOption(
-                      title: I18n.t('menu_settings'),
-                      index: 2,
-                      currentIndex: cursorIndex,
-                      color: Palette.branco,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: CustomPaint(
+                        painter: _MapPainter(
+                          map: game.dungeon,
+                          playerX: game.player.x,
+                          playerY: game.player.y,
+                          playerFacing: game.player.facing,
+                        ),
+                      ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                  SizedBox(height: spacing * 1.5),
+
+                  ValueListenableBuilder<int>(
+                    valueListenable: game.pauseMenuCursor,
+                    builder: (context, cursorIndex, child) {
+                      return Column(
+                        children: [
+                          _buildMenuOption(
+                            title: I18n.t('pause_continue'),
+                            index: 0,
+                            currentIndex: cursorIndex,
+                            color: Palette.branco,
+                            isDesktop: isDesktop, fontSize: optionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          
+                          _buildMenuOption(
+                            title: I18n.t('pause_main_menu'),
+                            index: 1,
+                            currentIndex: cursorIndex,
+                            color: Palette.branco,
+                            isDesktop: isDesktop, fontSize: optionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          
+                          _buildMenuOption(
+                            title: I18n.t('menu_settings'),
+                            index: 2,
+                            currentIndex: cursorIndex,
+                            color: Palette.branco,
+                            isDesktop: isDesktop, fontSize: optionSize,
+                          ),
+                          SizedBox(height: spacing),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          );
+        }
       ),
     );
   }
@@ -109,38 +135,46 @@ class PauseMenuOverlay extends StatelessWidget {
     required int index, 
     required int currentIndex,
     required Color color,
+    required bool isDesktop,
+    required double fontSize,
   }) {
     bool isSelected = (index == currentIndex);
 
-    return GestureDetector(
-      onTap: () {
-        game.pauseMenuCursor.value = index;
-        game.startInput(GameInput.buttonA);
+    return MouseRegion(
+      onEnter: (_) {
+        if (isDesktop) game.pauseMenuCursor.value = index;
       },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            isSelected ? "> " : "  ",
-            style: TextStyle(
-              fontFamily: 'pixelFont',
-              fontSize: 18,
-              color: isSelected ? Palette.amarelo : Colors.transparent,
-              fontWeight: FontWeight.bold,
-              decoration: TextDecoration.none,
+      child: GestureDetector(
+        onTap: () {
+          game.pauseMenuCursor.value = index;
+          game.startInput(GameInput.buttonA);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isSelected ? "> " : "  ",
+              style: TextStyle(
+                fontFamily: 'pixelFont',
+                fontSize: fontSize,
+                color: isSelected ? Palette.amarelo : Colors.transparent,
+                fontWeight: FontWeight.bold,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'pixelFont',
-              fontSize: 18,
-              color: isSelected ? Palette.amarelo : color,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              decoration: TextDecoration.none,
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'pixelFont',
+                fontSize: fontSize,
+                color: isSelected ? Palette.amarelo : color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -263,12 +297,10 @@ class _MapPainter extends CustomPainter {
     
     playerPath.moveTo(0, -sizeArrow); 
     playerPath.lineTo(sizeArrow, sizeArrow); 
-   // playerPath.lineTo(0, sizeArrow * 0.4); 
     playerPath.lineTo(-sizeArrow, sizeArrow); 
     playerPath.close();
 
     canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
-    //canvas.drawPath(playerPath, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 1.0);
 
     canvas.restore();
   }
