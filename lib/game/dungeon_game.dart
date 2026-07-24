@@ -33,6 +33,7 @@ class GameMessage {
 
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // --- ESTADOS E MANAGERS ---
+  bool isDesktopLayout = false;
   GameState currentState = GameState.splash;
   GameState previousState = GameState.splash;
   GameState previousState2 = GameState.splash;
@@ -44,8 +45,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late MinimapRenderer minimap;
   late PlayerCombatStats playerCombatStats;
   late CombatOverlay combatOverlay;
-
- // bool _hasStartedMenuMusic = false;
 
   // --- DICIONÁRIOS DE ASSETS ---
   late Map<EnemyType, ui.Image> enemySheets;
@@ -108,10 +107,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late final TextPaint _dangerTextPaint;
 
   // --- lista de lore ---
-
    List<String> loreTxt = ['lore1','lore2','lore3','lore4','lore5','lore6','lore7','lore8','lore9','lore10'];
-
-
 
   // ===========================================================================
   // GETTERS AUXILIARES
@@ -127,7 +123,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     int totalLevel = (playerCombatStats.str + playerCombatStats.con + playerCombatStats.wis).toInt();
     return 50 + (totalLevel * 15);
   }
-
 
   int _getPlayerCoins() {
     try { return playerCombatStats.inventory.firstWhere((i) => i.name == "moeda").quantity; } 
@@ -461,6 +456,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   @override
   void update(double dt) {
     super.update(dt);
+    combatOverlay.isDesktopLayout = isDesktopLayout;
 
     if (isRunStartAnimating && currentState == GameState.exploration) {
       runStartAnimTimer += dt;
@@ -468,12 +464,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       double progress = (runStartAnimTimer / runStartAnimDuration).clamp(0.0, animDur);
       double curvedProgress = Curves.linear.transform(progress);
       
-      // Em vez de mover o Canvas global, passamos o valor para o Labirinto!
-      renderer.yOffsetAnim = (animDur - curvedProgress) * size.y;
+      // NOVA MATEMÁTICA: Usar a altura do Viewport Central para empurrar o labirinto sem quebrar a escala
+      double scaleF = isDesktopLayout ? (size.y / 720.0).clamp(0.1, 5.0) : (size.x / 400.0).clamp(0.1, 5.0);
+      renderer.yOffsetAnim = (animDur - curvedProgress) * (size.y / scaleF);
       
       if (runStartAnimTimer >= runStartAnimDuration) {
         isRunStartAnimating = false;
-        renderer.yOffsetAnim = 0.0; // Garante que tranca na posição 0
+        renderer.yOffsetAnim = 0.0; 
       }
       return; 
     }
@@ -999,9 +996,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _renderInventory(Canvas canvas) {
+    double  scaleFactor = isDesktopLayout 
+      ? (size.y / 720.0).clamp(0.1, 5.0) 
+      : (size.x / 500.0).clamp(0.1, 5.0);
+
+    double logicalWidth =size.x / scaleFactor;
+    double logicalHeight = size.y / scaleFactor;
     double startY = 75;
-    canvas.drawRect(Rect.fromLTWH(0, startY, size.x, playerCombatStats.maxInventory * 40 + 10), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(2, startY+2, size.x-3, playerCombatStats.maxInventory * 40 + 7), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    double startX = logicalHeight * 0.41;
+    canvas.drawRect(Rect.fromLTWH(startX, startY, logicalWidth * 0.64, playerCombatStats.maxInventory * 20 + 10), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(startX, startY+2, (logicalWidth * 0.64), playerCombatStats.maxInventory * 20 + 7), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
 
@@ -1011,16 +1015,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
       String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
       
-      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 12));
+      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX+18, startY + (i * 40) + 12));
 
       try {
         ui.Image itemImg = images.fromCache(item.imagePath);
         final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), tintPaint );
+        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(startX + 25, startY + (i * 40) + 2, 40, 40), tintPaint );
       } catch (e) {
         canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
       }
-      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 12));
+      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX+76, startY + (i * 40) + 12));
     }
 
     //descriçao do item
@@ -1029,10 +1033,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       String desc = selectedItem.description.isNotEmpty ? I18n.t(selectedItem.description) : "Sem descricao.";
       
       double boxH = 90; 
-      double boxY = playerCombatStats.maxInventory * 40 + 10 + startY;
-      double boxWidth = size.x;
-      Rect descRect = Rect.fromLTWH(0, boxY, size.x , boxH);
-      Rect descRectBorda = Rect.fromLTWH(2, boxY+2, size.x - 2, boxH - 2);
+      double boxY = playerCombatStats.maxInventory * 20 + 10 + startY;
+      double boxWidth =  logicalWidth * 0.64;
+      Rect descRect = Rect.fromLTWH(startX, boxY, boxWidth , boxH);
+      Rect descRectBorda = Rect.fromLTWH(startX+2, boxY+2, boxWidth - 2, boxH - 2);
       
       canvas.drawRect(descRect, Paint()..color = Palette.preto);
       canvas.drawRect(descRectBorda, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
@@ -1045,7 +1049,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       )..layout(minWidth: boxWidth, maxWidth: boxWidth)
-       ..paint(canvas, Offset(10, boxY + 15));
+       ..paint(canvas, Offset(startX+10, boxY + 15));
     }
 
     if (isActionMenuOpen) {
@@ -1202,11 +1206,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if (event.logicalKey == LogicalKeyboardKey.keyC) showHitboxes = !showHitboxes;
       if (event.logicalKey == LogicalKeyboardKey.keyG) {
         godMode = !godMode;
-        combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0);
+        // NOVA MATEMÁTICA: Usando o Viewport para posicionar texto
+        combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
-        //EncounterManager.triggerRandomEncounter(this);
+        //EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
+        EncounterManager.triggerRandomEncounter(this);
       } 
       if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
 
@@ -1846,7 +1851,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           if(dungeon.level >=10){
             renderer.darkRoomIdx = 1;
           }
-          combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
+          
+          // NOVA MATEMÁTICA: Usando o Viewport para posicionar o nome da fase no PC ou no Mobile
+          combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung', Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2), Palette.branco, speedY: 0, tmr: 2);
 
           if(dungeon.level >= 13){ currentState = GameState.victory; overlays.add('Victory'); }
         });
@@ -2053,7 +2060,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void finishIntro() {
     currentState = GameState.exploration;
     overlays.remove('Intro');
-    combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, size.y/2, size.x, size.y/2),Palette.branco,speedY: 0,tmr:2);
+    
+    // NOVA MATEMÁTICA: Usando o Viewport para posicionar texto
+    combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
     isRunStartAnimating = true;
     runStartAnimTimer = 0.0;
     AudioManager.playBgm('music/8-bit-dungeon.mp3');

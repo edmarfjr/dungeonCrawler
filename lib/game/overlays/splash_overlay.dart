@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:dungeon_crawler/game/components/core/palette.dart';
 import 'package:dungeon_crawler/game/dungeon_game.dart';
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart'; // Ajuste o caminho
+import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
 
 class SplashOverlay extends StatefulWidget {
   final DungeonCrawlerGame game;
@@ -66,6 +66,9 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // Puxa a informação se o jogo está no formato de PC ou Mobile
+    final bool isDesktop = widget.game.isDesktopLayout;
+
     return GestureDetector(
       onTap: () => _startFadeOut(autoAdvance: false),
       
@@ -83,59 +86,48 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
               widget.game.startInput(GameInput.buttonA);
             }
           },
-          child: Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: const AssetImage('assets/images/splash.png'), 
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Ajusta o tamanho da fonte e margens dinamicamente
+              final double fontSize = isDesktop 
+                  ? (constraints.maxWidth * 0.015).clamp(12.0, 24.0) 
+                  : (constraints.maxWidth * 0.035).clamp(10.0, 16.0); 
+
+              final double bottomPadding = isDesktop 
+                  ? (constraints.maxHeight * 0.05).clamp(20.0, 50.0)
+                  : (constraints.maxHeight * 0.15).clamp(20.0, 40.0);
+
+              // Usamos um Stack para separar a imagem do texto e controlar o "fit" livremente
+              return Stack(
+                alignment: Alignment.center,
                 children: [
-                 /* const Text(
-                    "A BLADE IN THE ABYSS", 
-                    style: TextStyle(
-                      fontFamily: 'pixelFont', 
-                      color: Palette.vermelhoEsc, 
-                      fontSize: 30, 
-                      fontWeight: FontWeight.bold, 
-                      letterSpacing: 1,
-                      decoration: TextDecoration.none, 
-                    )
-                  ), */
-                  const SizedBox(height: 500),
-                  const Text(
-                    "made by EDMAUL", 
-                    style: TextStyle(
-                      fontFamily: 'pixelFont', 
-                      color: Palette.branco, 
-                      fontSize: 12, 
-                      fontWeight: FontWeight.bold, 
-                      decoration: TextDecoration.none, 
-                    )
+                  // 1. A IMAGEM DE FUNDO
+                  Image.asset(
+                    'assets/images/splash.png',
+                    width: double.infinity,
+                    height: double.infinity,
+                    // No PC: O "contain" mostra a imagem 100% sem cortes, com laterais pretas.
+                    // No Mobile: O "cover" expande para preencher a telinha em pé.
+                    fit: isDesktop ? BoxFit.contain : BoxFit.cover,
                   ),
-                  /*
-                  if (!_isTransitioning)
-                    FadeTransition(
-                      opacity: _blinkController,
-                      child: const Text(
-                        "PRESSIONE QUALQUER BOTAO",
-                        style: TextStyle(
-                          fontFamily: 'pixelFont',
-                          color: Palette.branco,
-                          fontSize: 18,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    )
-                  else 
-                    const SizedBox(height: 18), 
-                  */
+                  
+                  // 2. O TEXTO DOS CRÉDITOS
+                  Positioned(
+                    bottom: bottomPadding,
+                    child: Text(
+                      "made by EDMAUL", 
+                      style: TextStyle(
+                        fontFamily: 'pixelFont', 
+                        color: Palette.branco, 
+                        fontSize: fontSize, 
+                        fontWeight: FontWeight.bold, 
+                        decoration: TextDecoration.none, 
+                      )
+                    ),
+                  ),
                 ],
-              ),
-            ),
+              );
+            }
           ),
         ),
       ),

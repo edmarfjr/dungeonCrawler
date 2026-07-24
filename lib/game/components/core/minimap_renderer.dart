@@ -7,7 +7,6 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
-  final double tileSize = 5.0;
   final int viewRadius = 7;
   
   @override
@@ -16,20 +15,59 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     
     if (gameRef.currentState != GameState.exploration) return;
 
-    final map = gameRef.dungeon;
-    final player = gameRef.player;
+    // =====================================================================
+    // 1. APLICA A ESCALA GLOBAL DO JOGO
+    // =====================================================================
+    final bool isDesktop = gameRef.isDesktopLayout;
+    double scaleFactor = isDesktop 
+        ? (gameRef.size.y / 720.0).clamp(0.1, 5.0) 
+        : (gameRef.size.x / 400.0).clamp(0.1, 5.0);
+
+    double logicalWidth = gameRef.size.x / scaleFactor;
+    double logicalHeight = gameRef.size.y / scaleFactor;
+
+    // Ajusta o tamanho dos blocos para caber perfeitamente na HUD do PC ou Mobile
+    double tileSize = isDesktop ? 14.0 : 4.5;
 
     int viewDiameter = (viewRadius * 2) + 1; 
     double mapWidth = viewDiameter * tileSize;
     double mapHeight = viewDiameter * tileSize;
     
-    double startX = gameRef.size.x - mapWidth;
-    double startY = 0.0; 
+    // 3. POSICIONA O MINIMAPA BASEADO NO DISPOSITIVO
+    double startX = 0;
+    double startY = 0;
+
+    if (isDesktop) {
+      double panelWidth = 260.0;
+      double rightPanelX = logicalWidth - panelWidth;
+      // PC: Centralizado dentro do painel lateral direito, abaixo do andar
+      startX = rightPanelX + (panelWidth - mapWidth) / 2;
+      startY = 50; 
+    } else {
+      double topHudHeight = 4;
+      double margin = 0;
+      // Mobile: Canto superior direito da tela de exploração (com margem de respiro)
+      startX = logicalWidth - mapWidth - 2;
+      startY = topHudHeight + 0;
+    }
+
+    // Salva o canvas para aplicar a escala
+    canvas.save();
+    canvas.scale(scaleFactor, scaleFactor);
+
+    final map = gameRef.dungeon;
+    final player = gameRef.player;
 
     final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth, mapHeight);
 
-    // 1. Fundo do Minimapa
+    // 4. Fundo do Minimapa e Borda externa
+    canvas.drawRect(
+      Rect.fromLTWH(startX - 2, startY - 2, mapWidth + 4, mapHeight + 4), 
+      Paint()..color = Palette.branco
+    );
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
+    
+    // Salva novamente apenas para o Clipping interno do minimapa
     canvas.save();
     canvas.clipRect(backgroundRect);
 
@@ -39,7 +77,6 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     int cameraX = player.x;
     int cameraY = player.y;
 
-    // Impede que a câmara tente mostrar o vazio além das bordas do mapa!
     int minCam = viewRadius;
     int maxCamX = max(minCam, map.width - 1 - viewRadius);
     int maxCamY = max(minCam, map.height - 1 - viewRadius);
@@ -50,20 +87,17 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     if (cameraY < minCam) cameraY = minCam;
     if (cameraY > maxCamY) cameraY = maxCamY;
 
-    // Define qual é o bloco que fica no canto superior esquerdo do minimapa
     int startMapX = cameraX - viewRadius;
     int startMapY = cameraY - viewRadius;
     // =====================================================================
 
-
-    // 2. DESENHO DOS BLOCOS DA MASMORRA
+    // 5. DESENHO DOS BLOCOS DA MASMORRA
     for (int y = 0; y < viewDiameter; y++) {
       for (int x = 0; x < viewDiameter; x++) {
         
         int mapX = startMapX + x;
         int mapY = startMapY + y;
 
-        // Se por algum motivo o mapa for minúsculo, previne erros
         if (mapX < 0 || mapX >= map.width || mapY < 0 || mapY >= map.height) continue;
         if (!map.explored[mapY][mapX]) continue;
 
@@ -143,7 +177,6 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             tilePaint.style = PaintingStyle.stroke;
             canvas.drawRect(Rect.fromLTWH(renderX , renderY, tileSize, tileSize), tilePaint);
             break;
-          
         }
 
         if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && !player.hasKey) {
@@ -156,42 +189,35 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
       }
     }
 
-    // 3. DESENHO DOS INIMIGOS PRÓXIMOS
+    // 6. DESENHO DOS INIMIGOS PRÓXIMOS
     final enemyPaint = Paint()..color = Palette.vermelho;
     for (var enemy in map.roamingEnemies) {
       if (map.explored[enemy.y][enemy.x]) {
-        // Calcula a posição do inimigo relativa à câmara do minimapa
         int ex = enemy.x - startMapX;
         int ey = enemy.y - startMapY;
         
-        // Só desenha se ele estiver dentro do visor do minimapa
         if (ex >= 0 && ex < viewDiameter && ey >= 0 && ey < viewDiameter) {
           double renderX = startX + (ex * tileSize);
           double renderY = startY + (ey * tileSize);
-         //canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize-1, tileSize-1), enemyPaint);
           canvas.drawCircle(Offset(renderX+tileSize/2, renderY+tileSize/2), tileSize/2, enemyPaint);
         }
       }
     }
 
-    // 4. DESENHO DO JOGADOR
-    // O jogador agora move-se livremente no radar quando a câmara trava na parede!
+    // 7. DESENHO DO JOGADOR
     int playerRelX = player.x - startMapX;
     int playerRelY = player.y - startMapY;
     
     double playerRenderX = startX + (playerRelX * tileSize);
     double playerRenderY = startY + (playerRelY * tileSize);
     
-    // 1. Encontrar o centro exato do bloco onde o jogador está
     double centerX = playerRenderX + (tileSize / 2);
     double centerY = playerRenderY + (tileSize / 2);
 
-    canvas.save(); // Salva o canvas antes de rodar
+    canvas.save(); 
     
-    // 2. Movemos o "pincel" para o centro do jogador
     canvas.translate(centerX, centerY);
 
-    // 3. Rotacionamos o canvas de acordo com a direção! (Requer import 'dart:math';)
     double angle = 0;
     switch (player.facing) {
       case Direction.north: angle = 0; break;
@@ -201,33 +227,21 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     }
     canvas.rotate(angle);
 
-    // 4. Desenhamos a Seta/Nave apontando para cima (Norte)
-    // Como já rotacionamos o canvas, desenhar para cima sempre apontará para a direção certa!
     Path playerPath = Path();
-    double size = tileSize * 0.4; 
+    double sizeArrow = tileSize * 0.4; 
     
-    playerPath.moveTo(0, -size); // Ponta da seta
-    playerPath.lineTo(size, size); // Perna direita da seta
-    //playerPath.lineTo(0, size * 0.4); // Recuo no meio da base (dá o formato de seta/GPS)
-    playerPath.lineTo(-size, size); // Perna esquerda da seta
+    playerPath.moveTo(0, -sizeArrow); 
+    playerPath.lineTo(sizeArrow, sizeArrow); 
+    playerPath.lineTo(-sizeArrow, sizeArrow); 
     playerPath.close();
 
-    // 5. Pinta a seta de azul
     canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
-    
-    // Opcional: Adiciona um contorninho branco ou vermelho para a seta saltar aos olhos!
-    //canvas.drawPath(playerPath, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 0.5);
 
-    // 6. Restaura o canvas para a rotação não afetar a sua moldura do minimapa!
+    // Restaura o Clipping interno do minimapa
     canvas.restore();
-    
-    // 5. Borda final por cima de tudo
-    canvas.drawRect(
-      backgroundRect, 
-      Paint()
-        ..color = Palette.branco
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-    );
+    canvas.restore();
+
+    // Restaura a Escala Global
+    canvas.restore();
   }
 }

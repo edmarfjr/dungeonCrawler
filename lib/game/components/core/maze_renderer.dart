@@ -44,6 +44,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
   int darkRoomIdx = 0;
 
+  // Variáveis para armazenar a resolução da tela de jogo (Viewport)
+  double _currentViewWidth = 400.0;
+  double _currentViewHeight = 400.0;
+
   MazeRenderer({
     required this.map,
     required this.player,
@@ -71,7 +75,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     _bumpForward = forward;
   }
 
-    void triggerSmoothMove({required bool forward}) {
+  void triggerSmoothMove({required bool forward}) {
     _smoothMoveTimer = _maxSmoothMoveTime;
     _smoothMoveForward = forward;
   }
@@ -99,88 +103,110 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   void render(Canvas canvas) {
     super.render(canvas);
 
+    // 1. APLICA A ESCALA GLOBAL DO JOGO
+    double scaleFactor = gameRef.isDesktopLayout ? (size.y / 720.0).clamp(0.1, 5.0) : (size.x / 400.0).clamp(0.1, 5.0);
+    double logicalWidth = size.x / scaleFactor;
+    double logicalHeight = size.y / scaleFactor;
+
+    // 2. RECORTA A TELA (VIEWPORT DA HUD)
+    Rect viewportRect;
+    if (gameRef.isDesktopLayout) {
+      double panelWidth = 260.0;
+      viewportRect = Rect.fromLTWH(panelWidth, 0, logicalWidth - (panelWidth * 2), logicalHeight);
+    } else {
+      double topHudHeight = 76.0;
+      double bottomHudHeight = 76.0;
+      viewportRect = Rect.fromLTWH(0, topHudHeight, logicalWidth, logicalHeight - topHudHeight - bottomHudHeight);
+    }
+
+    _currentViewWidth = viewportRect.width;
+    _currentViewHeight = viewportRect.height;
+
     canvas.save();
+    canvas.scale(scaleFactor, scaleFactor);
+    
     if (yOffsetAnim > 0) {
       canvas.translate(0, yOffsetAnim);
     }
 
-    // 2. APLICA O TRANCO DE IMPACTO NA CÂMERA
+    // ==== MÁGICA DA MOLDURA: O labirinto só pode desenhar dentro deste buraco! ====
+    canvas.clipRect(viewportRect);
+    canvas.translate(viewportRect.left, viewportRect.top);
+
+    // 3. APLICA O TRANCO DE IMPACTO NA CÂMERA
     if (_bumpTimer > 0) {
-      // Transforma o tempo em um progresso de 0.0 a 1.0
       double progress = 1.0 - (_bumpTimer / _maxBumpTime);
-      
-      // O Seno faz o valor subir suavemente e voltar (0 -> 1 -> 0)
       double intensity = sin(progress * pi);
 
       if (_bumpForward) {
-        // Impacto andando para frente: Câmera avança 5% na parede e desce 14 pixels pelo baque
         double scalePunch = 1.0 + (intensity * 0.05); 
         double yJolt = intensity * 14.0;
-
-        // Faz o Zoom acontecer a partir do centro da tela, em vez do canto superior esquerdo
-        canvas.translate(gameRef.size.x / 2, gameRef.size.y / 2);
+        canvas.translate(_currentViewWidth / 2, _currentViewHeight / 2);
         canvas.scale(scalePunch);
-        canvas.translate(-gameRef.size.x / 2, (-gameRef.size.y / 2) + yJolt);
+        canvas.translate(-_currentViewWidth / 2, (-_currentViewHeight / 2) + yJolt);
       } else {
-        // Impacto andando de costas: Câmera dá um solavanco rápido para cima
         double yJolt = -intensity * 10.0;
         canvas.translate(0, yJolt);
       }
     }
 
-    // ===============================================================
-    // 3. APLICA O MOVIMENTO SUAVE (ZOOM IN / ZOOM OUT)
-    // ===============================================================
+    // 4. APLICA O MOVIMENTO SUAVE (ZOOM IN / ZOOM OUT)
     if (_smoothMoveTimer > 0) {
       double progress = (_smoothMoveTimer / _maxSmoothMoveTime).clamp(0.0, 1.0);
-      double ease = progress * progress; // Inicia rápido, suaviza no final
+      double ease = progress * progress; 
       
       if (_smoothMoveForward) {
-        double scale = 1.0 - (0.2 * ease); // Cena começa em 0.6 e cresce para 1.0
-        double yJolt = 15.0 * ease; // Head bob (Câmera baixa levemente e sobe)
+        double scale = 1.0 - (0.2 * ease); 
+        double yJolt = 15.0 * ease; 
         
-        canvas.translate(size.x / 2, size.y / 2);
+        canvas.translate(_currentViewWidth / 2, _currentViewHeight / 2);
         canvas.scale(scale);
-        canvas.translate(-size.x / 2, (-size.y / 2) + yJolt);
+        canvas.translate(-_currentViewWidth / 2, (-_currentViewHeight / 2) + yJolt);
       } else {
-        double scale = 1.0 + (0.2 * ease); // Cena começa em 1.4 e encolhe para 1.0
+        double scale = 1.0 + (0.2 * ease); 
         double yJolt = -15.0 * ease; 
         
-        canvas.translate(size.x / 2, size.y / 2);
+        canvas.translate(_currentViewWidth / 2, _currentViewHeight / 2);
         canvas.scale(scale);
-        canvas.translate(-size.x / 2, (-size.y / 2) + yJolt);
+        canvas.translate(-_currentViewWidth / 2, (-_currentViewHeight / 2) + yJolt);
       }
     }
 
-    // ===============================================================
-    // 4. APLICA A ROTAÇÃO SUAVE (DESLIZE HORIZONTAL)
-    // ===============================================================
+    // 5. APLICA A ROTAÇÃO SUAVE (DESLIZE HORIZONTAL)
     if (_smoothTurnTimer > 0) {
       double progress = (_smoothTurnTimer / _maxSmoothTurnTime).clamp(0.0, 1.0);
       double ease = progress * progress; 
       
-      double offset = size.x * 0.5 * ease; // Desliza ocupando 60% da tela
+      double offset = _currentViewWidth * 0.5 * ease; 
       
       if (_smoothTurnRight) {
-        canvas.translate(offset, 0); // Nova cena desliza da direita para a esquerda
+        canvas.translate(offset, 0); 
       } else {
-        canvas.translate(-offset, 0); // Nova cena desliza da esquerda para a direita
+        canvas.translate(-offset, 0); 
       }
     }
 
-    // Fundo preto (teto e o vazio distante)
-   // canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black );
-    canvas.drawRect(Rect.fromLTWH(-size.x, -size.y, size.x * 3, size.y * 3), Paint()..color = Palette.preto );
+    // Fundo preto garantido (para cobrir além do que o labirinto renderiza)
+    canvas.drawRect(Rect.fromLTWH(-_currentViewWidth, -_currentViewHeight, _currentViewWidth * 3, _currentViewHeight * 3), Paint()..color = Palette.preto );
 
-    if(gameRef.isDarkRoom){
-       canvas.drawImageRect(
+    if (gameRef.isDarkRoom) {
+      double imgW = darkRoomImage[darkRoomIdx].width.toDouble();
+      double imgH = darkRoomImage[darkRoomIdx].height.toDouble();
+      
+      double scale = min(_currentViewWidth / imgW, _currentViewHeight / imgH);
+      double drawW = imgW * scale;
+      double drawH = imgH * scale;
+      
+      double dx = (_currentViewWidth - drawW) / 2;
+      double dy = (_currentViewHeight - drawH) / 2;
+
+      canvas.drawImageRect(
         darkRoomImage[darkRoomIdx],
-        Rect.fromLTWH(0, 0, darkRoomImage[darkRoomIdx].width.toDouble(), darkRoomImage[darkRoomIdx].height.toDouble()),
-        Rect.fromLTWH(0, 0, size.x, size.y),
+        Rect.fromLTWH(0, 0, imgW, imgH),
+        Rect.fromLTWH(dx, dy, drawW, drawH),
         Paint(),
       );
-    }else{
-     // Vetores de direção
+    } else {
       int dx = 0, dy = 0;
       int sideDx = 0, sideDy = 0;
 
@@ -191,7 +217,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         case Direction.west:  dx = -1; sideDy = -1; break;
       }
 
-      // Renderiza do fundo para a frente
       for (int cz = 4; cz >= 0; cz--) {
         for (int cx in [-3, 3, -2, 2, -1, 1, 0]) {
           int mapX = player.x + (dx * cz) + (sideDx * cx);
@@ -203,23 +228,13 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           Color corChao = Colors.white;
           Color corParede = Colors.white;
 
-          if (map.level >= 4){
-            tileIdx = 1;
-          }
+          if (map.level >= 4) tileIdx = 1;
+          if (map.level >= 7) tileIdx = 2;
+          if (map.level >= 10) tileIdx = 3;
 
-          if (map.level >= 7){
-            tileIdx = 2;
-          }
-
-          if (map.level >= 10){
-            tileIdx = 3;
-          }
-
-          // Sempre desenha o chão
           _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
           _drawCeiling(canvas, cx, cz,floorImage[tileIdx], corChao);
 
-          // --- 1. LÓGICA DAS PAREDES SÓLIDAS ---
           if (tile == TileType.wall) {
             if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
             if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
@@ -232,21 +247,11 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
             if (cz > 0) _drawFrontFace(canvas, cx, cz, secretWallImage[tileIdx], corParede);
           }
 
-          // --- 2. LÓGICA DA PORTA ---
           if (tile == TileType.door) {
-            // A porta vai do chão (0.5) até quase o teto (-0.1)
             _drawFloorTile(canvas, cx, cz, doorImage, Colors.white);
           }
 
-          //if (tile == TileType.entry) {
-          //   _drawCeiling(canvas, cx, cz, doorImage2, Colors.white);
-          //}
-
-          
-
-          // --- 3. LÓGICA DA CHAVE ---
           if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
-            // A chave vai do chão (0.5) até uma altura menor (0.1)
             _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
           }
 
@@ -287,71 +292,40 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           }
 
           if (tile == TileType.spike && gameRef.currentState == GameState.exploration) {
-            // Sempre desenha o chão normal debaixo da armadilha
             _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
-
-            // Calcula a largura de 1 frame (divide a spritesheet por 4)
             double frameWidth = trapImage[0].width / 4;
-            
-            // O frameX é o estado atual do mapa (0, 1, 2 ou 3)
             Rect frameRect = Rect.fromLTWH(map.spikeState * frameWidth, 0, frameWidth, trapImage[0].height.toDouble());
-
-            // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
             _drawBillboardItem(canvas, cx, cz, trapImage[0], 0.7, 0.1,Colors.white, srcRect: frameRect);
           }
 
           if (tile == TileType.poison && gameRef.currentState == GameState.exploration) {
-            // Sempre desenha o chão normal debaixo da armadilha
             _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
-
-            // Calcula a largura de 1 frame (divide a spritesheet por 5)
             double frameWidth = trapImage[1].width / 5;
-            
             Rect frameRect = Rect.fromLTWH(map.poisonState * frameWidth, 0, frameWidth, trapImage[1].height.toDouble());
-
-            // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
             _drawBillboardItem(canvas, cx, cz, trapImage[1], 0.7, 0.1,Colors.white, srcRect: frameRect);
           }
 
           if (tile == TileType.teleport && gameRef.currentState == GameState.exploration) {
-            // Sempre desenha o chão normal debaixo da armadilha
             _drawFloorTile(canvas, cx, cz, floorImage[tileIdx], corChao);
-
-            // Calcula a largura de 1 frame (divide a spritesheet por 5)
             double frameWidth = trapImage[2].width / 5;
-            
             Rect frameRect = Rect.fromLTWH(map.teleportState * frameWidth, 0, frameWidth, trapImage[2].height.toDouble());
-
-            // Desenha o espinho! O topY=0.2 garante que ele suba bastante em relação ao chão (0.5)
             _drawBillboardItem(canvas, cx, cz, trapImage[2], 0.6, 0.1,Colors.white, srcRect: frameRect);
           }
 
           Point<int> currentMapPos = Point(mapX, mapY);
           if (map.droppedItems.containsKey(currentMapPos) && map.droppedItems[currentMapPos]!.isNotEmpty && gameRef.currentState == GameState.exploration) {
-            
             for(var item in map.droppedItems[currentMapPos]!.reversed){
               try {
-              // Puxa a imagem verdadeira do item usando o cache do Flame!
-              ui.Image itemImg = gameRef.images.fromCache(item.imagePath);
-              
-              // Desenha usando o Billboarding. O item flutua da altura 0.5 (chão) até a 0.2
-              _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, item.cor);
-            } catch (e) {
-              // Fallback de segurança: Se a imagem falhar ao carregar, desenha uma caixinha/baú
-              _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, item.cor);
+                ui.Image itemImg = gameRef.images.fromCache(item.imagePath);
+                _drawBillboardItem(canvas, cx, cz, itemImg, 0.5, 0.2, item.cor);
+              } catch (e) {
+                _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.2, item.cor);
+              }
             }
-            }
-            // Pega sempre o item que está no topo da pilha do chão (last)
-          // var dropItem = map.droppedItems[currentMapPos]!.last;
-            
-            
           }
           
           for (var enemy in map.roamingEnemies) {
-            
-            // Se o inimigo estiver na coordenada que o laço está varrendo agora...
             if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
-              // Desenha ele no chão (0.5), um pouco esticado pra cima (0.0) para parecer intimidador
               _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelho);
             }
           }
@@ -359,35 +333,29 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       }
     }
 
-    
-
     canvas.restore();
   }
 
+  // --- NOVA PROJEÇÃO: Utiliza o tamanho do viewport ao invés da tela cheia!
   Offset _project(double x, double y, double z) {
     double cameraZ = z + 0.5; 
-    double fov = size.x * 0.8; 
+    
+    double baseDim = min(_currentViewWidth, _currentViewHeight); 
+    double fov = baseDim * 0.8; 
+    
     return Offset(
-      (x / cameraZ) * fov + size.x / 2,
-      (y / cameraZ) * fov + size.y / 2,
+      (x / cameraZ) * fov + _currentViewWidth / 2,
+      (y / cameraZ) * fov + _currentViewHeight / 2,
     );
   }
 
-  // --- NOVA FUNÇÃO GENÉRICA DE BILLBOARDING ---
-  // Ela serve para qualquer objeto (Inimigos, Chaves, Portas, Magias...)
   void _drawBillboardItem(Canvas canvas, int cx, int cz, ui.Image image, double bottomY, double topY, Color cor, {Rect? srcRect}) {
     double zCenter = cz + 0.5;
 
-    // Calcula a escuridão bruta
     double rawDarkness = (zCenter / 5.0).clamp(0.0, 1.0);
-    
-    // O EFEITO CROCANTE: Quebra o degradê em 4 níveis rígidos (0%, 25%, 50%, 75%, 100%)
     double darkness = (rawDarkness * 4).round() / 4.0;
-    
-    // Mistura a cor
     Color darkenedColor = Color.lerp(cor, Colors.black, darkness)!;
 
-    // Projeta as alturas baseadas nos parâmetros informados
     Offset bottom = _project(cx.toDouble(), bottomY, zCenter);
     Offset top = _project(cx.toDouble(), topY, zCenter);
 
@@ -405,7 +373,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       spriteHeight
     );
 
-    // Usa a nova cor escurecida no ColorFilter
     final paint = Paint()
       ..colorFilter = ColorFilter.mode(darkenedColor, BlendMode.modulate);
 
@@ -417,7 +384,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     );
   }
 
-  // MÉTODOS 3D:
   void _drawFrontFace(Canvas canvas, int cx, int cz, ui.Image tex, Color color) {
     _drawSubdividedPolygon(canvas, tex, color, [
       [cx - 0.5, -0.5, cz.toDouble()], 
@@ -457,7 +423,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   }
 
   void _drawCeiling(Canvas canvas, int cx, int cz, ui.Image img, Color color) {
-    // Usamos a mesma floorImage, mas mudamos o eixo Y de 0.5 para -0.5
     _drawSubdividedPolygon(canvas, img, color, [
       [cx - 0.5, -0.5, cz + 1.0], 
       [cx + 0.5, -0.5, cz + 1.0], 
@@ -478,11 +443,11 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     var positions = Float32List(numVertices * 2);
     var texCoords = Float32List(numVertices * 2);
     var indices = Uint16List(segs * segs * 6);
-    var colors = Int32List(numVertices); // Lista de cores pronta para receber dados
+    var colors = Int32List(numVertices); 
 
     int vIdx = 0;
     int tIdx = 0;
-    int cIdx = 0; // NOVO: Índice para rastrear a cor de cada vértice
+    int cIdx = 0; 
 
     final p0 = points3D[0];
     final p1 = points3D[1];
@@ -506,15 +471,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
         double finalY = topY + (botY - topY) * ty;
         double finalZ = topZ + (botZ - topZ) * ty;
 
-       // Escuridão bruta baseada na profundidade daquele pedacinho
         double rawDarkness = (finalZ / 4.5).clamp(0.0, 1.0);
-        
-        // Aplica a mesma quebra para criar faixas duras de sombra na parede
         double darkness = (rawDarkness * 4).round() / 4.0;
         
         Color vertexColor = Color.lerp(tintColor, Colors.black, darkness)!;
-        
-        // Aplica a cor escurecida diretamente no vértice atual
         colors[cIdx++] = vertexColor.value;
 
         Offset proj = _project(finalX, finalY, finalZ);

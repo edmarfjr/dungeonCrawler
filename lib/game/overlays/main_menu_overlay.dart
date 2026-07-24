@@ -53,120 +53,181 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = widget.game.isDesktopLayout;
+
     return Container(
       color: Palette.preto,
-      child: Center(
-        child: ValueListenableBuilder<int>(
-          valueListenable: widget.game.mainMenuCursor,
-          builder: (context, cursorIndex, child) {
-            return SlideTransition(
-              position: _blockOffsetAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                   Image.asset(
-                      'assets/images/title.png', 
-                      width: MediaQuery.of(context).size.width * 0.65, 
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Text(
-                          "A BLADE IN THE ABYSS", 
-                          style: TextStyle(
-                            fontFamily: 'pixelFont', 
-                            color: Palette.branco, 
-                            fontSize: 28, 
-                            fontWeight: FontWeight.bold, 
-                            letterSpacing: 2,
-                            decoration: TextDecoration.none, 
-                          ),
-                        );
-                      },
-                    ),
-                  
-                  const SizedBox(height: 20),
+      // O LayoutBuilder nos dá as restrições reais da área do jogo (ex: 2/3 da tela no mobile)
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double availableWidth = constraints.maxWidth;
+          final double availableHeight = constraints.maxHeight;
 
-                  if (widget.game.hasSavedGame) ...[
-                    _buildMenuOption(
-                      title: I18n.t('menu_continue'),
-                      index: 0,
-                      currentIndex: cursorIndex,
+          // Largura da imagem proporcional e com limites para não estourar
+          final double imageWidth = isDesktop 
+              ? (availableWidth * 0.40).clamp(200.0, 600.0) 
+              : (availableWidth * 0.70).clamp(150.0, 400.0);
+
+          // Tamanho de fontes proporcionais ao espaço disponível
+          final double safeTitleSize = (availableWidth * 0.05).clamp(20.0, 36.0);
+          final double safeOptionSize = (availableWidth * 0.04).clamp(14.0, 24.0);
+
+          // Espaçamento dinâmico baseado na altura disponível
+          final double spacing = (availableHeight * 0.03).clamp(10.0, 30.0);
+
+          return Center(
+            // O SingleChildScrollView garante que NUNCA haverá erro de Overflow (faixa amarela/preta)
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: ValueListenableBuilder<int>(
+                valueListenable: widget.game.mainMenuCursor,
+                builder: (context, cursorIndex, child) {
+                  return SlideTransition(
+                    position: _blockOffsetAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                         Image.asset(
+                            'assets/images/title.png', 
+                            width: imageWidth, 
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Text(
+                                "A BLADE IN THE ABYSS", 
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'pixelFont', 
+                                  color: Palette.branco, 
+                                  fontSize: safeTitleSize, 
+                                  fontWeight: FontWeight.bold, 
+                                  letterSpacing: 2,
+                                  decoration: TextDecoration.none, 
+                                ),
+                              );
+                            },
+                          ),
+                        
+                        SizedBox(height: spacing * 1.5),
+
+                        if (widget.game.hasSavedGame) ...[
+                          _buildMenuOption(
+                            title: I18n.t('menu_continue'),
+                            index: 0,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('menu_new'),
+                            index: 1,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('menu_settings'),
+                            index: 2,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('menu_manual'),
+                            index: 3,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                        ] else ...[
+                          _buildMenuOption(
+                            title: I18n.t('menu_new'),
+                            index: 0,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('menu_settings'),
+                            index: 1,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('menu_manual'),
+                            index: 2,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                        ],
+                        
+                        // Padding final para não ficar colado embaixo se precisar rolar a tela
+                        SizedBox(height: spacing),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                    _buildMenuOption(
-                      title: I18n.t('menu_new'),
-                      index: 1,
-                      currentIndex: cursorIndex,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildMenuOption(
-                      title: I18n.t('menu_settings'),
-                      index: 2,
-                      currentIndex: cursorIndex,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildMenuOption(
-                      title: I18n.t('menu_manual'),
-                      index: 3,
-                      currentIndex: cursorIndex,
-                    ),
-                  ] else ...[
-                    _buildMenuOption(
-                      title: I18n.t('menu_new'),
-                      index: 0,
-                      currentIndex: cursorIndex,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildMenuOption(
-                      title: I18n.t('menu_settings'),
-                      index: 1,
-                      currentIndex: cursorIndex,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildMenuOption(
-                      title: I18n.t('menu_manual'),
-                      index: 2,
-                      currentIndex: cursorIndex,
-                    ),
-                  ],
-                ],
+                  );
+                },
               ),
-            );
-          },
-        ),
+            ),
+          );
+        }
       ),
     );
   }
 
-  Widget _buildMenuOption({required String title, required int index, required int currentIndex}) {
+  Widget _buildMenuOption({
+    required String title, 
+    required int index, 
+    required int currentIndex, 
+    required bool isDesktop,
+    required double fontSize,
+  }) {
     bool isSelected = (index == currentIndex);
 
-    return GestureDetector(
-      onTap: () {
-        if (widget.game.isMainMenuAnimating) return;
-        widget.game.mainMenuCursor.value = index;
-        widget.game.startInput(GameInput.buttonA);
+    return MouseRegion(
+      onEnter: (_) {
+        if (!widget.game.isMainMenuAnimating && isDesktop) {
+          widget.game.mainMenuCursor.value = index;
+        }
       },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            isSelected ? "> " : "  ",
-            style: TextStyle(
-              fontFamily: 'pixelFont', fontSize: 20,
-              color: isSelected ? Palette.amarelo : Colors.transparent,
-              fontWeight: FontWeight.bold, decoration: TextDecoration.none,
+      child: GestureDetector(
+        onTap: () {
+          if (widget.game.isMainMenuAnimating) return;
+          widget.game.mainMenuCursor.value = index;
+          widget.game.startInput(GameInput.buttonA);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // Garante que a área de clique seja apenas o tamanho do texto
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isSelected ? "> " : "  ",
+              style: TextStyle(
+                fontFamily: 'pixelFont', 
+                fontSize: fontSize,
+                color: isSelected ? Palette.amarelo : Colors.transparent,
+                fontWeight: FontWeight.bold, 
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'pixelFont', fontSize: 20,
-              color: isSelected ? Palette.amarelo : Palette.branco,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              decoration: TextDecoration.none,
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'pixelFont', 
+                fontSize: fontSize,
+                color: isSelected ? Palette.amarelo : Palette.branco,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

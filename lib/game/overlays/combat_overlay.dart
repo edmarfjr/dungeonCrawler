@@ -37,6 +37,7 @@ class EnemyAnimationSet {
 }
 
 class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
+  bool isDesktopLayout = false;
   final PlayerCombatStats playerStats;
   final ui.Image playerSheetImage;
   final Map<EnemyType, ui.Image> enemySheets;
@@ -53,7 +54,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   late SpriteAnimation shieldIdle, shieldWalk, shieldAttackWindup, shieldAttackActive, shieldAttackRecovery, shieldGuard, shieldHit;
   late SpriteAnimationTicker shieldIdleTicker, shieldWalkTicker, shieldAttackWindupTicker, shieldAttackActiveTicker, shieldAttackRecoveryTicker, shieldGuardTicker, shieldHitTicker;
 
-
   Map<EnemyType, EnemyAnimationSet> enemyAnimationSets = {}; 
   Map<Enemy, SpriteAnimationTicker> enemyTickers = {};       
   Map<Enemy, CombatPhase> enemyLastPhase = {};      
@@ -66,6 +66,30 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   List<Enemy> enemies = [];
   double _walkTimer = 0.0;
+
+  // ============================================================================
+  // === ESCALA VIRTUAL E VIEWPORT (O SEGREDO DA MOLDURA E ALINHAMENTO) ===
+  // ============================================================================
+  
+  double get scaleFactor => gameRef.isDesktopLayout 
+      ? (size.y / 720.0).clamp(0.1, 5.0) 
+      : (size.x / 500.0).clamp(0.1, 5.0);
+
+  double get logicalWidth => size.x / scaleFactor;
+  double get logicalHeight => size.y / scaleFactor;
+  Vector2 get logicalSize => Vector2(logicalWidth, logicalHeight);
+
+  // Define a área central livre onde o jogo 3D e combate acontecem
+  Rect get viewportRect {
+    if (gameRef.isDesktopLayout) {
+      double panelWidth = 260.0;
+      return Rect.fromLTWH(panelWidth, 0, logicalWidth - (panelWidth * 2), logicalHeight);
+    } else {
+      double topHudHeight = 76.0;
+      double bottomHudHeight = 76.0;
+      return Rect.fromLTWH(0, topHudHeight, logicalWidth, logicalHeight - topHudHeight - bottomHudHeight);
+    }
+  }
 
   void addFloatingText(String text, Rect targetRect, Color color,{double speedY = 60, double tmr = 1.5}) {
     add(FloatingText(text, targetRect.center.dx, targetRect.top + 20, color,speedY: speedY, maxLifeTime: tmr));
@@ -100,10 +124,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     // --- ARMA DO PLAYER ---
     _initWeaponAnimations();
-
-    // --- ARMADURA DO PLAYER ---
     _initArmorAnimations();
-
     _initShieldAnimations();
 
     // --- INIMIGOS ---
@@ -229,17 +250,17 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   void equipNewWeapon(ui.Image newWeaponImage) {
     weaponSheetImage = newWeaponImage; 
-    _initWeaponAnimations();           
+    _initWeaponAnimations();            
   }
 
   void equipNewArmor(ui.Image newArmorImage) {
     armorSheetImage = newArmorImage; 
-    _initArmorAnimations();           
+    _initArmorAnimations();            
   }
 
   void equipNewShield(ui.Image newShieldImage) {
     shieldSheetImage = newShieldImage; 
-    _initShieldAnimations();           
+    _initShieldAnimations();            
   }
 
   void startEncounter(List<Enemy> newEnemies) {
@@ -302,16 +323,17 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     if (playerStats.staminaInfiniteTmr > 0 && gameRef.currentState == GameState.combat) {
       if (Random().nextDouble() < 0.3) { 
-        double px = (size.x / 2) + (playerStats.strafePosition * size.x * 0.35) + (Random().nextDouble() * 100 - 50);
-        double py = size.y - 50 - (Random().nextDouble() * 50);
+        double px = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35) + (Random().nextDouble() * 100 - 50);
+        // O py acompanha a compensação de D2 do jogador
+        double py = logicalHeight - 110 - (Random().nextDouble() * 50);
         add(BuffParticle(px, py, 40 + Random().nextDouble() * 60, 0.8 + Random().nextDouble()));
       }
     }
 
     if (playerStats.buffForcaTmr > 0 && gameRef.currentState == GameState.combat) {
       if (Random().nextDouble() < 0.3) { 
-        double px = (size.x / 2) + (playerStats.strafePosition * size.x * 0.35) + (Random().nextDouble() * 100 - 50);
-        double py = size.y - 50 - (Random().nextDouble() * 50);
+        double px = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35) + (Random().nextDouble() * 100 - 50);
+        double py = logicalHeight - 110 - (Random().nextDouble() * 50);
         add(BuffParticle(px, py, 40 + Random().nextDouble() * 60, 0.8 + Random().nextDouble(),cor:Palette.cinzaMed));
       }
     }
@@ -367,119 +389,181 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   @override
   void renderTree(Canvas canvas) {
-    if (gameRef.currentState == GameState.combat) {
-      if(gameRef.isBoss && gameRef.dungeon.level == 12){//12
-        canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = Colors.black);
-      }
+    // === 1. MÁGICA DA ESCALA GLOBAL ===
+    canvas.save();
+    canvas.scale(scaleFactor, scaleFactor);
+
+    render(canvas); 
+
+    // ====================================================================
+    // === 2. MÁSCARA DO VIEWPORT E ALINHAMENTO DO CHÃO DOS ATORES ===
+    // ====================================================================
+    canvas.save();
+    canvas.clipRect(viewportRect); 
+    
+    // Ajuste D1: Adicionamos +25.0 pixels para descer os inimigos levemente, 
+    // afundando eles um pouco para trás da HUD (profundidade de campo)
+    double actorOffsetY = viewportRect.bottom - logicalHeight + 65.0;
+    canvas.translate(0, actorOffsetY);
+
+    if (gameRef.currentState == GameState.combat && gameRef.isBoss && gameRef.dungeon.level == 12) {
+        canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, logicalHeight), Paint()..color = Colors.black);
     }
 
-    // 1. Renderiza a base do componente (caso exista algo no render padrão)
-    render(canvas);
-
-    // 2. Desenha TODOS os filhos normais ATRÁS do jogador (Sombras, Textos, Projéteis)
     for (var child in children) {
       if (child.runtimeType.toString() != 'BuffParticle') {
         child.renderTree(canvas);
       }
     }
 
-    // 3. Desenha o Jogador e os Efeitos de Ataque (agora por cima das sombras/projéteis)
     if (gameRef.currentState == GameState.combat) {
       _drawAttackEffects(canvas);
       _drawPlayer(canvas);
       if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
     }
 
-    // 4. Desenha APENAS as partículas de Buff NA FRENTE do jogador
     for (var child in children) {
       if (child.runtimeType.toString() == 'BuffParticle') {
         child.renderTree(canvas);
       }
     }
 
-    // 5. Interface de Usuário e HUD (Sempre por cima de tudo)
-    _drawPlayerUI(canvas);
-    _drawBottomBarBackground(canvas);
+    canvas.restore(); 
 
-    if (gameRef.currentState == GameState.combat) _drawEnemyUI(canvas);
+    // ====================================================================
+    // === 3. DESENHO DAS BORDAS / HUD (Desenhadas por cima de tudo) ===
+    // ====================================================================
+    if (gameRef.isDesktopLayout) {
+      _drawDesktopHUD(canvas);
+    } else {
+      _drawBottomBarBackground(canvas);
+      _drawPlayerUI(canvas);
+      if (gameRef.currentState == GameState.combat) _drawEnemyUI(canvas);
+    }
 
     _drawEffects(canvas);
+    
+    canvas.restore();
   }
-
 
   void _drawEffects(Canvas canvas) {
     if (playerStats.vfxTimer > 0) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), Paint()..color = playerStats.vfxColor.withOpacity(playerStats.vfxTimer.clamp(0.0, 0.5)));
+      canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, logicalHeight), Paint()..color = playerStats.vfxColor.withOpacity(playerStats.vfxTimer.clamp(0.0, 0.5)));
     }
   }
 
   void _drawAttackEffects(Canvas canvas) {
+    canvas.save();
+    canvas.translate(0, -60.0); // Ajuste D2 para elevar o Efeito de Ataque
+
     if (playerStats.currentPhase == CombatPhase.active) {
       int slashIdx = 0;
       bool wide = playerStats.equippedWeapon?.isWide ?? false;
       if (wide) slashIdx = 1;
+      
+      // Rescale correto (Tamanho Gigante) usando viewportRect
+      double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
+      double playerCX = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35);
+      
+      Rect attackRect = Rect.fromCenter(
+        center: Offset(playerCX, logicalHeight - 65 - ((196 * baseSizeMultiplier) / 2)),
+        width: 120 * baseSizeMultiplier,
+        height: 120 * baseSizeMultiplier
+      );
+
       canvas.drawImageRect(
         playerSlashImage[slashIdx],
         Rect.fromLTWH(0, 0, playerSlashImage[slashIdx].width.toDouble(), playerSlashImage[slashIdx].height.toDouble()),
-        playerStats.getHitboxImageSize(size), 
+        attackRect, 
         Paint()
       );
     }
+    canvas.restore();
 
     for (var enemy in enemies) {
       if (!enemy.isAlive) continue;
       
-      if ((enemy.currentPhase == CombatPhase.active || enemy.currentPhase == CombatPhase.active2)&& enemy.getHitbox(size).width > 0 && enemy.isMelee) {
+      if ((enemy.currentPhase == CombatPhase.active || enemy.currentPhase == CombatPhase.active2)&& enemy.getHitbox(logicalSize).width > 0 && enemy.isMelee) {
         final slashImg = enemySlashImages[enemy.type] ?? enemySlashImages[EnemyType.slime]!;
         final slashPaint = Paint();
         canvas.drawImageRect(
           slashImg,
           Rect.fromLTWH(0, 0, slashImg.width.toDouble(), slashImg.height.toDouble()),
-          enemy.getHitboxImageSize(size),
+          enemy.getHitboxImageSize(logicalSize),
           slashPaint 
         );
       }
-
     }
   }
 
   void _drawBottomBarBackground(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(1, size.y - 76, size.x-2, 75), Paint()..color = Colors.black);
-    canvas.drawRect(Rect.fromLTWH(1, size.y - 76, size.x-2, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawRect(Rect.fromLTWH(0, logicalHeight - logicalHeight*0.145, logicalWidth, logicalHeight*0.145), Paint()..color = Colors.black);
+    canvas.drawRect(Rect.fromLTWH(1, logicalHeight - logicalHeight*0.145, logicalWidth-2, (logicalHeight*0.145) - 2), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
   }
 
   void _drawDebugBoxes(Canvas canvas) {
     for (var enemy in enemies) {
-      canvas.drawRect(enemy.getHurtbox(size), Paint()..color = Colors.green.withOpacity(0.4)..style = PaintingStyle.fill);
-      canvas.drawRect(enemy.getHurtbox(size), Paint()..color = Colors.green..style = PaintingStyle.stroke..strokeWidth = 2);
+      final eHurtbox = enemy.getHurtbox(logicalSize);
+      canvas.drawRect(eHurtbox, Paint()..color = Colors.green.withOpacity(0.4)..style = PaintingStyle.fill);
+      canvas.drawRect(eHurtbox, Paint()..color = Colors.green..style = PaintingStyle.stroke..strokeWidth = 2);
       
-      if (enemy.currentPhase == CombatPhase.active && enemy.getHitbox(size).width > 0) {
-        canvas.drawRect(enemy.getHitbox(size), Paint()..color = Colors.red.withOpacity(0.4)..style = PaintingStyle.fill);
-        canvas.drawRect(enemy.getHitbox(size), Paint()..color = Colors.red..style = PaintingStyle.stroke..strokeWidth = 2);
+      if (enemy.currentPhase == CombatPhase.active && enemy.getHitbox(logicalSize).width > 0) {
+        final eHitbox = enemy.getHitbox(logicalSize);
+        canvas.drawRect(eHitbox, Paint()..color = Colors.red.withOpacity(0.4)..style = PaintingStyle.fill);
+        canvas.drawRect(eHitbox, Paint()..color = Colors.red..style = PaintingStyle.stroke..strokeWidth = 2);
       }
     }
-    canvas.drawRect(playerStats.getHurtbox(size), Paint()..color = Colors.blueAccent.withOpacity(0.4)..style = PaintingStyle.fill);
-    canvas.drawRect(playerStats.getHurtbox(size), Paint()..color = Colors.blueAccent..style = PaintingStyle.stroke..strokeWidth = 2);
+    
+    canvas.save();
+    canvas.translate(0, -60.0); // Ajuste D2 para elevar a Hitbox Debug
+
+    double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
+    double playerCX = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35);
+    double playerCY = logicalHeight - 65 - ((196 * baseSizeMultiplier) / 2);
+    
+    // Box fixa garantida, mesmo que a original falhe
+    Rect pHurtbox = Rect.fromCenter(
+      center: Offset(playerCX, playerCY),
+      width: 100 * baseSizeMultiplier, 
+      height: 140 * baseSizeMultiplier
+    );
+
+    canvas.drawRect(pHurtbox, Paint()..color = Colors.blueAccent.withOpacity(0.4)..style = PaintingStyle.fill);
+    canvas.drawRect(pHurtbox, Paint()..color = Colors.blueAccent..style = PaintingStyle.stroke..strokeWidth = 2);
     
     if (playerStats.currentPhase == CombatPhase.active) {
-      canvas.drawRect(playerStats.getHitbox(size), Paint()..color = Colors.orange.withOpacity(0.4)..style = PaintingStyle.fill);
-      canvas.drawRect(playerStats.getHitbox(size), Paint()..color = Colors.orange..style = PaintingStyle.stroke..strokeWidth = 2);
+      Rect pHitbox = Rect.fromCenter(
+        center: Offset(playerCX, playerCY),
+        width: 120 * baseSizeMultiplier, 
+        height: 120 * baseSizeMultiplier
+      );
+      canvas.drawRect(pHitbox, Paint()..color = Colors.orange.withOpacity(0.4)..style = PaintingStyle.fill);
+      canvas.drawRect(pHitbox, Paint()..color = Colors.orange..style = PaintingStyle.stroke..strokeWidth = 2);
     }
+
+    canvas.restore();
   }
 
   void _drawPlayer(Canvas canvas) {
     if (playerStats.invencibleTmr>0 && (playerStats.invencibleTmr * 15).toInt() % 2 == 0) return;
     
-    double playerWidth = 196; double playerHeight = 196;
+    // Rescale Correto garantindo que não fique gigante (viewportRect)
+    double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
+    double playerWidth = 196 * baseSizeMultiplier; 
+    double playerHeight = 196 * baseSizeMultiplier;
     double yOffset = 0; double duration = 0.5;
 
     if (playerStats.currentPhase == CombatPhase.walk) { yOffset = -(sin(_walkTimer * 12) * 4).abs() * -1; } 
     else if (playerStats.currentPhase == CombatPhase.entering) { yOffset = playerHeight * (1.0 - ((duration - playerStats.animTimer) / duration).clamp(0.0, 1.0)); } 
     else if (playerStats.currentPhase == CombatPhase.exiting) { yOffset = playerHeight * ((duration - playerStats.animTimer) / duration).clamp(0.0, 1.0); }
 
-    double xPixel = (size.x / 2) + (playerStats.strafePosition * size.x * 0.35) - (playerWidth / 2);
-    final dstRect = Rect.fromLTWH(xPixel, size.y - 65 - playerHeight + yOffset, playerWidth, playerHeight);
-    final dstRectWeapon = Rect.fromLTWH(xPixel, size.y - 65 - playerHeight + yOffset - playerStats.offYWeapon, playerWidth, playerHeight);
+    double xPixel = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35) - (playerWidth / 2);
+    
+    canvas.save();
+    if(!isDesktopLayout)canvas.translate(0, -15.0); 
+
+    final dstRect = Rect.fromLTWH(xPixel, logicalHeight - 65 - playerHeight + yOffset, playerWidth, playerHeight);
+    final dstRectWeapon = Rect.fromLTWH(xPixel, logicalHeight - 65 - playerHeight + yOffset - playerStats.offYWeapon, playerWidth, playerHeight);
 
     SpriteAnimationTicker activeTicker;
     SpriteAnimationTicker activeWeaponTicker; 
@@ -497,7 +581,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     }
 
     final playerPaint = Paint();
-    //playerPaint.colorFilter = const ColorFilter.mode(Palette.bege, BlendMode.modulate); 
 
     Color corArma = playerStats.equippedWeapon?.cor ?? Colors.white;
     Color corArmadura = playerStats.equippedArmor?.cor ?? Colors.white;
@@ -543,12 +626,158 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       activeArmorTicker.getSprite().renderRect(canvas, dstRect, overridePaint: armorPaint);
     }
 
+    canvas.restore();
   }
 
+  // ============================================================================
+  // FUNÇÕES DE TEXTO E DESENHO DE BARRAS
+  // ============================================================================
+
+  void _drawText(Canvas canvas, String text, double x, double y, double fontSize, Color color, {bool alignCenter = false}) {
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(fontFamily: 'pixelFont', color: color, fontSize: fontSize, fontWeight: FontWeight.bold)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    double drawX = alignCenter ? x - (textPainter.width / 2) : x;
+    textPainter.paint(canvas, Offset(drawX, y));
+  }
+
+  void _drawHorizontalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(x, y, w * r.clamp(0.0, 1.0), h), Paint()..color = c);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+  }
+
+  void _drawVerticalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(x, y, w , h * r.clamp(0.0, 1.0)), Paint()..color = c);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+  }
+
+  // ============================================================================
+  // === HUD PC / WEB DESKTOP ===
+  // ============================================================================
+  void _drawDesktopHUD(Canvas canvas) {
+    double panelWidth = 260.0;
+    
+    // --- PAINEL ESQUERDO (HERÓI) ---
+    canvas.drawRect(Rect.fromLTWH(0, 0, panelWidth, logicalHeight), Paint()..color = Palette.preto); // Moldura
+    canvas.drawRect(Rect.fromLTWH(4, 4, panelWidth-4, logicalHeight-8), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 8);
+    
+    _drawText(canvas, "ESSENCE: ${playerStats.essence}", panelWidth / 2, 30, 24, Palette.branco, alignCenter: true);
+    _drawText(canvas, 'STR: ${playerStats.str}\nCON: ${playerStats.con}\nWIS: ${playerStats.wis}', panelWidth / 2, 70, 24, Palette.branco, alignCenter: true);
+    
+    // Barras de Status
+    _drawText(canvas, "HP", 45, 170, 16, Palette.amarelo);
+    _drawVerticalBar(canvas, 40, 200, 40, playerStats.maxHp * 6, Palette.vermelho, playerStats.hp / playerStats.maxHp);
+    
+    _drawText(canvas, "ST", 105, 170, 16, Palette.amarelo);
+    _drawVerticalBar(canvas, 100, 200, 40, playerStats.con * 18, Palette.verde, playerStats.stamina / (playerStats.con * 3));
+    
+    _drawText(canvas, "MP", 165, 170, 16, Palette.amarelo);
+    _drawVerticalBar(canvas, 160, 200, 40, playerStats.wis * 18, Palette.azul, playerStats.mana / (playerStats.wis * 3));
+
+
+    // Bússola e Chave na exploração
+    if (gameRef.currentState == GameState.exploration) {
+    
+    }else{
+  // Inventário
+      //_drawText(canvas, "INVENTÁRIO", panelWidth / 2, 200, 20, Palette.amarelo, alignCenter: true);
+      
+      //if(playerStats.reflex){
+        _drawText(canvas, "REFLEXO ATIVO", panelWidth / 2, logicalHeight - 80, 14, Palette.amarelo, alignCenter: true);
+      //}
+    }
+
+    // --- PAINEL DIREITO (INIMIGOS / INFO) ---
+    double rightX = logicalWidth - panelWidth;
+    canvas.drawRect(Rect.fromLTWH(rightX, 0, panelWidth, logicalHeight), Paint()..color = Palette.preto); // Moldura
+    canvas.drawRect(Rect.fromLTWH(rightX, 4, panelWidth-4, logicalHeight-8), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 8);
+
+    if (gameRef.currentState == GameState.combat) {
+
+        if (gameRef.selectedConsumableIndex < playerStats.consumables.length) {
+        Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
+        double bxSize = 150;
+        double boxX = logicalWidth - (panelWidth / 2) - (bxSize / 2);
+        double boxY = 40;
+        
+        canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.cinzaEsc);
+        try {
+          ui.Image itemImg = gameRef.images.fromCache(sel.imagePath);
+          final tintPaint = Paint()..colorFilter = ColorFilter.mode(sel.cor, BlendMode.modulate);
+          canvas.drawImageRect(
+            itemImg,
+            Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
+            Rect.fromLTWH(boxX, boxY, bxSize, bxSize), 
+            tintPaint
+          );
+        } catch (e) {}
+        canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+
+        String amountText = sel.type == ItemType.spell ? '${sel.manaCost} MP' : '${sel.quantity}x';
+        _drawText(canvas, amountText, panelWidth / 2, boxY + bxSize + 10, 14, sel.type == ItemType.spell ? Palette.azul : Palette.branco, alignCenter: true);
+      }
+
+      _drawText(canvas, "INIMIGOS", rightX + panelWidth / 2, 200, 24, Palette.vermelho, alignCenter: true);
+      
+      double startY = 240;
+      for (var enemy in enemies) {
+        if (!enemy.isAlive) continue;
+        
+        _drawText(canvas, I18n.t(enemy.name).toUpperCase(), rightX + panelWidth / 2, startY, 14, Palette.branco, alignCenter: true);
+        _drawHorizontalBar(canvas, rightX + 20, startY + 20, panelWidth - 40, 16, Palette.vermelho, enemy.hp / enemy.maxHp);
+        
+        startY += 45;
+      }
+    } else {
+      /*_drawText(canvas, "MUNDO", rightX + panelWidth / 2, 30, 24, Palette.amarelo, alignCenter: true);
+      _drawText(canvas, "Andar: ${gameRef.dungeon.level}", rightX + panelWidth / 2, 80, 18, Palette.branco, alignCenter: true);
+      
+      _drawText(canvas, "Controles PC:", rightX + panelWidth / 2, 160, 16, Palette.cinzaCla, alignCenter: true);
+      _drawText(canvas, "W,A,S,D - Mover / Girar", rightX + panelWidth / 2, 190, 12, Palette.branco, alignCenter: true);
+      _drawText(canvas, "E / Espaço - Interagir", rightX + panelWidth / 2, 220, 12, Palette.branco, alignCenter: true);
+      _drawText(canvas, "Q / Shift - Usar Item", rightX + panelWidth / 2, 250, 12, Palette.branco, alignCenter: true);
+      */
+       String direc = 'dir_n';
+       switch (gameRef.player.facing) {
+         case Direction.north: direc = 'dir_n'; break;
+         case Direction.east:  direc = 'dir_l'; break;
+         case Direction.south: direc = 'dir_s'; break;
+         case Direction.west:  direc = 'dir_o'; break;
+       }
+       _drawText(canvas, "${I18n.t(direc).toUpperCase()}", logicalWidth -panelWidth / 2, 15, 20, Palette.branco, alignCenter: true);
+
+       
+       if (gameRef.player.hasKey) {
+          double bxSize = 150;
+          double keyX = logicalWidth -(panelWidth / 2) - (bxSize / 2);
+          double keyY = logicalHeight - 260;
+          try {
+            canvas.drawImageRect(
+              gameRef.keySprite, 
+              Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
+              Rect.fromLTWH(keyX, keyY, bxSize, bxSize),
+              Paint()..colorFilter = const ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
+            );
+          } catch (e) {}
+          canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.amarelo..style = PaintingStyle.stroke..strokeWidth = 4);
+
+       }
+       
+    }
+  }
+
+  // ============================================================================
+  // === HUD MOBILE ===
+  // ============================================================================
+
   void _drawPlayerUI(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 75), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(1, 1, size.x-2, 75), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-    //double barWidth = (size.x - 40) / 3;
+    // Fundo sólido garantido no Topo
+    canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, logicalHeight*0.145), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(1, 1, logicalWidth-2, logicalHeight*0.145), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    
     _drawHorizontalBar(canvas, 10, 13, playerStats.maxHp * 4, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
     _drawHorizontalBar(canvas, 10, 30, playerStats.con * 12, 12, Palette.verde, playerStats.stamina / (playerStats.con * 3));
     _drawHorizontalBar(canvas, 10, 47, playerStats.wis * 12, 12, Palette.azul, playerStats.mana / (playerStats.wis * 3));
@@ -557,26 +786,21 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
       Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
       double bxSize = 55;
-      double boxX = size.x - (bxSize + 1);
+      double boxX = logicalWidth - (bxSize + 1);
       double boxY = 1;
-      // Desenha a caixa de fundo
+      
       canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.preto);
       
       try {
         ui.Image itemImg = gameRef.images.fromCache(sel.imagePath);
-        
-        // Aplica a cor definida na variável do Item
         final tintPaint = Paint()..colorFilter = ColorFilter.mode(sel.cor, BlendMode.modulate);
-        
         canvas.drawImageRect(
           itemImg,
           Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()),
           Rect.fromLTWH(boxX, boxY, bxSize, bxSize), 
-          tintPaint // <--- Usa o paint com cor aqui!
+          tintPaint
         );
-      } catch (e) {
-        // Se a imagem não for encontrada, não quebra o jogo
-      }
+      } catch (e) {}
       canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
 
       String amountText = sel.type == ItemType.spell ? '${sel.manaCost} MP' : '${sel.quantity}x';
@@ -585,21 +809,18 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         text: TextSpan(text: amountText, style: TextStyle(fontFamily: 'pixelFont', color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       )..layout()..paint(canvas, Offset(boxX, bxSize + 5));
-      //TextPainter(
-      //  text: const TextSpan(text: 'Uso[B]', style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 10)),
-      //  textDirection: TextDirection.ltr,
-      //)..layout()..paint(canvas, Offset(boxX, 45));
+      
       if(playerStats.reflex){
         TextPainter(
           text: const TextSpan(text: 'REFLEX', style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 10)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x-(bxSize*1.5)-'REFLEX'.length*10, 20));
+        )..layout()..paint(canvas, Offset(logicalWidth-(bxSize*1.5)-'REFLEX'.length*10, 20));
       }
 
     }
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
       double bxSize = 55;
-      double keyX = size.x/2 + bxSize;
+      double keyX = logicalWidth/2 + bxSize;
       double keyY = 10;
       
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.preto);
@@ -608,11 +829,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           gameRef.keySprite, 
           Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
           Rect.fromLTWH(keyX, keyY, bxSize, bxSize),
-          Paint()..colorFilter = ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
+          Paint()..colorFilter = const ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
         );
-      } catch (e) {
-        // Fallback caso a imagem dê erro
-      }
+      } catch (e) {}
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.amarelo..style = PaintingStyle.stroke..strokeWidth = 1);
       
     }
@@ -629,35 +848,48 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       TextPainter(
           text: TextSpan(text: I18n.t(direc).toUpperCase(), style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(size.x/2 - I18n.t(direc).length*6 , 22));
+        )..layout()..paint(canvas, Offset(logicalWidth/2 - I18n.t(direc).length*6 , 22));
+    }else{
+      double statusY = logicalHeight - logicalHeight*0.145/2 -35;
+
+      String statusTxt = 'STR: ${playerStats.str}  CON: ${playerStats.con}  WIS: ${playerStats.wis}';
+      String essenTxt = 'ESSENCE: ${playerStats.essence}';
+
+      TextPainter(
+            text: TextSpan(text: statusTxt, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
+            textDirection: TextDirection.ltr,
+          )..layout()..paint(canvas, Offset(logicalWidth/2 - statusTxt.length*7, statusY));
+
+      TextPainter(
+            text: TextSpan(text: essenTxt, style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
+            textDirection: TextDirection.ltr,
+          )..layout()..paint(canvas, Offset(logicalWidth/2 - essenTxt.length*7, statusY + 40));
+
     }
+
+    
+
   }
 
   void _drawEnemyUI(Canvas canvas) {
-    // 1. Configurações de espaçamento da grade
-    double margin = 15.0; // Margem das laterais da tela
-    double gap = 10.0;    // Espaço em branco entre a Coluna 1 e a Coluna 2
+    double margin = 15.0; 
+    double gap = 10.0;  
     
-    // 2. Calcula a largura que cada barra terá (Metade da tela - margens e espaçamento)
-    double barWidth = (size.x - (margin * 2) - gap) / 2;
+    double barWidth = (logicalWidth - (margin * 2) - gap) / 2;
 
-    int displayIndex = 0; // Índice visual para não deixar buracos quando um inimigo morrer
+    int displayIndex = 0; 
 
     for (int i = 0; i < enemies.length; i++) {
       if (!enemies[i].isAlive) continue;
 
-      // Impede de desenhar mais do que 8 barras para não vazar da caixa preta
       if (displayIndex >= 8) break; 
 
-      // 3. Matemática da Grade (Grid)
-      int col = displayIndex % 2;  // Retorna 0 (Esquerda) ou 1 (Direita)
-      int row = displayIndex ~/ 2; // Retorna a linha: 0, 1, 2 ou 3
+      int col = displayIndex % 2;  
+      int row = displayIndex ~/ 2; 
 
-      // Calcula as posições X e Y baseadas na coluna e linha
       double startX = margin + (col * (barWidth + gap));
-      double startY = size.y - 75 + 2 + (row * 18);
+      double startY = logicalHeight - 75 + 2 + (row * 18);
 
-      // Desenha a barra com o novo tamanho e posição
       _drawHorizontalBar(
         canvas, 
         startX, 
@@ -668,7 +900,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         enemies[i].hp / enemies[i].maxHp
       );
 
-      // 4. Desenha o Texto
       final textPainter = TextPainter(
         text: TextSpan(
           text: I18n.t(enemies[i].name).toUpperCase(),
@@ -677,7 +908,6 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Melhoria: Usando o 'textPainter.width' o texto fica perfeitamente centralizado na barra!
       double textX = startX + (barWidth / 2) - (textPainter.width / 2);
       
       textPainter.paint(canvas, Offset(textX, startY));
@@ -685,11 +915,4 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       displayIndex++;
     }
   }
-
-  void _drawHorizontalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(x, y, w * r.clamp(0.0, 1.0), h), Paint()..color = c);
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-  }
-
 }

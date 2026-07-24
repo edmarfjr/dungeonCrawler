@@ -10,117 +10,128 @@ class GameOverOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tempoAtual = game.getFormattedRunTime();
+    final bool isDesktop = game.isDesktopLayout;
 
     return Container(
       color: Palette.vermelho.withOpacity(0.5),
-      child: Center(
-        child: ValueListenableBuilder<int>(
-          valueListenable: game.mainMenuCursor,
-          builder: (context, cursorIndex, child) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                 Text(
-                  I18n.t('game_over'), 
-                  style: TextStyle(
-                    fontFamily: 'pixelFont', 
-                    color: Palette.branco, 
-                    fontSize: 32, 
-                    fontWeight: FontWeight.bold, 
-                    letterSpacing: 2,
-                    decoration: TextDecoration.none, // Remove sublinhados amarelos do Flutter
-                  )
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  I18n.t('time') + tempoAtual,
-                  style: const TextStyle(
-                    fontFamily: 'pixelFont',
-                    color: Palette.branco,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 60),
-                _buildMenuOption(
-                    title: I18n.t('try_again'),
-                    index: 0,
-                    currentIndex: cursorIndex,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildMenuOption(
-                    title: I18n.t('main_menu'),
-                    index: 1,
-                    currentIndex: cursorIndex,
-                  ),
-              ],
-            );
-          },
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double availableW = constraints.maxWidth;
+          final double availableH = constraints.maxHeight;
+
+          // Escala responsiva das fontes
+          final double titleSize = (availableW * 0.08).clamp(28.0, 48.0);
+          final double subtitleSize = (availableW * 0.04).clamp(14.0, 20.0);
+          final double optionSize = (availableW * 0.045).clamp(16.0, 24.0);
+          
+          // Escala responsiva do espaçamento
+          final double spacing = (availableH * 0.05).clamp(10.0, 60.0);
+
+          return Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: ValueListenableBuilder<int>(
+                valueListenable: game.mainMenuCursor,
+                builder: (context, cursorIndex, child) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                       Text(
+                        I18n.t('game_over'), 
+                        style: TextStyle(
+                          fontFamily: 'pixelFont', 
+                          color: Palette.branco, 
+                          fontSize: titleSize, 
+                          fontWeight: FontWeight.bold, 
+                          letterSpacing: 2,
+                          decoration: TextDecoration.none, 
+                        )
+                      ),
+                      SizedBox(height: spacing * 0.2),
+                      Text(
+                        I18n.t('time') + tempoAtual,
+                        style: TextStyle(
+                          fontFamily: 'pixelFont',
+                          color: Palette.branco,
+                          fontSize: subtitleSize,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                      SizedBox(height: spacing),
+                      _buildMenuOption(
+                          title: I18n.t('try_again'),
+                          index: 0,
+                          currentIndex: cursorIndex,
+                          isDesktop: isDesktop,
+                          fontSize: optionSize,
+                        ),
+                        SizedBox(height: spacing * 0.3),
+                        _buildMenuOption(
+                          title: I18n.t('main_menu'),
+                          index: 1,
+                          currentIndex: cursorIndex,
+                          isDesktop: isDesktop,
+                          fontSize: optionSize,
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          );
+        }
       ),
     );
   }
 
-/*  Widget build(BuildContext context) {
-    return Container(
-      color: Palette.vermelho.withOpacity(0.9),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text("VOCÊ MORREU", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 40, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text("Você sobreviveu até o Andar ${game.player.floorLevel}", style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Palette.preto, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
-              onPressed: () => game.startGame(),
-              child: const Text("TENTAR NOVAMENTE", style: TextStyle(fontFamily: 'pixelFont', fontSize: 18, color: Palette.branco)),
-            ),
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: () => game.quitToMainMenu(),
-              child: const Text("MENU PRINCIPAL", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-*/
-  Widget _buildMenuOption({required String title, required int index, required int currentIndex}) {
+  Widget _buildMenuOption({
+    required String title, 
+    required int index, 
+    required int currentIndex,
+    required bool isDesktop,
+    required double fontSize,
+  }) {
     bool isSelected = (index == currentIndex);
 
-    return GestureDetector(
-      onTap: () {
-        game.mainMenuCursor.value = index;
-        game.startInput(GameInput.buttonA);
+    return MouseRegion(
+      onEnter: (_) {
+        if (isDesktop) {
+          game.mainMenuCursor.value = index;
+        }
       },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // A SETINHA DE SELEÇÃO:
-          Text(
-            isSelected ? "> " : "  ",
-            style: TextStyle(
-              fontFamily: 'pixelFont',
-              fontSize: 20,
-              color: isSelected ? Palette.amarelo : Colors.transparent,
-              fontWeight: FontWeight.bold,
-              decoration: TextDecoration.none,
+      child: GestureDetector(
+        onTap: () {
+          game.mainMenuCursor.value = index;
+          game.startInput(GameInput.buttonA);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // Restringe a área de clique ao texto
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // A SETINHA DE SELEÇÃO:
+            Text(
+              isSelected ? "> " : "  ",
+              style: TextStyle(
+                fontFamily: 'pixelFont',
+                fontSize: fontSize,
+                color: isSelected ? Palette.amarelo : Colors.transparent,
+                fontWeight: FontWeight.bold,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
-          // O TEXTO DO BOTÃO:
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'pixelFont',
-              fontSize: 20,
-              color: isSelected ? Palette.amarelo : Palette.branco,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              decoration: TextDecoration.none,
+            // O TEXTO DO BOTÃO:
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'pixelFont',
+                fontSize: fontSize,
+                color: isSelected ? Palette.amarelo : Palette.branco,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                decoration: TextDecoration.none,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -99,21 +99,36 @@ class _IntroOverlayState extends State<IntroOverlay> {
               widget.game.finishIntro();
             }
           },
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Text(
-                visibleText,
-                style: const TextStyle(
-                  fontFamily: 'pixelFont',
-                  color: Palette.branco,
-                  fontSize: 13,
-                  height: 1.5,
-                  decoration: TextDecoration.none,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Ajusta o tamanho da fonte para não ficar minúscula no PC
+              final double fontSize = widget.game.isDesktopLayout ? 18.0 : 13.0;
+              
+              return Center(
+                // O ConstrainedBox garante que no Widescreen o texto não vai virar uma linha reta enorme,
+                // mantendo o aspecto de "caixa de texto de RPG" elegante no centro.
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        visibleText,
+                        style: TextStyle(
+                          fontFamily: 'pixelFont',
+                          color: Palette.branco,
+                          fontSize: fontSize,
+                          height: 1.5,
+                          decoration: TextDecoration.none,
+                        ),
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.start,
-              ),
-            ),
+              );
+            }
           ),
         ),
       ),
