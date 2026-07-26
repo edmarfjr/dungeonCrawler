@@ -1004,6 +1004,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double logicalHeight = size.y / scaleFactor;
     double startY = 75;
     double startX = logicalHeight * 0.41;
+    if(!isDesktopLayout) startX = logicalHeight * 0.05;
     canvas.drawRect(Rect.fromLTWH(startX, startY, logicalWidth * 0.64, playerCombatStats.maxInventory * 20 + 10), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(startX, startY+2, (logicalWidth * 0.64), playerCombatStats.maxInventory * 20 + 7), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();

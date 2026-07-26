@@ -849,8 +849,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           text: TextSpan(text: I18n.t(direc).toUpperCase(), style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
           textDirection: TextDirection.ltr,
         )..layout()..paint(canvas, Offset(logicalWidth/2 - I18n.t(direc).length*6 , 22));
-    }else{
-      double statusY = logicalHeight - logicalHeight*0.145/2 -35;
+
+        double statusY = logicalHeight - logicalHeight*0.145/2 -35;
 
       String statusTxt = 'STR: ${playerStats.str}  CON: ${playerStats.con}  WIS: ${playerStats.wis}';
       String essenTxt = 'ESSENCE: ${playerStats.essence}';
@@ -865,6 +865,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
             textDirection: TextDirection.ltr,
           )..layout()..paint(canvas, Offset(logicalWidth/2 - essenTxt.length*7, statusY + 40));
 
+    }else{
+      
     }
 
     
