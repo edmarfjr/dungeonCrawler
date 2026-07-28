@@ -239,6 +239,15 @@ class I18n {
       'lore8':'',
       'lore9':'',
       'lore10':'',
+      'mod_rusty':'Enferrujado',
+      'mod_sharp':'Afiado',
+      'mod_balanced':'Balanceado',
+      'mod_unbalanced':'Desbalanceado',
+      'mod_heavy':'Pesado',
+      'mod_light':'Leve',
+      'mod_broken':'Quebrado',
+      'mod_masterwork':'Obra-prima',
+      'mod_magical':'Mágico',
     },
     AppLanguage.en: {
       'menu_continue': 'CONTINUE GAME',
@@ -466,6 +475,15 @@ class I18n {
       'lore8':'',
       'lore9':'',
       'lore10':'',
+      'mod_rusty':'Rusty',
+      'mod_sharp':'SHarp',
+      'mod_unbalanced':'Unbalanced',
+      'mod_balanced':'Balanced',
+      'mod_heavy':'Heavy',
+      'mod_light':'Light',
+      'mod_broken':'Broken',
+      'mod_masterwork':'Masterwork',
+      'mod_magical':'Magical',
     }
   };
 

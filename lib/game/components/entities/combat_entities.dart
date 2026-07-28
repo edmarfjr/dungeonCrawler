@@ -46,7 +46,7 @@ class PlayerCombatStats {
   double windupTime = 0.1;
   double activeTime = 0.1;
   double recoveryTime = 0.1;
-  double staminaCost = 3.0;
+  //double staminaCost = 3.0;
   double offYWeapon = 0;
   double critChance = 5;
   double critMultiplier = 1.5;
@@ -220,7 +220,7 @@ class PlayerCombatStats {
   Rect getHurtbox(Vector2 screenSize) {
     double scale = screenSize.x * 0.35;
     double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y - 70 - 55; // Posição Y base do jogador
+    double cy = screenSize.y - 70; // Posição Y base do jogador
     return Rect.fromCenter(center: Offset(cx, cy + hurtboxOffsetY), width: hurtboxWidth, height: hurtboxHeight);
   }
 

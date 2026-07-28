@@ -522,12 +522,12 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     double playerCY = logicalHeight - 65 - ((196 * baseSizeMultiplier) / 2);
     
     // Box fixa garantida, mesmo que a original falhe
-    Rect pHurtbox = Rect.fromCenter(
-      center: Offset(playerCX, playerCY),
-      width: 100 * baseSizeMultiplier, 
-      height: 140 * baseSizeMultiplier
-    );
-
+   // Rect pHurtbox = Rect.fromCenter(
+   //   center: Offset(playerCX, playerCY),
+   //   width: 100 * baseSizeMultiplier, 
+    //  height: 140 * baseSizeMultiplier
+   // );
+    Rect pHurtbox = playerStats.getHurtbox(logicalSize);
     canvas.drawRect(pHurtbox, Paint()..color = Colors.blueAccent.withOpacity(0.4)..style = PaintingStyle.fill);
     canvas.drawRect(pHurtbox, Paint()..color = Colors.blueAccent..style = PaintingStyle.stroke..strokeWidth = 2);
     

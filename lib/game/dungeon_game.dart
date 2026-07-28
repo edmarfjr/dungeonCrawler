@@ -407,7 +407,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     dungeon.droppedItems.putIfAbsent(pos, () => []).add(item);
     
     playerCombatStats.inventory.removeAt(cursorIndex);
-    showMessage(I18n.t('inv_chao').replaceAll('[item]', I18n.t(item.name)));
+    showMessage(I18n.t('inv_chao').replaceAll('[item]', item.displayName));
   }
 
   Future<void> equipSavedItem(String itemName, ItemType type) async {
@@ -628,7 +628,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
             }else{
               enemy.applyHitGuard(0.3);
               playerCombatStats.stamina -= 4;
-              playerCombatStats.stamina = max(playerCombatStats.stamina - playerCombatStats.staminaCost,0);
+              playerCombatStats.stamina = max(playerCombatStats.stamina - playerCombatStats.equippedWeapon!.staCust,0);
               combatOverlay.addFloatingText("BLOCK!", enemy.getHurtbox(size), Palette.cinzaCla);
               AudioManager.playSfx('sfx/block.wav');
             }
@@ -908,7 +908,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           } catch (e) {
             canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
+          TextPainter(text: TextSpan(text: "${item.displayName}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
         }
       }
       else if (currentShopPhase == ShopPhase.sell) {
@@ -931,7 +931,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           } catch (e) {
             canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
+          TextPainter(text: TextSpan(text: "${item.displayName}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
         }
       }
       else if (currentShopPhase == ShopPhase.confirmSell && itemToSell != null) {
@@ -971,7 +971,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           } catch (e) {
             canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
           }
-          TextPainter(text: TextSpan(text: I18n.t(item.name), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
+          TextPainter(text: TextSpan(text: item.displayName, style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
         }
       }
   }
@@ -1003,10 +1003,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double logicalWidth =size.x / scaleFactor;
     double logicalHeight = size.y / scaleFactor;
     double startY = 75;
-    double startX = logicalHeight * 0.41;
-    if(!isDesktopLayout) startX = logicalHeight * 0.05;
-    canvas.drawRect(Rect.fromLTWH(startX, startY, logicalWidth * 0.64, playerCombatStats.maxInventory * 20 + 10), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(startX, startY+2, (logicalWidth * 0.64), playerCombatStats.maxInventory * 20 + 7), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    double startX = logicalHeight * 0.5;
+    double border = 8;
+    double itemSize = 64;
+    if(!isDesktopLayout){
+      startX = logicalHeight * 0.05;
+      border = 2;
+      itemSize = 40;
+    } 
+    canvas.drawRect(Rect.fromLTWH(startX, startY, logicalWidth * 0.7, playerCombatStats.maxInventory * itemSize + 10), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(startX, startY, (logicalWidth * 0.7), playerCombatStats.maxInventory * itemSize + 10), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 30));
 
@@ -1016,16 +1022,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
       String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
       
-      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX+18, startY + (i * 40) + 12));
+      TextPainter(text: TextSpan(text: (i == inventoryCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX+18, startY + (i * itemSize) + 12));
 
       try {
         ui.Image itemImg = images.fromCache(item.imagePath);
         final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(startX + 25, startY + (i * 40) + 2, 40, 40), tintPaint );
+        canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(startX + 25, startY + (i * itemSize) + 2, itemSize, itemSize), tintPaint );
       } catch (e) {
-        canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
+        canvas.drawRect(Rect.fromLTWH(25, startY + (i * itemSize) + 2, itemSize, itemSize), Paint()..color = Colors.pinkAccent);
       }
-      TextPainter(text: TextSpan(text: "${I18n.t(item.name)}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX+76, startY + (i * 40) + 12));
+      TextPainter(text: TextSpan(text: "${item.displayName}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX+76, startY + (i * itemSize) + 12));
     }
 
     //descriçao do item
@@ -1034,13 +1040,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       String desc = selectedItem.description.isNotEmpty ? I18n.t(selectedItem.description) : "Sem descricao.";
       
       double boxH = 90; 
-      double boxY = playerCombatStats.maxInventory * 20 + 10 + startY;
-      double boxWidth =  logicalWidth * 0.64;
+      double boxY = playerCombatStats.maxInventory * itemSize + 10 + startY;
+      double boxWidth =  logicalWidth * 0.7;
       Rect descRect = Rect.fromLTWH(startX, boxY, boxWidth , boxH);
-      Rect descRectBorda = Rect.fromLTWH(startX+2, boxY+2, boxWidth - 2, boxH - 2);
+      Rect descRectBorda = Rect.fromLTWH(startX, boxY, boxWidth, boxH);
       
       canvas.drawRect(descRect, Paint()..color = Palette.preto);
-      canvas.drawRect(descRectBorda, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(descRectBorda, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
 
       TextPainter(
         text: TextSpan(
@@ -1055,7 +1061,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (isActionMenuOpen) {
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
       TextPainter(text:  TextSpan(text: "${I18n.t('a_confirma')}\n${I18n.t('b_cancelar')}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
     }
     if (isItemActionMenuOpen) {
@@ -1063,7 +1069,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       double menuX = (size.x - menuWidth) / 2 + 50, menuY = (size.y - menuHeight) / 2;
       final menuRect = Rect.fromLTWH(menuX, menuY, menuWidth, menuHeight);
       canvas.drawRect(menuRect, Paint()..color = Palette.preto);
-      canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
 
       List<String> options = [I18n.t('eqpUse'), I18n.t('eqpDescarte'), I18n.t('cancel')];
       for (int i = 0; i < options.length; i++) {
@@ -1189,12 +1195,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    // O Flutter mapeia o D-Pad de joysticks nativamente para as setas normais.
     leftPressed = keysPressed.contains(LogicalKeyboardKey.arrowLeft);
     rightPressed = keysPressed.contains(LogicalKeyboardKey.arrowRight); 
     downPressed = keysPressed.contains(LogicalKeyboardKey.arrowDown);
     upPressed = keysPressed.contains(LogicalKeyboardKey.arrowUp);
     
-    if (event.logicalKey == LogicalKeyboardKey.keyZ) {
+    // Botão A (Z no teclado ou Botão A no Xbox)
+    if (event.logicalKey == LogicalKeyboardKey.keyZ || event.logicalKey == LogicalKeyboardKey.gameButtonA) {
       if (event is KeyDownEvent) {
         startInput(GameInput.buttonA);
       } else if (event is KeyUpEvent) {
@@ -1202,8 +1210,18 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
     }
 
+    // Botão B (X no teclado ou Botão B no Xbox)
+    if (event.logicalKey == LogicalKeyboardKey.keyX || event.logicalKey == LogicalKeyboardKey.gameButtonB) {
+      if (event is KeyDownEvent) {
+        startInput(GameInput.buttonB);
+      } else if (event is KeyUpEvent) {
+        stopInput(GameInput.buttonB); 
+      }
+    }
+
     if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape) togglePause();
+      // Pause (P, Escape ou botão Start do Joystick)
+      if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape || event.logicalKey == LogicalKeyboardKey.gameButtonStart) togglePause();
       if (event.logicalKey == LogicalKeyboardKey.keyC) showHitboxes = !showHitboxes;
       if (event.logicalKey == LogicalKeyboardKey.keyG) {
         godMode = !godMode;
@@ -1214,17 +1232,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         //EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
         EncounterManager.triggerRandomEncounter(this);
       } 
-      if (event.logicalKey == LogicalKeyboardKey.keyX) startInput(GameInput.buttonB);
+
+      // Variáveis auxiliares (o D-Pad do controle também ativa estas)
+      bool isUp = event.logicalKey == LogicalKeyboardKey.arrowUp;
+      bool isDown = event.logicalKey == LogicalKeyboardKey.arrowDown;
+      bool isLeft = event.logicalKey == LogicalKeyboardKey.arrowLeft;
+      bool isRight = event.logicalKey == LogicalKeyboardKey.arrowRight;
 
       if (currentState == GameState.levelUp && activeMessage == null) {
-        if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) startInput(GameInput.left);
-        if (event.logicalKey == LogicalKeyboardKey.arrowRight) startInput(GameInput.right);
+        if (isUp) startInput(GameInput.up);
+        if (isDown) startInput(GameInput.down);
+        if (isLeft) startInput(GameInput.left);
+        if (isRight) startInput(GameInput.right);
       } 
       else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
-        if (event.logicalKey == LogicalKeyboardKey.arrowUp) startInput(GameInput.up);
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) startInput(GameInput.down);
+        if (isUp) startInput(GameInput.up);
+        if (isDown) startInput(GameInput.down);
       }
     }
     return KeyEventResult.handled;
@@ -1295,7 +1318,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (currentState == GameState.combat && input == GameInput.buttonA) {
       if (playerCombatStats.isCharging) {
         playerCombatStats.isCharging = false;
-        double custoStaminaBase = playerCombatStats.staminaCost;
+        double custoStaminaBase = playerCombatStats.equippedWeapon!.staCust;
 
         if (playerCombatStats.chargeTimer >= playerCombatStats.chargeTime) {
           playerCombatStats.isHeavyAttack = true;
@@ -1858,7 +1881,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
           if(dungeon.level >= 13){ currentState = GameState.victory; overlays.add('Victory'); }
         });
-      } else { showMessage(I18n.t('door_locked')); }
+      } else { showMessage(I18n.t('locked_door')); }
     } 
     else if (playerTile == TileType.chest) {
       int chance = Random().nextInt(100);
@@ -1883,7 +1906,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         unownedEquipments.shuffle(); 
         Item newEquipment = unownedEquipments.first; newEquipment.quantity = 1; 
 
-        showMessage(I18n.t('item_found').replaceAll('{item}', I18n.t(newEquipment.name)), onDismiss: () { receiveItem(newEquipment); });
+        //if(Random().nextDouble() <= 0.9){
+        newEquipment.applyRandomModifier();
+       //}
+        
+        showMessage(I18n.t('item_found').replaceAll('{item}', newEquipment.displayName), onDismiss: () { receiveItem(newEquipment); });
       }
     }
     else if (playerTile == TileType.crate) {
@@ -1913,7 +1940,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _performAttack() {
     if (playerCombatStats.stamina >= 0 && !playerCombatStats.cansado && (playerCombatStats.currentPhase == CombatPhase.idle || playerCombatStats.currentPhase == CombatPhase.walk)) {
-      if (playerCombatStats.staminaInfiniteTmr <= 0) playerCombatStats.stamina -= playerCombatStats.staminaCost;
+      if (playerCombatStats.staminaInfiniteTmr <= 0) playerCombatStats.stamina -= playerCombatStats.equippedWeapon!.staCust;
       if(playerCombatStats.stamina <=0){ playerCombatStats.stamina = 0; playerCombatStats.cansado = true; }
       playerCombatStats.staminaTmr = playerCombatStats.staminaRegenDelay; 
       playerCombatStats.currentPhase = CombatPhase.windup; playerCombatStats.animTimer = playerCombatStats.windupTime;

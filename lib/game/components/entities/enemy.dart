@@ -678,7 +678,7 @@ class BatEnemy extends Enemy {
     type: EnemyType.bat, name: 'bat',
     color: Palette.roxo, 
     hp: 40, maxHp: 40, dropEssence: 10, width: 144, height: 144, speed: 0.5,
-    hurtboxWidth: 60, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0, damage: 5,
+    hurtboxWidth: 140, hurtboxHeight: 60, hurtboxOffsetX: 0, hurtboxOffsetY: 0, damage: 5,
     hitboxWidth: 60, hitboxHeight: 60, hitboxOffsetX: 0, hitboxOffsetY: 10,drop: [ItemDatabase.meat]
   ) {
     isMelee = true;

@@ -256,7 +256,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           }
 
           if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
-            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Palette.amarelo);
+            _drawBillboardItem(canvas, cx, cz, chestImage, 0.5, 0.1, Colors.white);
           }
 
           if (tile == TileType.font && gameRef.currentState == GameState.exploration) {
@@ -280,7 +280,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           }
 
           if (tile == TileType.openChest && gameRef.currentState == GameState.exploration) {
-            _drawBillboardItem(canvas, cx, cz, openChestImage, 0.5, 0.1, Palette.amarelo);
+            _drawBillboardItem(canvas, cx, cz, openChestImage, 0.5, 0.1, Colors.white);
           }
 
           if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {

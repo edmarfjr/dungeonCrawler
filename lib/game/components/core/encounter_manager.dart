@@ -82,10 +82,15 @@ class EncounterManager {
             return !game.playerCombatStats.inventory.any((invItem) => invItem.name == equip.name);
           }).toList();    
 
+          Item equip = unownedEquipments[Random().nextInt(unownedEquipments.length)];
+          if(Random().nextDouble() <= 0.9){
+          equip.applyRandomModifier();
+        }
+
           var mimic = MimicEnemy()
               ..strafePosition = 0
               ..isFrontRow = true
-              ..drop.add(unownedEquipments[Random().nextInt(unownedEquipments.length)]);
+              ..drop.add(equip);
           game.startCombat([mimic]); return;
           
         case EnemyType.bug: newEnemy = BugEnemy(); break;
