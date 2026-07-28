@@ -116,6 +116,14 @@ class PauseMenuOverlay extends StatelessWidget {
                             color: Palette.branco,
                             isDesktop: isDesktop, fontSize: optionSize,
                           ),
+                          _buildMenuOption(
+                            title:'debug-hitbox',
+                            index: 3,
+                            currentIndex: cursorIndex,
+                            color: Palette.branco,
+                            isDesktop: isDesktop, fontSize: optionSize,
+                          ),
+                          
                           SizedBox(height: spacing),
                         ],
                       );

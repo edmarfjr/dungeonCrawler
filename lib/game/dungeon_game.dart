@@ -873,107 +873,144 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _renderShop(Canvas canvas) {
-      _titleTextPaint.render(canvas, I18n.t('loja'), Vector2((size.x  / 2.0)-I18n.t('loja').length*12, 15));
-      _normalTextPaint.render(canvas, "${I18n.t('moedas')}${_getPlayerCoins()}", Vector2((size.x  / 2.0)-I18n.t('moedas').toString().length*8, 45));
+    double scaleFactor = isDesktopLayout 
+      ? (size.y / 720.0).clamp(0.1, 5.0) 
+      : (size.x / 500.0).clamp(0.1, 5.0);
 
-      double startY = 90;
+    double logicalWidth = size.x / scaleFactor;
+    double logicalHeight = size.y / scaleFactor;
+    double startY = 100; // Um pouco mais baixo para dar espaço aos títulos
+    double startX = logicalHeight * 0.5;
+    double border = 8;
+    double itemSize = 64; 
+    
+    if(!isDesktopLayout){
+      startX = logicalHeight * 0.05;
+      border = 2;
+      itemSize = 40;
+    } 
+    
+    double boxWidth = logicalWidth * 0.7;
 
-      if (currentShopPhase == ShopPhase.main) {
-        List<String> options = [I18n.t('comprar'), I18n.t('vender'), I18n.t('roubar'), I18n.t('sair')];
-        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, options.length * 40 ), Paint()..color = Palette.preto);
-        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, options.length * 40 - 3), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-        for (int i = 0; i < options.length; i++) {
-          TextPaint paintToUse = _normalTextPaint;
-          if (i == shopCursor){ paintToUse = _selectTextPaint; }
-          else if (i == 2) { paintToUse = _dangerTextPaint; }
-          paintToUse.render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + (i * 30)));
-        }
+    // Título Principal
+    final titlePainter = TextPainter(text: TextSpan(text: I18n.t('loja'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+    titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 20));
+
+    // Moedas
+    final moedasPainter = TextPainter(text: TextSpan(text: "${I18n.t('moedas')}: ${_getPlayerCoins()}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 18)), textDirection: TextDirection.ltr)..layout();
+    moedasPainter.paint(canvas, Offset((size.x - moedasPainter.width) / 2, 55));
+
+    if (currentShopPhase == ShopPhase.main) {
+      List<String> options = [I18n.t('comprar'), I18n.t('vender'), I18n.t('roubar'), I18n.t('sair')];
+      double boxHeight = options.length * itemSize + 20;
+
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      
+      for (int i = 0; i < options.length; i++) {
+        Color textColor = Palette.branco;
+        if (i == shopCursor) textColor = Palette.amarelo;
+        else if (i == 2) textColor = Palette.vermelho; // Roubar
+
+        TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  ") + options[i], style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 20)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + 18, startY + itemSize/2 + (i * itemSize)));
       }
-      else if (currentShopPhase == ShopPhase.buy) {
-        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, shopInventory.length * 40 + 40), Paint()..color = Palette.preto);
-        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, shopInventory.length * 40 + 37), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-        _titleTextPaint.render(canvas, I18n.t('comprar'), Vector2((size.x  / 2.0)-I18n.t('comprar').toString().length*8, startY - 10));
-        for (int i = 0; i < shopInventory.length; i++) {
-          Item item = shopInventory[i];
-          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
-          //String equipTag = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item) ? " ${I18n.t('equipado')}" : "";
-          //String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
-          
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 22));
+    }
+    else if (currentShopPhase == ShopPhase.buy) {
+      double boxHeight = shopInventory.length * itemSize + 20;
+      
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      
+      final subtitlePainter = TextPainter(text: TextSpan(text: I18n.t('comprar'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 20)), textDirection: TextDirection.ltr)..layout();
+      subtitlePainter.paint(canvas, Offset(startX + (boxWidth - subtitlePainter.width) / 2, startY - 25));
 
-          try {
-            ui.Image itemImg = images.fromCache(item.imagePath);
-            final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 12, 40, 40), tintPaint);
-          } catch (e) {
-            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
-          }
-          TextPainter(text: TextSpan(text: "${item.displayName}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
-        }
-      }
-      else if (currentShopPhase == ShopPhase.sell) {
-        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, playerCombatStats.inventory.length * 40 + 40), Paint()..color = Palette.preto);
-        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, playerCombatStats.inventory.length * 40 + 37), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-        _titleTextPaint.render(canvas, I18n.t('vender'), Vector2((size.x  / 2.0)-I18n.t('vender').toString().length*8, startY - 10));
-        for (int i = 0; i < playerCombatStats.inventory.length; i++) {
-          Item item = playerCombatStats.inventory[i];
-          bool itEqp = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item);
-          Color textColor = i == shopCursor ? Palette.branco : itEqp? Palette.cinzaEsc:Palette.cinzaCla;
-          String equipTag = itEqp ? " ${I18n.t('equipado')}" : "";
-          String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
-          
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 22));
-
-          try {
-            ui.Image itemImg = images.fromCache(item.imagePath);
-            final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 12, 40, 40), tintPaint);
-          } catch (e) {
-            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 40) + 2, 40, 40), Paint()..color = Colors.pinkAccent);
-          }
-          TextPainter(text: TextSpan(text: "${item.displayName}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
-        }
-      }
-      else if (currentShopPhase == ShopPhase.confirmSell && itemToSell != null) {
-        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, playerCombatStats.inventory.length * 40 + 20), Paint()..color = Palette.preto);
-        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, playerCombatStats.inventory.length * 40 + 17), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-        int valorVenda = (itemToSell!.value * 0.5).floor();
-        if (valorVenda < 1) valorVenda = 1;
-
-        final TextPaint questionTextPaint = TextPaint(
-          style: const TextStyle(
-            fontFamily: 'pixelFont',
-            color: Palette.amarelo,
-            fontSize: 18, //
-          ),
-        );
-
-        questionTextPaint.render(canvas, "${I18n.t('vender')} ${I18n.t(itemToSell!.name)}: \$$valorVenda?", Vector2(20, startY));
+      for (int i = 0; i < shopInventory.length; i++) {
+        Item item = shopInventory[i];
+        Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
         
-        List<String> options = [I18n.t('vender'), I18n.t('sair')];
-        for (int i = 0; i < options.length; i++) {
-          (i == shopCursor ? _selectTextPaint : _normalTextPaint).render(canvas, (i == shopCursor ? "> " : "  ") + options[i], Vector2(20, startY + 40 + (i * 30)));
-        }
-      }
-      else if (currentShopPhase == ShopPhase.steal) {
-        canvas.drawRect(Rect.fromLTWH(0, 75, size.x, shopInventory.length * 40 + 40), Paint()..color = Palette.preto);
-        canvas.drawRect(Rect.fromLTWH(2, 77, size.x-3, shopInventory.length * 40 + 37), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
-        _dangerTextPaint.render(canvas, I18n.t('roubar'), Vector2((size.x  / 2.0)-I18n.t('roubar').toString().length*8, startY - 10));
-        for (int i = 0; i < shopInventory.length; i++) {
-          Item item = shopInventory[i];
-          Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
-          TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(18, startY + (i * 40) + 22));
+        TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + 18, startY + itemSize/2 + (i * itemSize)));
 
-          try {
-            ui.Image itemImg = images.fromCache(item.imagePath);
-            final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
-            canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(25, startY + (i * 40) + 12, 40, 40), tintPaint);
-          } catch (e) {
-            canvas.drawRect(Rect.fromLTWH(25, startY + (i * 50) + 2, 50, 50), Paint()..color = Colors.pinkAccent);
-          }
-          TextPainter(text: TextSpan(text: item.displayName, style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(76, startY + (i * 40) + 22));
+        try {
+          ui.Image itemImg = images.fromCache(item.imagePath);
+          final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+          canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(startX + 45, startY + 6 + (i * itemSize), itemSize, itemSize), tintPaint);
+        } catch (e) {
+          canvas.drawRect(Rect.fromLTWH(startX + 45, startY + 6 + (i * itemSize), itemSize, itemSize), Paint()..color = Colors.pinkAccent);
         }
+        TextPainter(text: TextSpan(text: "${item.displayName}: \$${I18n.t(item.value.toString())}", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX +itemSize*2, startY + itemSize/2 + (i * itemSize)));
       }
+    }
+    else if (currentShopPhase == ShopPhase.sell) {
+      double boxHeight = playerCombatStats.inventory.length * itemSize + 20;
+      
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      
+      final subtitlePainter = TextPainter(text: TextSpan(text: I18n.t('vender'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 20)), textDirection: TextDirection.ltr)..layout();
+      subtitlePainter.paint(canvas, Offset(startX + (boxWidth - subtitlePainter.width) / 2, startY - 25));
+
+      for (int i = 0; i < playerCombatStats.inventory.length; i++) {
+        Item item = playerCombatStats.inventory[i];
+        bool itEqp = (playerCombatStats.equippedWeapon == item || playerCombatStats.equippedArmor == item || playerCombatStats.equippedShield == item);
+        Color textColor = i == shopCursor ? Palette.branco : itEqp ? Palette.cinzaEsc : Palette.cinzaCla;
+        String equipTag = itEqp ? " ${I18n.t('equipado')}" : "";
+        String qtyTag = item.quantity > 1 ? " x${item.quantity}" : "";
+        
+        TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + 18, startY + itemSize/2 + (i * itemSize)));
+
+        try {
+          ui.Image itemImg = images.fromCache(item.imagePath);
+          final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+          canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(startX + 45, startY + 6 + (i * itemSize), itemSize, itemSize), tintPaint);
+        } catch (e) {
+          canvas.drawRect(Rect.fromLTWH(startX + 45, startY + 6 + (i * itemSize), itemSize, itemSize), Paint()..color = Colors.pinkAccent);
+        }
+        TextPainter(text: TextSpan(text: "${item.displayName}$equipTag$qtyTag", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX +itemSize*2, startY + itemSize/2 + (i * itemSize)));
+      }
+    }
+    else if (currentShopPhase == ShopPhase.confirmSell && itemToSell != null) {
+      double boxHeight = 2 * itemSize + 50; // Espaço para a pergunta + 2 opções
+      
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      
+      int valorVenda = (itemToSell!.value * 0.5).floor();
+      if (valorVenda < 1) valorVenda = 1;
+
+      // Usando displayName para puxar a formatação com Modificadores (ex: Machado Enferrujado)
+      TextPainter(text: TextSpan(text: "${I18n.t('vender')} ${itemToSell!.displayName}: \$$valorVenda?", style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 18)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + 20, startY + 15));
+      
+      List<String> options = [I18n.t('vender'), I18n.t('sair')];
+      for (int i = 0; i < options.length; i++) {
+        Color textColor = i == shopCursor ? Palette.amarelo : Palette.branco;
+        TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  ") + options[i], style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 20)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + 20, startY + 50 + (i * itemSize)));
+      }
+    }
+    else if (currentShopPhase == ShopPhase.steal) {
+      double boxHeight = shopInventory.length * itemSize + 20;
+      
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.vermelho..style = PaintingStyle.stroke..strokeWidth = border);
+      
+      final subtitlePainter = TextPainter(text: TextSpan(text: I18n.t('roubar'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.vermelho, fontSize: 20)), textDirection: TextDirection.ltr)..layout();
+      subtitlePainter.paint(canvas, Offset(startX + (boxWidth - subtitlePainter.width) / 2, startY - 25));
+
+      for (int i = 0; i < shopInventory.length; i++) {
+        Item item = shopInventory[i];
+        Color textColor = i == shopCursor ? Palette.branco : Palette.cinzaCla;
+        
+        TextPainter(text: TextSpan(text: (i == shopCursor ? "> " : "  "), style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 24)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + 18, startY + itemSize/2 + (i * itemSize)));
+
+        try {
+          ui.Image itemImg = images.fromCache(item.imagePath);
+          final tintPaint = Paint()..colorFilter = ColorFilter.mode(item.cor, BlendMode.modulate);
+          canvas.drawImageRect(itemImg, Rect.fromLTWH(0, 0, itemImg.width.toDouble(), itemImg.height.toDouble()), Rect.fromLTWH(startX + 45, startY + 6 + (i * itemSize), itemSize, itemSize), tintPaint);
+        } catch (e) {
+          canvas.drawRect(Rect.fromLTWH(startX + 45, startY + 6 + (i * itemSize), itemSize, itemSize), Paint()..color = Colors.pinkAccent);
+        }
+        TextPainter(text: TextSpan(text: item.displayName, style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: 16)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX +itemSize*2, startY + itemSize/2 + (i * itemSize)));
+      }
+    }
   }
 
   void _renderPassTurnPrompt(Canvas canvas) {
@@ -1115,6 +1152,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _renderMessageQueue(Canvas canvas) {
       double boxWidth = size.x * 0.8;
+      double border = 2;
+
+      if (isDesktopLayout){
+        boxWidth = size.x * 0.6;
+        border = 8;
+      }
 
       final textSpan = TextSpan(
         text: '$activeMessage\n\n${I18n.t('a_continuar')}', 
@@ -1134,7 +1177,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       
       final rect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
       canvas.drawRect(rect, Paint()..color = Palette.preto);
-      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
       textPainter.paint(canvas, Offset(boxX, boxY + (boxHeight - textPainter.height) / 2));
   }
 
@@ -1222,7 +1265,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (event is KeyDownEvent) {
       // Pause (P, Escape ou botão Start do Joystick)
       if (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape || event.logicalKey == LogicalKeyboardKey.gameButtonStart) togglePause();
-      if (event.logicalKey == LogicalKeyboardKey.keyC) showHitboxes = !showHitboxes;
+      if (event.logicalKey == LogicalKeyboardKey.keyC) {
+        showHitboxes = !showHitboxes;
+        combatOverlay.addFloatingText('showHitbox: $showHitboxes',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
+      }
       if (event.logicalKey == LogicalKeyboardKey.keyG) {
         godMode = !godMode;
         // NOVA MATEMÁTICA: Usando o Viewport para posicionar texto
@@ -1694,6 +1740,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         quitToMainMenu();
       } else if (pauseMenuCursor.value == 2) {
         openSettings(); 
+      }else if (pauseMenuCursor.value == 3) {
+        showHitboxes = !showHitboxes; 
+        combatOverlay.addFloatingText('showHitbox: $showHitboxes',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
     }
   }
@@ -2057,7 +2106,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.currentPhase = CombatPhase.idle;
 
     _initializeInventory();
-    dungeon.level = 1;
+    dungeon.level = 4;
     player.hasKey = false;
     dungeon.width = mapSize; 
     dungeon.height = mapSize; 
