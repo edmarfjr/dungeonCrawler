@@ -725,15 +725,15 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
             tintPaint
           );
         } catch (e) {}
-        canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+        canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 8);
 
         String amountText = sel.type == ItemType.spell ? '${sel.manaCost} MP' : '${sel.quantity}x';
-        _drawText(canvas, amountText, panelWidth / 2, boxY + bxSize + 10, 14, sel.type == ItemType.spell ? Palette.azul : Palette.branco, alignCenter: true);
+        _drawText(canvas, amountText, boxX + bxSize/2, boxY + bxSize + 10, 14, sel.type == ItemType.spell ? Palette.azul : Palette.branco, alignCenter: true);
       }
 
-      _drawText(canvas, "INIMIGOS", rightX + panelWidth / 2, 200, 24, Palette.vermelho, alignCenter: true);
+     // _drawText(canvas, "INIMIGOS", rightX + panelWidth / 2, 220, 24, Palette.vermelho, alignCenter: true);
       
-      double startY = 240;
+      double startY = 230;
       for (var enemy in enemies) {
         if (!enemy.isAlive) continue;
         

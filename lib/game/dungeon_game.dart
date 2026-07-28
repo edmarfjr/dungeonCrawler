@@ -1315,6 +1315,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
         if (isUp) startInput(GameInput.up);
         if (isDown) startInput(GameInput.down);
+
+        if (currentState == GameState.combat) {
+          if (isLeft) startInput(GameInput.left);
+          if (isRight) startInput(GameInput.right);
+        }
       }
     }
     return KeyEventResult.handled;
