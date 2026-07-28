@@ -1,5 +1,5 @@
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/core/i18n.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/i18n.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsManager {

@@ -1,6 +1,6 @@
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/core/palette.dart';
-import 'package:dungeon_crawler/game/components/entities/item.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/item.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 

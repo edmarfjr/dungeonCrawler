@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/entities/enemy.dart';
-import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/enemy.dart';
+import 'package:a_blade_in_the_abyss/game/dungeon_game.dart';
 import 'package:flame/components.dart';
 
 class BounceProjectile extends PositionComponent with HasGameRef<DungeonCrawlerGame> {

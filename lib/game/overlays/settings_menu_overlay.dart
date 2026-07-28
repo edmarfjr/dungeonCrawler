@@ -1,7 +1,7 @@
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/core/i18n.dart';
-import 'package:dungeon_crawler/game/components/core/palette.dart';
-import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/i18n.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
+import 'package:a_blade_in_the_abyss/game/dungeon_game.dart';
 import 'package:flutter/material.dart';
 
 class SettingsMenuOverlay extends StatelessWidget {

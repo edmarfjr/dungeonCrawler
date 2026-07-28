@@ -1,9 +1,9 @@
 import 'dart:math';
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/core/palette.dart';
-import 'package:dungeon_crawler/game/components/entities/enemy.dart';
-import 'package:dungeon_crawler/game/components/entities/item.dart';
-import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/enemy.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/item.dart';
+import 'package:a_blade_in_the_abyss/game/dungeon_game.dart';
 
 class EncounterManager {
   static void triggerRandomEncounter(DungeonCrawlerGame game) {

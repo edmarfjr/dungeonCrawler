@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dungeon_crawler/game/dungeon_game.dart'; // Ajuste o seu import
-import 'package:dungeon_crawler/game/components/core/palette.dart';
+import 'package:a_blade_in_the_abyss/game/dungeon_game.dart'; // Ajuste o seu import
+import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
 
 class ManualOverlay extends StatefulWidget {
   final DungeonCrawlerGame game;

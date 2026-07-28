@@ -1,26 +1,26 @@
 import 'dart:math';
 import 'dart:ui' as ui;
-import 'package:dungeon_crawler/game/components/core/encounter_manager.dart';
-import 'package:dungeon_crawler/game/components/core/save_manager.dart';
-import 'package:dungeon_crawler/main.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/encounter_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/save_manager.dart';
+import 'package:a_blade_in_the_abyss/main.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame_audio/flame_audio.dart' hide PlayerState;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dungeon_crawler/game/components/core/audio_manager.dart';
-import 'package:dungeon_crawler/game/components/core/dungeon_map.dart';
-import 'package:dungeon_crawler/game/components/core/i18n.dart';
-import 'package:dungeon_crawler/game/components/core/minimap_renderer.dart';
-import 'package:dungeon_crawler/game/components/core/palette.dart';
-import 'package:dungeon_crawler/game/components/core/player_state.dart';
-import 'package:dungeon_crawler/game/components/core/maze_renderer.dart';
-import 'package:dungeon_crawler/game/components/entities/combat_entities.dart';
-import 'package:dungeon_crawler/game/components/entities/enemy.dart';
-import 'package:dungeon_crawler/game/components/entities/item.dart';
-import 'package:dungeon_crawler/game/components/entities/player_projectile.dart';
-import 'package:dungeon_crawler/game/overlays/combat_overlay.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/dungeon_map.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/i18n.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/minimap_renderer.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/player_state.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/maze_renderer.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/combat_entities.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/enemy.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/item.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/player_projectile.dart';
+import 'package:a_blade_in_the_abyss/game/overlays/combat_overlay.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
 enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, victory, settings, splash }

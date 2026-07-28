@@ -1,4 +1,4 @@
-import 'package:dungeon_crawler/game/components/core/settings_manager.dart';
+import 'package:a_blade_in_the_abyss/game/components/core/settings_manager.dart';
 
 enum AppLanguage { pt, en }
 

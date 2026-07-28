@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
-import 'package:dungeon_crawler/game/components/entities/enemy.dart';
+import 'package:a_blade_in_the_abyss/game/components/entities/enemy.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
-import 'package:dungeon_crawler/game/dungeon_game.dart';
+import 'package:a_blade_in_the_abyss/game/dungeon_game.dart';
 
 class FirePillar extends SpriteComponent with HasGameRef<DungeonCrawlerGame> {
   double strafeX;
