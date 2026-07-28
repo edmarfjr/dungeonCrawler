@@ -46,7 +46,6 @@ class PlayerCombatStats {
   double windupTime = 0.1;
   double activeTime = 0.1;
   double recoveryTime = 0.1;
-  //double staminaCost = 3.0;
   double offYWeapon = 0;
   double critChance = 5;
   double critMultiplier = 1.5;
@@ -217,36 +216,64 @@ class PlayerCombatStats {
     }
   }
 
+  List<double> _getMetrics(Vector2 screenSize) {
+    double aspect = screenSize.x / screenSize.y;
+    // Garante que usa a mesma contenção de ecrã que o Combat Overlay
+    double viewportWidth = aspect > 0.8 ? screenSize.y * 0.75 : screenSize.x;
+    double baseMultiplier = (viewportWidth / 500.0).clamp(0.5, 5.0);
+    return [viewportWidth, baseMultiplier];
+  }
+
   Rect getHurtbox(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y - 70; // Posição Y base do jogador
-    return Rect.fromCenter(center: Offset(cx, cy + hurtboxOffsetY), width: hurtboxWidth, height: hurtboxHeight);
+    var metrics = _getMetrics(screenSize);
+    double viewportWidth = metrics[0];
+    double multiplier = metrics[1];
+
+    double cx = (screenSize.x / 2) + (strafePosition * viewportWidth * 0.35);
+    // Centraliza perfeitamente no sprite desenhado (igual ao código do Overlay)
+    double cy = screenSize.y - (65 * multiplier) - ((196 * multiplier) / 2); 
+    
+    return Rect.fromCenter(
+      center: Offset(cx, cy + (hurtboxOffsetY * multiplier)), 
+      width: hurtboxWidth * multiplier, 
+      height: hurtboxHeight * multiplier
+    );
   }
 
   Rect getHitbox(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y - 70 - 55;
+    var metrics = _getMetrics(screenSize);
+    double viewportWidth = metrics[0];
+    double multiplier = metrics[1];
+
+    double cx = (screenSize.x / 2) + (strafePosition * viewportWidth * 0.35);
+    double cy = screenSize.y - (65 * multiplier) - ((196 * multiplier) / 2); 
+    
     bool wide = equippedWeapon?.isWide ?? false;
-    if(wide){
-       hitboxWidth = 140;
-    }else{
-      hitboxWidth = 70;
-    }
-    return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: hitboxWidth, height: hitboxHeight);
+    hitboxWidth = wide ? 140.0 : 70.0;
+
+    return Rect.fromCenter(
+      center: Offset(cx + (hitboxOffsetX * multiplier), cy + (hitboxOffsetY * multiplier)), 
+      width: hitboxWidth * multiplier, 
+      height: hitboxHeight * multiplier
+    );
   }
 
   Rect getHitboxImageSize(Vector2 screenSize) {
-    double scale = screenSize.x * 0.35;
-    double cx = (screenSize.x / 2) + (strafePosition * scale);
-    double cy = screenSize.y - 70 - 55;
+    var metrics = _getMetrics(screenSize);
+    double viewportWidth = metrics[0];
+    double multiplier = metrics[1];
+
+    double cx = (screenSize.x / 2) + (strafePosition * viewportWidth * 0.35);
+    double cy = screenSize.y - (65 * multiplier) - ((196 * multiplier) / 2); 
+    
     bool wide = equippedWeapon?.isWide ?? false;
-    double size = 144;
-    if(wide){
-       hitboxWidth = 192;
-    }
-    return Rect.fromCenter(center: Offset(cx + hitboxOffsetX, cy + hitboxOffsetY), width: size, height: size);
+    double size = wide ? 192.0 : 144.0;
+    
+    return Rect.fromCenter(
+      center: Offset(cx + (hitboxOffsetX * multiplier), cy + (hitboxOffsetY * multiplier)), 
+      width: size * multiplier, 
+      height: size * multiplier
+    );
   }
 
 }

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:dungeon_crawler/game/components/core/encounter_manager.dart';
 import 'package:dungeon_crawler/game/components/core/save_manager.dart';
+import 'package:dungeon_crawler/main.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
 import 'package:flutter/material.dart';
@@ -581,8 +582,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
 
     // IA E COLISÃO
+    Vector2 colSize = combatOverlay.logicalSize; 
     if (combatOverlay.enemies.isNotEmpty) {
-      Rect pHitbox = playerCombatStats.getHitbox(size);
+      Rect pHitbox = combatOverlay.getPlayerHitbox();
       bool weaponHasReach = playerCombatStats.equippedWeapon?.hasReach ?? false;
       bool weaponHasStun = playerCombatStats.equippedWeapon?.hasStun ?? false;
       bool weaponHasPoison = playerCombatStats.equippedWeapon?.hasPoisonAttack ?? false;
@@ -599,7 +601,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
         for (var enemy in combatOverlay.enemies) {
           if (!enemy.isFrontRow && !weaponHasReach) continue;
-          if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(size))){
+          if (!enemy.isDying && pHitbox.overlaps(enemy.getHurtbox(colSize))){
 
             double damage = playerCombatStats.str.toDouble();
             if (playerCombatStats.equippedWeapon != null) damage += playerCombatStats.equippedWeapon!.power;
@@ -736,9 +738,28 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _renderInvestigationPrompt(Canvas canvas) {
     if (activeMessage != null) return;
-    final rect = Rect.fromCenter(center: size.toOffset() / 2 - Offset(0, size.y * 0.2), width: size.x * 0.8, height: size.y * 0.3);
+    double scaleFactor = isDesktopLayout 
+      ? (size.y / 720.0).clamp(0.1, 5.0) 
+      : (size.x / 500.0).clamp(0.1, 5.0);
+
+    double logicalWidth = size.x / scaleFactor;
+    //double logicalHeight = size.y / scaleFactor;
+    double startY = 250; // Um pouco mais baixo para dar espaço aos títulos
+    //double startX = logicalHeight * 0.5;
+    double border = 8;
+    
+    if(!isDesktopLayout){
+      //startX = logicalHeight * 0.05;
+      border = 2;
+      startY = 100;
+    } 
+    
+    double boxWidth = logicalWidth * 0.7;
+
+    if(isDesktopPlatform){}
+    final rect = Rect.fromCenter(center: size.toOffset() / 2 - Offset(0, startY), width: boxWidth, height: size.y * 0.3);
     canvas.drawRect(rect, Paint()..color = Palette.preto);
-    canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
 
     String promptText = "";
     if (dungeon.level == 11) {
@@ -2106,7 +2127,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.currentPhase = CombatPhase.idle;
 
     _initializeInventory();
-    dungeon.level = 1;
+    dungeon.level = 2;
     player.hasKey = false;
     dungeon.width = mapSize; 
     dungeon.height = mapSize; 

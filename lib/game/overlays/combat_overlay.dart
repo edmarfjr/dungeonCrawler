@@ -501,6 +501,35 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     canvas.drawRect(Rect.fromLTWH(1, logicalHeight - logicalHeight*0.145, logicalWidth-2, (logicalHeight*0.145) - 2), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
   }
 
+  Rect getPlayerHurtbox() {
+    double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
+    double playerCX = (logicalSize.x / 2) + (playerStats.strafePosition * viewportRect.width * 0.35);
+    double playerCY = logicalSize.y - ((196 * baseSizeMultiplier) / 2) - 50.0 ; 
+
+    if(isDesktopLayout) playerCY += 50;
+
+    return Rect.fromCenter(
+      center: Offset(playerCX, playerCY),
+      width: 100 * baseSizeMultiplier, 
+      height: 140 * baseSizeMultiplier
+    );
+  }
+
+  Rect getPlayerHitbox() {
+    double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
+    double playerCX = (logicalSize.x / 2) + (playerStats.strafePosition * viewportRect.width * 0.35);
+    double playerCY = logicalSize.y - 65 - ((196 * baseSizeMultiplier) / 2) - 60.0; 
+    
+    bool wide = playerStats.equippedWeapon?.isWide ?? false;
+    double hitWidth = wide ? 140.0 : 70.0;
+    
+    return Rect.fromCenter(
+      center: Offset(playerCX, playerCY),
+      width: hitWidth * baseSizeMultiplier, 
+      height: 120 * baseSizeMultiplier
+    );
+  }
+
   void _drawDebugBoxes(Canvas canvas) {
     for (var enemy in enemies) {
       final eHurtbox = enemy.getHurtbox(logicalSize);
@@ -514,34 +543,16 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       }
     }
     
-    canvas.save();
-    canvas.translate(0, -60.0); // Ajuste D2 para elevar a Hitbox Debug
-
-    double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
-    double playerCX = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35);
-    double playerCY = logicalHeight - 65 - ((196 * baseSizeMultiplier) / 2);
-    
-    // Box fixa garantida, mesmo que a original falhe
-   // Rect pHurtbox = Rect.fromCenter(
-   //   center: Offset(playerCX, playerCY),
-   //   width: 100 * baseSizeMultiplier, 
-    //  height: 140 * baseSizeMultiplier
-   // );
-    Rect pHurtbox = playerStats.getHurtbox(logicalSize);
+    // Agora usamos as caixas geradas perfeitamente alinhadas com o visual!
+    Rect pHurtbox = getPlayerHurtbox();
     canvas.drawRect(pHurtbox, Paint()..color = Colors.blueAccent.withOpacity(0.4)..style = PaintingStyle.fill);
     canvas.drawRect(pHurtbox, Paint()..color = Colors.blueAccent..style = PaintingStyle.stroke..strokeWidth = 2);
     
     if (playerStats.currentPhase == CombatPhase.active) {
-      Rect pHitbox = Rect.fromCenter(
-        center: Offset(playerCX, playerCY),
-        width: 120 * baseSizeMultiplier, 
-        height: 120 * baseSizeMultiplier
-      );
+      Rect pHitbox = getPlayerHitbox();
       canvas.drawRect(pHitbox, Paint()..color = Colors.orange.withOpacity(0.4)..style = PaintingStyle.fill);
       canvas.drawRect(pHitbox, Paint()..color = Colors.orange..style = PaintingStyle.stroke..strokeWidth = 2);
     }
-
-    canvas.restore();
   }
 
   void _drawPlayer(Canvas canvas) {

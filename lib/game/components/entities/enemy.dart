@@ -253,20 +253,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     }
 
     if ((currentPhase == CombatPhase.active || currentPhase == CombatPhase.active2) && !attackHit && isMelee && isFrontRow) {
-      // === NOVO CÁLCULO DE COLISÃO DO JOGADOR NO VIEWPORT ===
-      double viewportWidth = gameRef.combatOverlay.viewportRect.width;
-      double baseSizeMult = (gameRef.combatOverlay.viewportRect.width / 500).clamp(1.0, 3.0);
-      
-      double playerCX = (logicalWidth / 2) + (gameRef.playerCombatStats.strafePosition * viewportWidth * 0.35);
-      double playerCY = logicalHeight - 65 - ((196 * baseSizeMult) / 2);
-      
-      Rect playerHurtbox = Rect.fromCenter(
-        center: Offset(playerCX, playerCY),
-        width: 100 * baseSizeMult, 
-        height: 150 * baseSizeMult
-      );
-
-      if (getHitbox(gameRef.size).overlaps(playerHurtbox)) {
+   
+      if (getHitbox(gameRef.combatOverlay.logicalSize).overlaps(gameRef.combatOverlay.getPlayerHurtbox())) {
         attackHit = true;
         gameRef.applyEnemyDamage(this);
         gameRef.playerCombatStats.hitFlashTimer = 0.20;
