@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'dart:async'; 
+import 'package:gamepads/gamepads.dart'; 
 import 'package:a_blade_in_the_abyss/game/components/core/encounter_manager.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/save_manager.dart';
 import 'package:a_blade_in_the_abyss/main.dart';
@@ -35,6 +37,7 @@ class GameMessage {
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // --- ESTADOS E MANAGERS ---
   bool isDesktopLayout = false;
+  StreamSubscription<GamepadEvent>? _gamepadSubscription; 
   GameState currentState = GameState.splash;
   GameState previousState = GameState.splash;
   GameState previousState2 = GameState.splash;
@@ -175,6 +178,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance();
     hasSavedGame = prefs.containsKey('save_game');
 
+    try {
+      _gamepadSubscription = Gamepads.events.listen(_onGamepadEvent);
+    } catch (e) {
+      debugPrint('Gamepads não suportado ou erro: $e');
+    }
+
     _normalTextPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
     _titleTextPaint = TextPaint(style: const TextStyle(color: Palette.amarelo, fontSize: 24, fontFamily: 'pixelFont'));
     _selectTextPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
@@ -198,12 +207,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/armorBug.png', 'itens/bola.png', 'itens/coin.png', 'itens/claymore.png', 'itens/warhammer.png',
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
       'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png', 'itens/potionPreta.png',
-      'itens/potionLaranja.png', 'itens/ruby.png', 'itens/esmeralda.png', 'itens/safira.png', 'itens/magicSword.png'
+      'itens/potionLaranja.png', 'itens/ruby.png', 'itens/esmeralda.png', 'itens/safira.png', 'itens/magicSword.png',
+      'itens/aberrantAxe.png', 'itens/aberrantShield.png'
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
     final ui.Image floorImg = await images.load('tilesets/floor.png');
-    final ui.Image wallImg2 = await images.load('tilesets/wall2.png');
+    final ui.Image wallImg2 = await images.load('tilesets/floor2.png');
     final ui.Image floorImg2 = await images.load('tilesets/floor2.png');
     final ui.Image wallImg3 = await images.load('tilesets/wall1.png');
     final ui.Image floorImg3 = await images.load('tilesets/floor1.png');
@@ -348,6 +358,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
     if (isLoaded) { renderer.size = size; combatOverlay.size = size; }
+  }
+
+  @override
+  void onRemove() {
+    _gamepadSubscription?.cancel();
+    super.onRemove();
   }
 
   // ===========================================================================
@@ -589,6 +605,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       bool weaponHasStun = playerCombatStats.equippedWeapon?.hasStun ?? false;
       bool weaponHasPoison = playerCombatStats.equippedWeapon?.hasPoisonAttack ?? false;
       bool shieldHasPoison = playerCombatStats.equippedShield?.hasPoisonAttack ?? false;
+      bool hasLeach = playerCombatStats.equippedWeapon?.hasLeach ?? false;
       
       if (playerCombatStats.currentPhase == CombatPhase.active && !playerCombatStats.attackHit) {
         playerCombatStats.attackHit = true;
@@ -624,6 +641,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               }
               enemy.hp -= damage;
               enemy.applyHitStun(stun);
+
+              if(hasLeach){
+                double cura = (playerCombatStats.con/5).floor().toDouble();
+                playerCombatStats.hp = min(playerCombatStats.maxHp, playerCombatStats.hp + cura);
+              }
+
               if(weaponHasPoison || shieldHasPoison) enemy.isPoison = true;
               playerCombatStats.recoverMana();
               AudioManager.playSfx('sfx/hit.wav');
@@ -1096,6 +1119,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (playerCombatStats.inventory.isNotEmpty) {
       Item selectedItem = playerCombatStats.inventory[inventoryCursor];
       String desc = selectedItem.description.isNotEmpty ? I18n.t(selectedItem.description) : "Sem descricao.";
+
+      if(selectedItem.type == ItemType.weapon){
+        desc = desc + '\n DMG: ${selectedItem.power.toString()} | STR: ${selectedItem.str.toString()} | STA: ${selectedItem.staCust.toString()}';
+      }else if(selectedItem.type == ItemType.armor){
+        desc = desc + '\n DEF: ${selectedItem.power.toString()} | WGT: ${selectedItem.peso.toString()}';
+      }else if(selectedItem.type == ItemType.shield){
+        desc = desc + '\n STA: ${selectedItem.power.toString()}';
+      }
       
       double boxH = 90; 
       double boxY = playerCombatStats.maxInventory * itemSize + 10 + startY;
@@ -1257,6 +1288,69 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   // GERENCIAMENTO DE INPUTS (KEYBOARD)
   // ===========================================================================
+  void _onGamepadEvent(GamepadEvent event) {
+    // event.value retorna 1.0 quando pressionado e 0.0 quando solto (para botões normais)
+    bool isPressed = event.value > 0.5; 
+    String key = event.key.toLowerCase(); // Ex: "dpad_left", "button_a"
+
+    if (isPressed) {
+      if (key.contains('dpad_left')) {
+        leftPressed = true;
+        // Igual ao teclado: só chamamos o startInput imediato em menus e combate (para o dash!)
+        if ([GameState.combat, GameState.settings, GameState.levelUp, GameState.inventory, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
+          startInput(GameInput.left);
+        }
+      }
+      else if (key.contains('dpad_right')) {
+        rightPressed = true;
+        if ([GameState.combat, GameState.settings, GameState.levelUp, GameState.inventory, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
+          startInput(GameInput.right);
+        }
+      }
+      else if (key.contains('dpad_up')) {
+        upPressed = true;
+        startInput(GameInput.up);
+      }
+      else if (key.contains('dpad_down')) {
+        downPressed = true;
+        startInput(GameInput.down);
+      }
+      else if (key.contains('button_a') || key.contains('button_cross')) {
+        startInput(GameInput.buttonA);
+      }
+      else if (key.contains('button_b') || key.contains('button_circle') || key.contains('button_x')) {
+        startInput(GameInput.buttonB);
+      }
+      else if (key.contains('button_start') || key.contains('button_select') || key.contains('button_options') || key.contains('button_menu')) {
+        togglePause();
+      }
+    } else {
+      // Soltou o botão (Dispara as paradas e cancelamentos)
+      if (key.contains('dpad_left')) {
+        leftPressed = false;
+        stopInput(GameInput.left);
+      }
+      else if (key.contains('dpad_right')) {
+        rightPressed = false;
+        stopInput(GameInput.right);
+      }
+      else if (key.contains('dpad_up')) {
+        upPressed = false;
+        stopInput(GameInput.up);
+      }
+      else if (key.contains('dpad_down')) {
+        downPressed = false;
+        stopInput(GameInput.down);
+      }
+      else if (key.contains('button_a') || key.contains('button_cross')) {
+        stopInput(GameInput.buttonA);
+      }
+      else if (key.contains('button_b') || key.contains('button_circle') || key.contains('button_x')) {
+        stopInput(GameInput.buttonB);
+      }
+    }
+  }
+
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     // O Flutter mapeia o D-Pad de joysticks nativamente para as setas normais.
@@ -1312,14 +1406,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         if (isLeft) startInput(GameInput.left);
         if (isRight) startInput(GameInput.right);
       } 
-      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
+      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused, GameState.settings].contains(currentState)) {
         if (isUp) startInput(GameInput.up);
         if (isDown) startInput(GameInput.down);
 
-        if (currentState == GameState.combat) {
+        //if (currentState == GameState.combat) {
           if (isLeft) startInput(GameInput.left);
           if (isRight) startInput(GameInput.right);
-        }
+       // }
       }
     }
     return KeyEventResult.handled;
@@ -2034,6 +2128,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void applyEnemyDamage(Enemy enemy) {
     double defense = playerCombatStats.equippedArmor?.power ?? 0; 
+    bool hasLeach = playerCombatStats.equippedShield?.hasLeach ?? false;
     double dmg = max(1, enemy.damage - defense);
     bool unblockable = enemy.isHeavyAttack;
     
@@ -2046,6 +2141,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.stamina = playerCombatStats.stamina.clamp(0, playerCombatStats.con * 3);
         if (playerCombatStats.stamina <= 0) playerCombatStats.cansado = true;
         playerCombatStats.flashColor = Palette.cinza; playerCombatStats.hitFlashTimer = 0.1; 
+        if(hasLeach){
+          double cura = (playerCombatStats.con/5).floor().toDouble();
+          playerCombatStats.hp = min(playerCombatStats.maxHp, playerCombatStats.hp + cura);
+        }
       }
     } else { 
       AudioManager.playSfx('sfx/hit.wav');
@@ -2130,6 +2229,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.str = 5; playerCombatStats.con = 5; playerCombatStats.wis = 5;
     playerCombatStats.hp = playerCombatStats.maxHp; playerCombatStats.stamina = playerCombatStats.con*3; playerCombatStats.mana = playerCombatStats.wis*3;
     playerCombatStats.currentPhase = CombatPhase.idle;
+
+    playerCombatStats.recalculateMaxHp();
 
     _initializeInventory();
     dungeon.level = 1;

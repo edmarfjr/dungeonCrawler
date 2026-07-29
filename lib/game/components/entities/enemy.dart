@@ -2372,7 +2372,7 @@ class AberraBrutoEnemy extends Enemy {
   AberraBrutoEnemy() : super(name: 'aberraBruto',
     type: EnemyType.aberraBruto, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144
     , speed: 0.6, damage: 30,hurtboxWidth: 100, hurtboxHeight: 140, hurtboxOffsetY: 0,
-    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 3.0,drop: [ItemDatabase.meat2]
+    hitboxWidth: 50, hitboxHeight: 50, hitboxOffsetY: 40, hitboxOffsetX: 10, maxAttackCooldown: 3.0,drop: [ItemDatabase.meat2,ItemDatabase.escudoAberrante]
   ){
     naoInterrompe = true;
     isHeavyAttack = true;
@@ -2535,7 +2535,7 @@ class AberraArvEnemy extends Enemy {
   AberraArvEnemy() : super(name: 'aberraArv',
     type: EnemyType.aberraArv, color: Palette.verde, hp: 120, maxHp: 120, dropEssence: 30, width: 192, height: 192
     , speed: 0, damage: 30,hurtboxWidth: 120, hurtboxHeight: 180, hurtboxOffsetY: 0,
-    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 50, hitboxOffsetX: -10, maxAttackCooldown: 2.0,drop: [ItemDatabase.meat2]
+    hitboxWidth: 80, hitboxHeight: 80, hitboxOffsetY: 50, hitboxOffsetX: -10, maxAttackCooldown: 2.0,drop: [ItemDatabase.meat2,ItemDatabase.machadoAberrante]
   ){
     naoInterrompe = true;
     isHeavyAttack = true;

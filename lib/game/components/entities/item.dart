@@ -34,6 +34,7 @@ class Item {
   final bool hasRegen;
   final bool staminaSlowRegen;
   final bool isWide;
+  final bool hasLeach;
   int value;
   int str;
   int peso;
@@ -74,6 +75,7 @@ class Item {
     this.easyDash = false,
     this.hasRegen = false,
     this.isWide = false,
+    this.hasLeach = false,
     this.staminaSlowRegen = false,
     this.value = 1,
     this.str = 5,
@@ -196,12 +198,22 @@ class ItemDatabase {
 
   });
 
-  static Item get machado => Item('machado', ItemType.weapon, 'itens/axe.png', 20,staCust: 10.0 ,description: 'd_machado', value:16,isWide: true , cor: Colors.white, str:10, onUse: (item, game) {
+  static Item get machado => Item('machado', ItemType.weapon, 'itens/axe.png', 15,hasLeach:true,staCust: 10.0 ,description: 'd_machado', value:16,isWide: true , cor: Colors.white, str:10, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.2;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 3.5;
+    game.playerCombatStats.offYWeapon = 0;
+
+  });
+
+  static Item get machadoAberrante => Item('machadoAberrante', ItemType.weapon, 'itens/aberrantAxe.png', 18,staCust: 10.0 ,description: 'd_machadoAberra', value:16,isWide: true , cor: Colors.white, str:12, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.2;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 1.5;
     game.playerCombatStats.offYWeapon = 0;
 
   });
@@ -281,6 +293,10 @@ class ItemDatabase {
   });
 
   static Item get escudoTorre => Item('escudoTorre', ItemType.shield, 'itens/towerShield.png', 6,value:6, description: 'd_escudoTorre',walkSlow: true, cor: Colors.white, onUse: (item, game) {
+    //game.playerCombatStats.moveSpeedPenalty = 0.5;
+  });
+
+  static Item get escudoAberrante => Item('escudoAberrante', ItemType.shield, 'itens/aberrantShield.png', 5,value:6, description: 'd_escudoAberrante',walkSlow: true, hasLeach: true ,cor: Colors.white, onUse: (item, game) {
     //game.playerCombatStats.moveSpeedPenalty = 0.5;
   });
 

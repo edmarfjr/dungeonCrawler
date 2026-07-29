@@ -84,13 +84,13 @@ class SaveManager {
       // armas
       ItemDatabase.adaga, ItemDatabase.espadaCurta, ItemDatabase.espadaLonga, ItemDatabase.machado, ItemDatabase.clava,
       ItemDatabase.espadaOrc, ItemDatabase.lanca, ItemDatabase.claymore, ItemDatabase.clavaOrc, ItemDatabase.warhammer,
-      ItemDatabase.varinha, ItemDatabase.zweihander,  ItemDatabase.espadaMagica,
+      ItemDatabase.varinha, ItemDatabase.zweihander,  ItemDatabase.espadaMagica, ItemDatabase.machadoAberrante,
       // armaduras
       ItemDatabase.tanga, ItemDatabase.armaduraFerro, ItemDatabase.armaduraCouro, ItemDatabase.armaduraBug, ItemDatabase.armaduraAco,
       ItemDatabase.armaduraBronze, ItemDatabase.gambeson, ItemDatabase.chainMail,
       // escudos
       ItemDatabase.bloquel, ItemDatabase.escudoMadeira, ItemDatabase.escudoFerro, ItemDatabase.braceleteFung, 
-      ItemDatabase.braceleteNaga, ItemDatabase.escudoTorre,
+      ItemDatabase.braceleteNaga, ItemDatabase.escudoTorre, ItemDatabase.escudoAberrante,
       // pocoes
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion, ItemDatabase.strPotion,
       // itens

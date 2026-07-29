@@ -62,8 +62,8 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
 
     // 4. Fundo do Minimapa e Borda externa
     canvas.drawRect(
-      Rect.fromLTWH(startX - 2, startY - 2, mapWidth + 4, mapHeight + 4), 
-      Paint()..color = Palette.branco
+      Rect.fromLTWH(startX - 4, startY - 4, mapWidth + 8, mapHeight + 8), 
+      Paint()..color = Palette.bege
     );
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
     
