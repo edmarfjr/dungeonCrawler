@@ -252,7 +252,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           }
 
           if (map.keyPosition != null && map.keyPosition!.x == mapX && map.keyPosition!.y == mapY && gameRef.currentState == GameState.exploration) {
-            _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Palette.amarelo);
+            _drawBillboardItem(canvas, cx, cz, keyImage, 0.5, 0.1, Colors.white);
           }
 
           if (tile == TileType.chest && gameRef.currentState == GameState.exploration) {
@@ -268,11 +268,11 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           }
 
           if (tile == TileType.crate && gameRef.currentState == GameState.exploration) {
-            _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Palette.marrom);
+            _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Colors.white);
           }
 
           if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
-            _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Palette.vermelho);
+            _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Colors.white);
           }
 
           if (tile == TileType.shop && gameRef.currentState == GameState.exploration) {
@@ -326,7 +326,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           
           for (var enemy in map.roamingEnemies) {
             if (enemy.x == mapX && enemy.y == mapY && gameRef.currentState == GameState.exploration) {
-              _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Palette.vermelho);
+              _drawBillboardItem(canvas, cx, cz, roamerImage, 0.6, 0.0,Colors.white);
             }
           }
         }

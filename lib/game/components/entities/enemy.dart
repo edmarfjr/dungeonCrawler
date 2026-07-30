@@ -332,7 +332,7 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
     if (type == EnemyType.spider) {
       final webPaint = Paint()..color = Palette.branco..strokeWidth = 5.0..style = PaintingStyle.stroke..isAntiAlias = false;
       final webPaintBorder = Paint()..color = Palette.preto..strokeWidth = 15.0..isAntiAlias = false..style = PaintingStyle.stroke;  
-      double screenTopLocalY = -(position.y - size.y / 2);
+      double screenTopLocalY = -(position.y - size.y / 2)-70;
       double posX = size.x / 2 + 4;
       canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaintBorder);
       canvas.drawLine(Offset(posX, size.y / 2), Offset(posX, screenTopLocalY), webPaint);
@@ -436,14 +436,18 @@ class SlimeEnemy extends Enemy {
 
   @override
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     moveTimer -= dt;
     if (moveTimer <= 0) {
       currentDir = (Random().nextInt(3) - 1).toDouble();
       moveTimer = 1.0 + Random().nextDouble() * 1.5;
     }
     strafePosition += currentDir * speed * dt;
-    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+    if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+    if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
   }
 }
 
@@ -469,10 +473,15 @@ class GoblinEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
       isFleeing = true;
     }
-    if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) {
+    if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
       isFleeing = false;
     }
 
@@ -486,7 +495,8 @@ class GoblinEnemy extends Enemy {
         strafePosition += dir * speed * dt;
       }
     }
-    strafePosition = strafePosition.clamp(-0.95, 0.95);
+    
+    strafePosition = strafePosition.clamp(-limit, limit);
   }
 }
 
@@ -558,13 +568,17 @@ class MimicEnemy extends Enemy {
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     moveTimer -= dt;
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     if (moveTimer <= 0) {
       currentDir = (Random().nextInt(3) - 1).toDouble();
       moveTimer = 1.0 + Random().nextDouble() * 1.5;
     }
     strafePosition += currentDir * speed * dt;
-    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+    if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+    if (strafePosition <= limit) { strafePosition = -limit; currentDir = 1.0; }
   }
 
   @override 
@@ -609,6 +623,11 @@ class OrcEnemy extends Enemy {
 
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
     
@@ -628,7 +647,7 @@ class OrcEnemy extends Enemy {
         isFleeing = true;
       }
 
-      if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) {
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
         isFleeing = false;
       }
 
@@ -643,7 +662,7 @@ class OrcEnemy extends Enemy {
         }
       }
 
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -678,12 +697,16 @@ class BatEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     if (currentPhase == CombatPhase.idle) {
       targetY = flightHeight; 
+      double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+      double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+      double normalizedOffset = halfWidthPixels / strafeRange;
+      double limit = 0.95 - normalizedOffset;
 
       if ((yPosition - flightHeight).abs() < 0.05) {
         strafePosition += currentDir * speed * dt;
         
-        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+        if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+        if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
       }
     }
   }
@@ -772,6 +795,11 @@ class OrcChefe extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     if (isSummoning || currentPhase == CombatPhase.summon) return; 
     
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
@@ -786,7 +814,7 @@ class OrcChefe extends Enemy {
 
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) isFleeing = true;
-      if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) isFleeing = false;
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) isFleeing = false;
 
       if (isFleeing) {
         double dir = -(player.strafePosition - strafePosition).sign;
@@ -798,7 +826,7 @@ class OrcChefe extends Enemy {
         }
       }
 
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -919,6 +947,11 @@ class BugEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
@@ -937,7 +970,7 @@ class BugEnemy extends Enemy {
 
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) isFleeing = true;
-      if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) isFleeing = false;
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) isFleeing = false;
 
       if (isFleeing) {
         double dir = -(player.strafePosition - strafePosition).sign;
@@ -949,7 +982,7 @@ class BugEnemy extends Enemy {
           strafePosition += dir * speed * dt;
         }
       }
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -974,11 +1007,15 @@ class WormEnemy extends Enemy {
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     if (distanceToPlayer > 0.01) {
         double dir = (player.strafePosition - strafePosition).sign;
         strafePosition += dir * speed * dt;
     }
-    strafePosition = strafePosition.clamp(-0.95, 0.95);
+    strafePosition = strafePosition.clamp(-limit, limit);
   }
 
   @override 
@@ -1084,13 +1121,18 @@ class FungoEnemy extends Enemy {
   void update(double dt) {
     if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     floatTimer += dt;
     flightOffset = -0.25 + (sin(floatTimer * speed) * 0.25);
 
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
     if (!isAttacking && !isDying && hitFlashTimer <= 0) {
       strafePosition += startDirection * cos(floatTimer * speed) * speed * dt;
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
     super.update(dt);
   }
@@ -1196,10 +1238,15 @@ class Fungo2Enemy extends Enemy {
     floatTimer += dt;
     flightOffset = -0.25 + (sin(floatTimer * speed) * 0.25);
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     bool isAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery;
     if (!isAttacking && !isDying && hitFlashTimer <= 0) {
       strafePosition += startDirection * cos(floatTimer * speed) * speed * dt;
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
     super.update(dt);
   }
@@ -1285,6 +1332,11 @@ class InfectadoEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
@@ -1301,7 +1353,7 @@ class InfectadoEnemy extends Enemy {
 
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) isFleeing = true;
-      if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) isFleeing = false;
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) isFleeing = false;
 
       if (isFleeing) {
         double dir = -(player.strafePosition - strafePosition).sign;
@@ -1313,7 +1365,7 @@ class InfectadoEnemy extends Enemy {
           strafePosition += dir * speed * dt;
         }
       }
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -1458,13 +1510,18 @@ class RainhaInsetoEnemy extends Enemy {
       isFrontRow = true;
     }
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     if(!_garrasEstaoAtacando){
       if (strafePosition < player.strafePosition - 0.1) {
         strafePosition += speed * dt;
       } else if (strafePosition > player.strafePosition + 0.1) {
         strafePosition -= speed * dt;
       }
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -1561,6 +1618,11 @@ class EsqueletoEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
@@ -1574,7 +1636,7 @@ class EsqueletoEnemy extends Enemy {
 
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) isFleeing = true;
-      if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) isFleeing = false;
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) isFleeing = false;
 
       if (isFleeing) {
         double dir = -(player.strafePosition - strafePosition).sign;
@@ -1587,7 +1649,7 @@ class EsqueletoEnemy extends Enemy {
         }
       }
 
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -1766,6 +1828,11 @@ class NagaEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
     bool isPlayerAttacking = player.currentPhase == CombatPhase.windup || player.currentPhase == CombatPhase.active;
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     bool isSelfAttacking = currentPhase == CombatPhase.windup || 
                            currentPhase == CombatPhase.active || 
@@ -1782,7 +1849,7 @@ class NagaEnemy extends Enemy {
 
     if (currentPhase != CombatPhase.guard && !isSelfAttacking) {
       if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) isFleeing = true;
-      if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) isFleeing = false;
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) isFleeing = false;
 
       if (isFleeing) {
         double dir = -(player.strafePosition - strafePosition).sign;
@@ -1794,7 +1861,7 @@ class NagaEnemy extends Enemy {
           strafePosition += dir * speed * dt;
         }
       }
-      strafePosition = strafePosition.clamp(-0.95, 0.95);
+      strafePosition = strafePosition.clamp(-limit, limit);
     }
   }
 
@@ -2018,11 +2085,16 @@ class DollEnemy extends Enemy {
     if (currentPhase == CombatPhase.idle) {
       targetY = flightHeight;
 
+      double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+      double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+      double normalizedOffset = halfWidthPixels / strafeRange;
+      double limit = 0.95 - normalizedOffset;
+
       if ((yPosition - flightHeight).abs() < 0.05) {
         strafePosition += currentDir * speed * dt;
         
-        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+        if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+        if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
       }
     }
   }
@@ -2108,12 +2180,17 @@ class GoblinShopEnemy extends Enemy {
   @override 
   void updateBehavior(double dt, PlayerCombatStats player) {
     if (currentPhase == CombatPhase.idle) {
+      double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+      double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+      double normalizedOffset = halfWidthPixels / strafeRange;
+      double limit = 0.95 - normalizedOffset;
+
       targetY = flightHeight; 
       if ((yPosition - flightHeight).abs() < 0.05) {
         strafePosition += currentDir * speed * dt;
         
-        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+        if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+        if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
       }
     }
   }
@@ -2273,10 +2350,15 @@ class MagoEnemy extends Enemy {
         targetY = attackHeight;
       }
     }
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     strafePosition += currentDir * speed * dt;
-    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+    if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+    if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
   }
 
   @override 
@@ -2387,10 +2469,15 @@ class AberraBrutoEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
       isFleeing = true;
     }
-    if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) {
+    if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
       isFleeing = false;
     }
 
@@ -2405,7 +2492,7 @@ class AberraBrutoEnemy extends Enemy {
       }
     }
 
-    strafePosition = strafePosition.clamp(-0.95, 0.95);
+    strafePosition = strafePosition.clamp(-limit, limit);
   }
 
   @override
@@ -2455,10 +2542,14 @@ class AberraVoaEnemy extends Enemy {
         targetY = attackHeight;
       }
     }
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     strafePosition += currentDir * speed * dt;
-    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+    if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+    if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
   }
 
   @override 
@@ -2508,11 +2599,16 @@ class AberraBestaEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
       isFleeing = true;
     }
 
-    if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) {
+    if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
       isFleeing = false;
     }
 
@@ -2527,7 +2623,7 @@ class AberraBestaEnemy extends Enemy {
       }
     }
 
-    strafePosition = strafePosition.clamp(-0.95, 0.95);
+    strafePosition = strafePosition.clamp(-limit, limit);
   }
 }
 
@@ -2635,11 +2731,16 @@ class AberraCultistaEnemy extends Enemy {
   void updateBehavior(double dt, PlayerCombatStats player) {
     double distanceToPlayer = (player.strafePosition - strafePosition).abs();
 
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
     if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
       isFleeing = true;
     }
 
-    if (isFleeing && (strafePosition <= -0.94 || strafePosition >= 0.94)) {
+    if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
       isFleeing = false;
     }
 
@@ -2655,7 +2756,7 @@ class AberraCultistaEnemy extends Enemy {
       }
     }
 
-    strafePosition = strafePosition.clamp(-0.95, 0.95);
+    strafePosition = strafePosition.clamp(-limit, limit);
   }
 
   @override
@@ -2839,10 +2940,15 @@ class AntigoEnemy extends Enemy {
         targetY = attackHeight;
       }
     }
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
     
     strafePosition += currentDir * speed * dt;
-    if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-    if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+    if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+    if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
   }
 
   @override 
@@ -2983,11 +3089,16 @@ class TentaculoEnemy extends Enemy {
     if (currentPhase == CombatPhase.idle) {
       targetY = flightHeight; 
 
+      double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+      double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+      double normalizedOffset = halfWidthPixels / strafeRange;
+      double limit = 0.95 - normalizedOffset;
+
       if ((yPosition - flightHeight).abs() < 0.05) {
         strafePosition += currentDir * speed * dt;
         
-        if (strafePosition >= 1.0) { strafePosition = 1.0; currentDir = -1.0; }
-        if (strafePosition <= -1.0) { strafePosition = -1.0; currentDir = 1.0; }
+        if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+        if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
       }
     }
   }

@@ -141,6 +141,14 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
                             isDesktop: isDesktop,
                             fontSize: safeOptionSize,
                           ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('bestiario'),
+                            index: 4,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
                         ] else ...[
                           _buildMenuOption(
                             title: I18n.t('menu_new'),
@@ -161,6 +169,14 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with SingleTickerProv
                           _buildMenuOption(
                             title: I18n.t('menu_manual'),
                             index: 2,
+                            currentIndex: cursorIndex,
+                            isDesktop: isDesktop,
+                            fontSize: safeOptionSize,
+                          ),
+                          SizedBox(height: spacing),
+                          _buildMenuOption(
+                            title: I18n.t('bestiario'),
+                            index: 3,
                             currentIndex: cursorIndex,
                             isDesktop: isDesktop,
                             fontSize: safeOptionSize,

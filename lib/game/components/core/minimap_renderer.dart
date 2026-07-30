@@ -63,7 +63,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     // 4. Fundo do Minimapa e Borda externa
     canvas.drawRect(
       Rect.fromLTWH(startX - 4, startY - 4, mapWidth + 8, mapHeight + 8), 
-      Paint()..color = Palette.bege
+      Paint()..color = Palette.marromCla
     );
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
     
@@ -139,7 +139,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY , tileSize, tileSize), tilePaint);
             break;
           case TileType.spike:
-            tilePaint.color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinza;
+            tilePaint.color = map.spikeState == 3 ? Palette.cinza : Palette.cinzaMed;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.poison:
@@ -173,7 +173,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX , renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.lore:
-            tilePaint.color = Palette.bege;
+            tilePaint.color = Palette.marromCla;
             tilePaint.style = PaintingStyle.stroke;
             canvas.drawRect(Rect.fromLTWH(renderX , renderY, tileSize, tileSize), tilePaint);
             break;

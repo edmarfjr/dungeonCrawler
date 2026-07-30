@@ -25,7 +25,7 @@ import 'package:a_blade_in_the_abyss/game/components/entities/player_projectile.
 import 'package:a_blade_in_the_abyss/game/overlays/combat_overlay.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
-enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, victory, settings, splash }
+enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, victory, settings, splash, bestiary }
 enum ShopPhase { main, buy, sell, confirmSell, steal }
 
 class GameMessage {
@@ -93,6 +93,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   bool isInvestigationPromptOpen = false;
   bool investigationRoomCleared = false;
   int investigationAttempts = 0;
+
+  // --- BESTIÁRIO ---
+  Map<EnemyType, int> bestiaryKills = {};
+  int bestiaryCursor = 0;
+  int bestiaryScrollOffset = 0;
+
 
   // --- MENUS ---
   ScrollController? manualScrollController;
@@ -177,6 +183,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   Future<void> onLoad() async {
     final prefs = await SharedPreferences.getInstance();
     hasSavedGame = prefs.containsKey('save_game');
+
+    await loadBestiary();
 
   /*  try {
       _gamepadSubscription = Gamepads.events.listen(_onGamepadEvent);
@@ -663,6 +671,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
               enemy.hp = 0; enemy.isDying = true; 
               encounterEssence += enemy.dropEssence; 
               encounterDrop.addAll(enemy.drop);
+
+              bestiaryKills[enemy.type] = (bestiaryKills[enemy.type] ?? 0) + 1;
+              saveBestiary();
             }
           }
         }
@@ -749,6 +760,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.shop: _renderShop(canvas); break;
       case GameState.inventory: _renderInventory(canvas); break;
       case GameState.levelUp: _renderLevelUp(canvas); break;
+      case GameState.bestiary: _renderBestiary(canvas); break;
       default: break;
     }
 
@@ -1209,6 +1221,110 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
   }
 
+  void _renderBestiary(Canvas canvas) {
+    //double scaleFactor = isDesktopLayout ? (size.y / 720.0).clamp(0.1, 5.0) : (size.x / 500.0).clamp(0.1, 5.0);
+    //double logicalWidth = size.x ;
+    //double logicalHeight = size.y ;
+
+    double boxW = size.x ;
+    double boxH = size.y ;
+    double startX = (size.x - boxW) / 2;
+    double startY = (size.y - boxH) / 2;
+
+    int visibleItems = 9;
+    double itemH = 30;
+    double font = 14;
+    double fontTitle = 22;
+    
+    double leftW = boxW * 0.45;
+    double rightW = boxW * 0.55;
+
+    double rightX = startX + leftW + 20;
+    double rightY = startY + 60;
+
+    double descriYOffset = 40;
+
+    if (isDesktopLayout){
+      itemH = 50;
+      font = 26;
+      fontTitle = 44;
+      rightY += 20;
+      descriYOffset = 60;
+    }
+
+    // Fundo
+    canvas.drawRect(Rect.fromLTWH(startX, startY, boxW, boxH), Paint()..color = Palette.preto);
+    //canvas.drawRect(Rect.fromLTWH(startX, startY, boxW, boxH), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
+
+    // Título
+    final titlePainter = TextPainter(text: TextSpan(text: I18n.t('bestiario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: fontTitle, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+    titlePainter.paint(canvas, Offset(startX + (boxW - titlePainter.width) / 2, startY + 15));
+
+    // Lista de Inimigos (Esquerda)
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(startX, startY + 60, leftW, boxH - 80));
+
+    
+
+    if (bestiaryCursor < bestiaryScrollOffset) bestiaryScrollOffset = bestiaryCursor;
+    if (bestiaryCursor >= bestiaryScrollOffset + visibleItems) bestiaryScrollOffset = bestiaryCursor - visibleItems + 1;
+
+    for (int i = 0; i < EnemyType.values.length; i++) {
+      double yPos = startY + 60 + ((i - bestiaryScrollOffset) * itemH);
+      if (yPos < startY + 50 || yPos > startY + boxH - 20) continue;
+
+      EnemyType type = EnemyType.values[i];
+      int kills = bestiaryKills[type] ?? 0;
+      int reqKills = _getEnemyReqKills(type);
+      bool unlocked = kills >= reqKills;
+      bool selected = (i == bestiaryCursor);
+
+      Color textColor = selected ? Palette.amarelo : (unlocked ? Palette.branco : Palette.cinzaEsc);
+      String nameStr = unlocked ? I18n.t(type.name).toUpperCase() : "???";
+      String prefix = selected ? "> " : "  ";
+
+      TextPainter(text: TextSpan(text: "$prefix$nameStr", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: font)), textDirection: TextDirection.ltr)
+        ..layout(maxWidth: leftW)
+        ..paint(canvas, Offset(startX + 10, yPos));
+    }
+    canvas.restore();
+
+    // Divisória
+    canvas.drawLine(Offset(startX + leftW, startY + descriYOffset+20), Offset(startX + leftW, startY + boxH - 20), Paint()..color = Palette.cinzaEsc..strokeWidth = 4);
+
+    // Detalhes do Inimigo (Direita)
+    EnemyType selectedType = EnemyType.values[bestiaryCursor];
+    int kills = bestiaryKills[selectedType] ?? 0;
+    int reqKills = _getEnemyReqKills(selectedType);
+    bool unlocked = kills >= reqKills;
+
+    if (!unlocked) {
+      TextPainter(text: TextSpan(text: I18n.t('desconhecido'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.vermelho, fontSize: fontTitle)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(rightX, rightY));
+      TextPainter(text: TextSpan(text: I18n.t('derrote_mais').replaceAll('{kills}', (reqKills - kills).toString()), style: TextStyle(fontFamily: 'pixelFont', color: Palette.cinzaCla, fontSize: font)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(rightX, rightY + descriYOffset));
+    } else {
+      Map<String, dynamic> info = _getEnemyInfo(selectedType);
+      TextPainter(text: TextSpan(text: selectedType.name.toUpperCase(), style: TextStyle(fontFamily: 'pixelFont', color: Palette.verdeCla, fontSize: fontTitle)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(rightX, rightY));
+
+      // Desenha a Sprite do Inimigo (Pega o frame parado)
+      ui.Image? spr = enemySheets[selectedType];
+      
+      if (spr != null) {
+        double FrameSize = spr.height.toDouble()/2;
+        Rect src = Rect.fromLTWH(0, 0, FrameSize, FrameSize); // Assumindo 4 frames de animação
+        Rect dst = Rect.fromLTWH(rightX, rightY + 40, 96, 96);
+        canvas.drawImageRect(spr, src, dst, Paint());
+      }
+
+      String statsText = "Abates: $kills\nHP: ${info['hp']}\nDMG: ${info['dmg']}\n\n${info['desc']}";
+      TextPainter(text: TextSpan(text: statsText, style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: font)), textDirection: TextDirection.ltr)
+        ..layout(maxWidth: rightW - 40)
+        ..paint(canvas, Offset(rightX, rightY + 150));
+    }
+
+    // Ajuda de Rodapé
+    TextPainter(text: TextSpan(text: I18n.t('b_voltar'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: font)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + boxW - 130, startY + boxH - 30));
+  }
+
   void _renderMessageQueue(Canvas canvas) {
       double boxWidth = size.x * 0.8;
       double border = 2;
@@ -1265,6 +1381,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(previousState2 == GameState.mainMenu) overlays.add('MainMenu');
     if(previousState2 == GameState.paused) overlays.add('PauseMenu');
     currentState = previousState2; overlays.remove('settings'); 
+  }
+
+  void openBestiary() {
+    if(currentState == GameState.paused) overlays.remove('PauseMenu');
+    if(currentState == GameState.mainMenu) overlays.remove('MainMenu');
+    previousState2 = currentState; 
+    currentState = GameState.bestiary; 
   }
 
   void openShop() {
@@ -1400,8 +1523,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        //EncounterManager.triggerSpecificEncounter(this, EnemyType.boss1);
-        EncounterManager.triggerRandomEncounter(this);
+        EncounterManager.triggerSpecificEncounter(this, EnemyType.goblin);
+        //EncounterManager.triggerRandomEncounter(this);
       } 
 
       // Variáveis auxiliares (o D-Pad do controle também ativa estas)
@@ -1416,7 +1539,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         if (isLeft) startInput(GameInput.left);
         if (isRight) startInput(GameInput.right);
       } 
-      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused, GameState.settings].contains(currentState)) {
+      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused, GameState.settings, GameState.bestiary].contains(currentState)) {
         if (isUp) startInput(GameInput.up);
         if (isDown) startInput(GameInput.down);
 
@@ -1472,6 +1595,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.paused: _handlePauseInput(input); break;
       case GameState.mainMenu: _handleMainMenuInput(input); break;
       case GameState.gameOver: _handleGameOverInput(input); break;
+      case GameState.bestiary: _handleBestiaryInput(input); break;
       case GameState.victory: 
         if (input == GameInput.buttonA || input == GameInput.buttonB) {
           victoryInputNotifier.value++; 
@@ -1896,7 +2020,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     //  AudioManager.playBgm('music/main-menu.ogg');
     //}
     if (isMainMenuAnimating) return;
-    int maxOptions = hasSavedGame ? 4 : 3; 
+    int maxOptions = hasSavedGame ? 4 : 5; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
     if (input == GameInput.buttonA) {
@@ -1906,11 +2030,32 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         else if (mainMenuCursor.value == 1) { startGame(); } 
         else if (mainMenuCursor.value == 2) { openSettings(); } 
         else if (mainMenuCursor.value == 3) { openManual(); }
+        else if (mainMenuCursor.value == 4) { openBestiary(); }
       } else {
         if (mainMenuCursor.value == 0) { startGame(); } 
         else if (mainMenuCursor.value == 1) { openSettings(); } 
         else if (mainMenuCursor.value == 2) { openManual(); }
+        else if (mainMenuCursor.value == 3) { openBestiary(); }
       }
+    }
+  }
+
+  void _handleBestiaryInput(GameInput input) {
+    if (input == GameInput.up) {
+      bestiaryCursor--;
+      if (bestiaryCursor < 0) bestiaryCursor = EnemyType.values.length - 1;
+      AudioManager.playSfx('sfx/hover.wav');
+    } 
+    else if (input == GameInput.down) {
+      bestiaryCursor++;
+      if (bestiaryCursor >= EnemyType.values.length) bestiaryCursor = 0;
+      AudioManager.playSfx('sfx/hover.wav');
+    } 
+    else if (input == GameInput.buttonB || input == GameInput.pause) {
+      AudioManager.playSfx('sfx/decline.wav');
+      currentState = previousState2; // Retorna de onde veio (MainMenu ou PauseMenu)
+      if (currentState == GameState.mainMenu) overlays.add('MainMenu');
+      if (currentState == GameState.paused) overlays.add('PauseMenu');
     }
   }
 
@@ -2295,4 +2440,82 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance(); await prefs.remove('save_game');
     hasSavedGame = false;
   }
+
+  Future<void> saveBestiary() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> dataList = bestiaryKills.entries.map((e) => '${e.key.name}:${e.value}').toList();
+    await prefs.setStringList('bestiary_data', dataList);
+  }
+
+  Future<void> loadBestiary() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? dataList = prefs.getStringList('bestiary_data');
+    bestiaryKills.clear();
+    
+    if (dataList != null) {
+      for (var str in dataList) {
+        var parts = str.split(':');
+        if (parts.length == 2) {
+          try {
+            var type = EnemyType.values.firstWhere((e) => e.name == parts[0]);
+            bestiaryKills[type] = int.parse(parts[1]);
+          } catch (e) { /* Ignora se o inimigo for removido do jogo no futuro */ }
+        }
+      }
+    }
+  }
+
+  int _getEnemyReqKills(EnemyType type) {
+    if (type.name.contains('boss') || type.name == 'mimic') return 1;
+    return 10;
+  }
+
+  Map<String, dynamic> _getEnemyInfo(EnemyType type) {
+    int hp = 20; int dmg = 3; String desc = "";
+
+    switch(type) {
+      // --- FLOOR 1 (Slime / Goblin / Spider / Bat) ---
+      case EnemyType.slime: hp = 50; dmg = 3; desc = I18n.t('desc_slime'); break;
+      case EnemyType.goblin: hp = 60; dmg = 5; desc = I18n.t('desc_goblin'); break;
+      case EnemyType.spider: hp = 30; dmg = 3; desc = I18n.t('desc_spider'); break;
+      case EnemyType.bat: hp = 40; dmg = 5; desc = I18n.t('desc_bat'); break;
+      case EnemyType.mimic: hp = 60; dmg = 10; desc = I18n.t('desc_mimic'); break;
+      case EnemyType.orc: hp = 80; dmg = 12; desc = I18n.t('desc_orc'); break;
+      case EnemyType.boss1: hp = 300; dmg = 20; desc = I18n.t('desc_boss1'); break;
+
+      // --- FLOOR 2 (Insects / Fungus) ---
+      case EnemyType.bug: hp = 100; dmg = 15; desc = I18n.t('desc_bug'); break;
+      case EnemyType.worm: hp = 50; dmg = 10; desc = I18n.t('desc_worm'); break;
+      case EnemyType.ovo: hp = 80; dmg = 0; desc = I18n.t('desc_ovo'); break;
+      case EnemyType.fungo: hp = 60; dmg = 10; desc = I18n.t('desc_fungo'); break;
+      case EnemyType.fungo2: hp = 60; dmg = 10; desc = I18n.t('desc_fungo2'); break;
+      case EnemyType.infectado: hp = 90; dmg = 12; desc = I18n.t('desc_infectado'); break;
+      case EnemyType.garra: hp = 120; dmg = 20; desc = I18n.t('desc_garra'); break;
+      case EnemyType.boss2: hp = 300; dmg = 20; desc = I18n.t('desc_boss2'); break;
+
+      // --- FLOOR 3 (Undead / Magic / Dolls) ---
+      case EnemyType.esqueleto: hp = 120; dmg = 15; desc = I18n.t('desc_esqueleto'); break;
+      case EnemyType.jester: hp = 100; dmg = 15; desc = I18n.t('desc_jester'); break;
+      case EnemyType.naga: hp = 250; dmg = 20; desc = I18n.t('desc_naga'); break;
+      case EnemyType.mao: hp = 150; dmg = 15; desc = I18n.t('desc_mao'); break;
+      case EnemyType.doll: hp = 70; dmg = 15; desc = I18n.t('desc_doll'); break;
+      case EnemyType.goblinShop: hp = 150; dmg = 15; desc = I18n.t('desc_goblinShop'); break;
+      case EnemyType.boss3: hp = 300; dmg = 25; desc = I18n.t('desc_boss3'); break;
+
+      // --- FLOOR 4 (Aberrations / Cult) ---
+      case EnemyType.aberraBruto: hp = 120; dmg = 30; desc = I18n.t('desc_aberraBruto'); break;
+      case EnemyType.aberraVoa: hp = 80; dmg = 20; desc = I18n.t('desc_aberraVoa'); break;
+      case EnemyType.aberraBesta: hp = 100; dmg = 30; desc = I18n.t('desc_aberraBesta'); break;
+      case EnemyType.aberraArv: hp = 120; dmg = 30; desc = I18n.t('desc_aberraArv'); break;
+      case EnemyType.aberraCult: hp = 100; dmg = 30; desc = I18n.t('desc_aberraCult'); break;
+      case EnemyType.aberraOvo: hp = 100; dmg = 0; desc = I18n.t('desc_aberraOvo'); break;
+      case EnemyType.tentaculo: hp = 200; dmg = 15; desc = I18n.t('desc_tentaculo'); break;
+      case EnemyType.boss4: hp = 500; dmg = 25; desc = I18n.t('desc_boss4'); break;
+      
+      default: break;
+    }
+    return {'hp': hp, 'dmg': dmg, 'desc': desc};
+  }
+
+
 }
