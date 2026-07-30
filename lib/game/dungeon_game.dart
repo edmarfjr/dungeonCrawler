@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:async'; 
-import 'package:gamepads/gamepads.dart'; 
+//import 'package:gamepads/gamepads.dart'; 
 import 'package:a_blade_in_the_abyss/game/components/core/encounter_manager.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/save_manager.dart';
 import 'package:a_blade_in_the_abyss/main.dart';
@@ -37,7 +37,7 @@ class GameMessage {
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // --- ESTADOS E MANAGERS ---
   bool isDesktopLayout = false;
-  StreamSubscription<GamepadEvent>? _gamepadSubscription; 
+  //StreamSubscription<GamepadEvent>? _gamepadSubscription; 
   GameState currentState = GameState.splash;
   GameState previousState = GameState.splash;
   GameState previousState2 = GameState.splash;
@@ -178,12 +178,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance();
     hasSavedGame = prefs.containsKey('save_game');
 
-    try {
+  /*  try {
       _gamepadSubscription = Gamepads.events.listen(_onGamepadEvent);
     } catch (e) {
       debugPrint('Gamepads não suportado ou erro: $e');
     }
-
+*/
     _normalTextPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
     _titleTextPaint = TextPaint(style: const TextStyle(color: Palette.amarelo, fontSize: 24, fontFamily: 'pixelFont'));
     _selectTextPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
@@ -362,7 +362,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   @override
   void onRemove() {
-    _gamepadSubscription?.cancel();
+  //  _gamepadSubscription?.cancel();
     super.onRemove();
   }
 
@@ -1063,9 +1063,16 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       double promptX = (size.x - promptWidth) / 2;
       double promptY = (size.y - promptHeight) / 2;
       final promptRect = Rect.fromLTWH(promptX, promptY, promptWidth, promptHeight);
+
+      double border = 2;
+
+      if (isDesktopLayout){
+        promptWidth = size.x * 0.6;
+        border = 8;
+      }
       
       canvas.drawRect(promptRect, Paint()..color = Palette.preto);
-      canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
 
       final titleSpan = TextSpan(text: I18n.t('pass_turn'), style: const TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
@@ -1288,6 +1295,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   // GERENCIAMENTO DE INPUTS (KEYBOARD)
   // ===========================================================================
+  /*
   void _onGamepadEvent(GamepadEvent event) {
     // event.value retorna 1.0 quando pressionado e 0.0 quando solto (para botões normais)
     bool isPressed = event.value > 0.5; 
@@ -1350,6 +1358,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       }
     }
   }
+
+  */
 
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
