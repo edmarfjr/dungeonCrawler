@@ -784,7 +784,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     String promptText = (dungeon.level == 11) ? I18n.t('monolito') : I18n.t('darkRoom');
 
     final textPainter = TextPainter(
-      text: TextSpan(text: promptText, style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: fontSize)), 
+      text: TextSpan(text: promptText, style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: fontSize,fontWeight: FontWeight.bold)), 
       textAlign: TextAlign.center, 
       textDirection: TextDirection.ltr
     )..layout(maxWidth: boxWidth - 20);

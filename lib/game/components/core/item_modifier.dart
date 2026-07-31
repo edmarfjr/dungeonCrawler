@@ -2,7 +2,7 @@ import 'dart:math';
 
 class ItemModifier {
   final String name; 
-  final String id; // Útil para usar com seu sistema I18n (ex: 'mod_enferrujado')
+  final String id; 
   final double powerMultiplier;
   final double valueMultiplier;
   final double staMultiplier;
