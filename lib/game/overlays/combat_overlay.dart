@@ -787,8 +787,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   void _drawPlayerUI(Canvas canvas) {
     // Fundo sólido garantido no Topo
-    canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, logicalHeight*0.145+1), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(-2, 2, logicalWidth+4, logicalHeight*0.145+1), Paint()..color = Palette.marromCla..style = PaintingStyle.stroke..strokeWidth = 4);
+    double boxHeight = logicalHeight*0.145+1;
+    canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, boxHeight), Paint()..color = Palette.preto);
+    canvas.drawRect(Rect.fromLTWH(-2, 2, logicalWidth+4, boxHeight), Paint()..color = Palette.marromCla..style = PaintingStyle.stroke..strokeWidth = 4);
     
     _drawHorizontalBar(canvas, 10, 35, playerStats.maxHp * 3, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
     _drawHorizontalBar(canvas, 10, 52, playerStats.con * 9, 12, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
@@ -833,7 +834,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
       double bxSize = 55;
       double keyX = logicalWidth/2 + bxSize;
-      double keyY = 10;
+      double keyY = boxHeight/2 - bxSize/2;
       
       canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.preto);
       try {
@@ -841,10 +842,10 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           gameRef.keySprite, 
           Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
           Rect.fromLTWH(keyX, keyY, bxSize, bxSize),
-          Paint()..colorFilter = const ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
+          Paint()..colorFilter = const ColorFilter.mode(Palette.branco, BlendMode.modulate)
         );
       } catch (e) {}
-      canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.amarelo..style = PaintingStyle.stroke..strokeWidth = 1);
+      canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.marromCla..style = PaintingStyle.stroke..strokeWidth = 4);
       
     }
 

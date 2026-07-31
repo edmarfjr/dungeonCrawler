@@ -579,7 +579,7 @@ class MimicEnemy extends Enemy {
     }
     strafePosition += currentDir * speed * dt;
     if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
-    if (strafePosition <= limit) { strafePosition = -limit; currentDir = 1.0; }
+    if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
   }
 
   @override 

@@ -118,7 +118,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.floor:
-            tilePaint.color = Palette.preto;
+            tilePaint.color = Palette.azulEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.door:

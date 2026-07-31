@@ -38,22 +38,22 @@ class PauseMenuOverlay extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "JOGO PAUSADO", 
+                    I18n.t('pause'), 
                     style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: titleSize, fontWeight: FontWeight.bold, decoration: TextDecoration.none)
                   ),
                   SizedBox(height: spacing),
                   Text(
-                    "Andar Atual: ${game.dungeon.level}", 
-                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: subtitleSize, decoration: TextDecoration.none)
+                    "${I18n.t('andar_atual')}: ${game.dungeon.level}", 
+                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: subtitleSize, decoration: TextDecoration.none)
                   ),
                   SizedBox(height: spacing * 0.5),
                   Text(
-                    "Essências: ${game.playerCombatStats.essence.toInt()}", 
-                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.azul, fontSize: subtitleSize, decoration: TextDecoration.none)
+                    "${I18n.t('essencia')}: ${game.playerCombatStats.essence.toInt()}", 
+                    style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: subtitleSize, decoration: TextDecoration.none)
                   ),
                   SizedBox(height: spacing * 0.5),
                   Text(
-                    'TEMPO: $tempoAtual',
+                    '${I18n.t('tempo')}: $tempoAtual',
                     style: TextStyle(
                       fontFamily: 'pixelFont',
                       color: Palette.branco,
@@ -213,7 +213,7 @@ class _MapPainter extends CustomPainter {
     double offsetY = (size.height - (rows * tileSize)) / 2;
 
     final paintWall = Paint()..color = Palette.branco;
-    final paintFloor = Paint()..color = Palette.preto;
+    final paintFloor = Paint()..color = Palette.azulEsc;
     final paintDoor = Paint()..color = Palette.vermelhoEsc;
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
@@ -234,7 +234,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-        //  continue;
+          continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
