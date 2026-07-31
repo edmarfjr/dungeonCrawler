@@ -118,7 +118,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.floor:
-            tilePaint.color = Palette.cinzaEsc;
+            tilePaint.color = Palette.preto;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.door:
@@ -151,7 +151,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.crate:
-            tilePaint.color = Palette.marrom;
+            tilePaint.color = Palette.marromEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.shop:
@@ -159,7 +159,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.teleport:
-            tilePaint.color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinza;
+            tilePaint.color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinzaEsc;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.font:
@@ -168,7 +168,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.secretWall:
-            tilePaint.color = Palette.marromCla;
+            tilePaint.color = Palette.PlumEsc;
             tilePaint.style = PaintingStyle.stroke;
             canvas.drawRect(Rect.fromLTWH(renderX , renderY, tileSize, tileSize), tilePaint);
             break;
@@ -236,12 +236,9 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     playerPath.close();
 
     canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
+    canvas.drawRect(Rect.fromLTWH(-sizeArrow/3, -sizeArrow, sizeArrow/1.5, sizeArrow/1.5), Paint()..color = Palette.branco);
 
     // Restaura o Clipping interno do minimapa
-    canvas.restore();
-    canvas.restore();
-
-    // Restaura a Escala Global
     canvas.restore();
   }
 }

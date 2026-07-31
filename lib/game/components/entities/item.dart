@@ -97,11 +97,11 @@ class Item {
 
     modifier = randomMod;
 
-    power = power * randomMod.powerMultiplier;
+    power = (power * randomMod.powerMultiplier).roundToDouble();
     value = (value * randomMod.valueMultiplier).round();
     str = max(0, str + randomMod.strModifier); 
     peso = max(0, peso + randomMod.weightModifier);
-    staCust = staCust * randomMod.staMultiplier;
+    staCust = (staCust * randomMod.staMultiplier).roundToDouble();
 
   }
 
@@ -574,5 +574,18 @@ class ItemDatabase {
         } 
       }
     }
+  });
+
+  static Item get cura => Item('cura', ItemType.spell, 'itens/cura.png', 5, 
+    manaCost: 15, value:16, quantity: 1, description: 'd_cura', cor: Colors.white, onUse: (item, game) {
+    if (game.currentState != GameState.combat) {
+      game.showMessage(I18n.t('guarda_batalha'));
+      item.quantity++;
+      return;
+    }
+    double cura =item.power*game.playerCombatStats.wis;
+    game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + cura);
+    game.playerCombatStats.applyEffect(0.5,Palette.vermelho) ;
+    game.showMessage(I18n.t('recupera_hp').replaceFirst('[hp]', item.power.toString()));
   });
 }

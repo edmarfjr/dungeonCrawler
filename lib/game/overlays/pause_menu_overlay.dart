@@ -213,19 +213,19 @@ class _MapPainter extends CustomPainter {
     double offsetY = (size.height - (rows * tileSize)) / 2;
 
     final paintWall = Paint()..color = Palette.branco;
-    final paintFloor = Paint()..color = Palette.cinzaEsc;
+    final paintFloor = Paint()..color = Palette.preto;
     final paintDoor = Paint()..color = Palette.vermelhoEsc;
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
     final paintKey = Paint()..color = Palette.laranja;
-    final paintSpike = Paint()..color = map.spikeState == 3 ? Palette.cinzaCla : Palette.cinza;
-    final paintTele = Paint()..color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinza;
-    final paintPoison = Paint()..color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinza;
+    final paintSpike = Paint()..color = map.spikeState == 3 ? Palette.cinza : Palette.cinzaMed;
+    final paintTele = Paint()..color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinzaMed;
+    final paintPoison = Paint()..color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinzaMed;
     final paintShrine = Paint()..color = Palette.roxo;
-    final paintCrate = Paint()..color = Palette.marrom;
+    final paintCrate = Paint()..color = Palette.marromEsc;
     final paintShop = Paint()..color = Palette.azulCla;
     final paintFont = Paint()..color = Palette.azul;
-    final paintSecretWall = Paint()..color = Palette.marromCla;
+    final paintSecretWall = Paint()..color = Palette.PlumEsc..style = PaintingStyle.stroke..strokeWidth = 2;
     final paintLore = Paint()..color = Palette.bege;
 
     for (int y = 0; y < rows; y++) {
@@ -234,7 +234,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-          continue;
+        //  continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);
@@ -309,6 +309,7 @@ class _MapPainter extends CustomPainter {
     playerPath.close();
 
     canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
+    canvas.drawRect(Rect.fromLTWH(-sizeArrow/3, -sizeArrow, sizeArrow/1.5, sizeArrow/1.5), Paint()..color = Palette.branco);
 
     canvas.restore();
   }

@@ -28,7 +28,8 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
   final double hurtboxWidth, hurtboxHeight, hurtboxOffsetX, hurtboxOffsetY;
   final double hitboxWidth, hitboxHeight, hitboxOffsetX, hitboxOffsetY;
 
-  double hp, maxHp, dropEssence, damage;
+  double hp, maxHp, damage;
+  int dropEssence;
   double yPosition, targetY, speed, attackCooldown;
   double strafePosition = 0.0, animTimer = 0.0;
   bool isAlive = true, attackHit = false, isDying = false;

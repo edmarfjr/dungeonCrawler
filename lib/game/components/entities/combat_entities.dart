@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 enum CombatPhase { idle, walk, guard, windup, active, recovery, entering, exiting, hit, summon, die, windup2, active2, recovery2 }
 
 class PlayerCombatStats {
-  double hp = 30, maxHp = 30, mana = 15, essence = 0;
+  double hp = 30, maxHp = 30, mana = 15;
+  int essence = 0;
   double stamina = 15.0; 
   double staminaTmr = 0.0; 
   double staminaRegenDelay = 0.5;
