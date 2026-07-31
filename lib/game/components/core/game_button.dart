@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class GameButton extends StatefulWidget {
-  final Widget child; // A imagem ou desenho do seu botão atual
-  final VoidCallback onDown; // O que acontece quando aperta
-  final VoidCallback onUp;   // O que acontece quando solta
+  final Widget child;
+  final VoidCallback onDown; 
+  final VoidCallback onUp;  
 
   const GameButton({
     super.key,
@@ -21,7 +21,6 @@ class _GameButtonState extends State<GameButton> {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos o Listener porque ele não tem delay de toque (perfeito para jogos)
     return Listener(
       onPointerDown: (_) {
         setState(() {
@@ -35,7 +34,6 @@ class _GameButtonState extends State<GameButton> {
         });
         widget.onUp();
       },
-      // O Cancel é disparado se o jogador arrastar o dedo para fora do botão
       onPointerCancel: (_) {
         setState(() {
           _isPressed = false;
@@ -43,11 +41,11 @@ class _GameButtonState extends State<GameButton> {
         widget.onUp();
       },
       child: AnimatedScale(
-        scale: _isPressed ? 0.85 : 1.0, // Encolhe o botão em 15% quando pressionado
-        duration: const Duration(milliseconds: 50), // Animação hiper rápida
+        scale: _isPressed ? 0.85 : 1.0,
+        duration: const Duration(milliseconds: 50), 
         curve: Curves.easeOut,
         child: AnimatedOpacity(
-          opacity: _isPressed ? 0.6 : 1.0, // Deixa o botão 40% mais escuro/transparente
+          opacity: _isPressed ? 0.6 : 1.0, 
           duration: const Duration(milliseconds: 50),
           child: widget.child,
         ),

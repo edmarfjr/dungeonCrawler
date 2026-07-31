@@ -97,7 +97,7 @@ class SaveManager {
       ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.meat2, ItemDatabase.web, ItemDatabase.slimeEye,
       ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin, ItemDatabase.rubi,  ItemDatabase.esmeralda, ItemDatabase.safira,
       // magias
-      ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm,
+      ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm, ItemDatabase.cura,
     ];
     
     for(var itemData in sData['inventory']) {

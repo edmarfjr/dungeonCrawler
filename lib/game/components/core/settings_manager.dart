@@ -5,22 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsManager {
   static late SharedPreferences prefs;
 
-  // Carrega tudo quando o jogo abre
   static Future<void> init() async {
     prefs = await SharedPreferences.getInstance();
 
-    AudioManager.bgmVolumeLevel = prefs.getInt('bgmVolume') ?? 3; // Padrão: 3
-    AudioManager.sfxVolumeLevel = prefs.getInt('sfxVolume') ?? 10; // Padrão: 10
-    AudioManager.applyVolumes(); // Aplica a matemática para o motor de som
+    AudioManager.bgmVolumeLevel = prefs.getInt('bgmVolume') ?? 3; 
+    AudioManager.sfxVolumeLevel = prefs.getInt('sfxVolume') ?? 10; 
+    AudioManager.applyVolumes(); 
     
     // --- CARREGAR ÁUDIO ---
-    // Se não encontrar o save (?? false), o padrão é começar ligado (false = não mutado)
     AudioManager.isMusicMuted = prefs.getBool('isMusicMuted') ?? false;
     AudioManager.isSfxMuted = prefs.getBool('isSfxMuted') ?? false;
     
     // --- CARREGAR IDIOMA ---
-    // O padrão será português ('pt') se for a primeira vez
-    String savedLang = prefs.getString('language') ?? 'pt';
+    String savedLang = prefs.getString('language') ?? 'en';
     I18n.currentLanguage = (savedLang == 'en') ? AppLanguage.en : AppLanguage.pt;
   }
 
@@ -31,7 +28,7 @@ class SettingsManager {
   static Future<void> saveSfxVolume(int level) async {
     await prefs.setInt('sfxVolume', level);
   }
-  // Métodos para salvar cada alteração individualmente
+  
   static Future<void> saveMusic(bool isMuted) async {
     await prefs.setBool('isMusicMuted', isMuted);
   }

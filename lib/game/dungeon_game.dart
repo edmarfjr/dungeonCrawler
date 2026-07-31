@@ -744,17 +744,22 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   @override
   void render(Canvas canvas) {
+    canvas.save(); // <-- PROTEÇÃO MÁXIMA: Salva o canvas 100% limpo!
+
     if (shakeTimer > 0) {
-      canvas.save();
       double dx = (Random().nextDouble() - 0.5) * shakeIntensity;
       double dy = (Random().nextDouble() - 0.5) * shakeIntensity;
       canvas.translate(dx, dy);
-      super.render(canvas);
-      canvas.restore();
     }
-    else {
-      super.render(canvas);
-    }
+    
+    super.render(canvas); // Desenha o Labirinto, Inimigos e o MINIMAPA
+    
+    canvas.restore(); // <-- LIMPEZA: Desfaz qualquer escala fantasma esquecida por outros componentes!
+
+    // ===================================================================
+    // A partir daqui, o canvas está matematicamente perfeito e intocável!
+    // A sua UI vai desenhar exatamente onde mandámos, em qualquer tela.
+    // ===================================================================
 
     switch (currentState) {
       case GameState.shop: _renderShop(canvas); break;

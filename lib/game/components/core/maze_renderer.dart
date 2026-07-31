@@ -186,7 +186,6 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       }
     }
 
-    // Fundo preto garantido (para cobrir além do que o labirinto renderiza)
     canvas.drawRect(Rect.fromLTWH(-_currentViewWidth, -_currentViewHeight, _currentViewWidth * 3, _currentViewHeight * 3), Paint()..color = Palette.preto );
 
     if (gameRef.isDarkRoom) {

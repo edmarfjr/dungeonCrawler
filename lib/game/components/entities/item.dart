@@ -583,7 +583,7 @@ class ItemDatabase {
       item.quantity++;
       return;
     }
-    double cura =item.power*game.playerCombatStats.wis;
+    double cura = game.playerCombatStats.maxHp * (item.power*game.playerCombatStats.wis)/100;
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + cura);
     game.playerCombatStats.applyEffect(0.5,Palette.vermelho) ;
     game.showMessage(I18n.t('recupera_hp').replaceFirst('[hp]', item.power.toString()));
