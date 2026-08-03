@@ -1,6 +1,7 @@
+import 'package:a_blade_in_the_abyss/game/components/core/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:a_blade_in_the_abyss/game/dungeon_game.dart'; // Ajuste o seu import
+import 'package:a_blade_in_the_abyss/game/dungeon_game.dart'; 
 import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
 
 class ManualOverlay extends StatefulWidget {
@@ -39,6 +40,15 @@ class _ManualOverlayState extends State<ManualOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    // VERIFICAÇÃO DE PLATAFORMA: Define os tamanhos com base no layout
+    bool isDesktop = widget.game.isDesktopLayout;
+    
+    double titleFontSize = isDesktop ? 40.0 : 20.0;
+    double bodyFontSize = isDesktop ? 22.0 : 13.0;
+    double footerFontSize = isDesktop ? 20.0 : 13.0;
+    double paddingHorizontal = isDesktop ? 60.0 : 20.0;
+    double paddingVertical = isDesktop ? 40.0 : 25.0;
+
     return Align(
       alignment: Alignment.topCenter,
       child: KeyboardListener(
@@ -59,36 +69,36 @@ class _ManualOverlayState extends State<ManualOverlay> {
           child: Material(
             color: Colors.transparent,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
+              padding: EdgeInsets.fromLTRB(paddingHorizontal, paddingVertical, paddingHorizontal, 10),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     "MANUAL DE INSTRUÇÕES",
                     style: TextStyle(
                       fontFamily: 'pixelFont',
                       color: Palette.amarelo,
-                      fontSize: 20,
+                      fontSize: titleFontSize,
                       fontWeight: FontWeight.bold,
                       decoration: TextDecoration.none,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: isDesktop ? 24 : 12),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Palette.branco, width: 2),
+                        border: Border.all(color: Palette.branco, width: isDesktop ? 4 : 2),
                         color: Colors.black.withOpacity(0.3),
                       ),
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(isDesktop ? 24 : 12),
                       child: SingleChildScrollView(
                         controller: _scrollController, // Vinculado!
                         physics: const BouncingScrollPhysics(),
                         child: Text(
                           _getManualContent(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'pixelFont',
                             color: Palette.branco,
-                            fontSize: 13,
+                            fontSize: bodyFontSize,
                             height: 1.4,
                             decoration: TextDecoration.none,
                           ),
@@ -96,33 +106,31 @@ class _ManualOverlayState extends State<ManualOverlay> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: isDesktop ? 20 : 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "[▲▼] Controles ou Arrastar",
                         style: TextStyle(
                           fontFamily: 'pixelFont',
                           color: Palette.branco,
-                          fontSize: 13,
+                          fontSize: footerFontSize,
                         ),
                       ),
                       TextButton(
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                          backgroundColor: Colors.redAccent.withOpacity(0.2),
-                          side: const BorderSide(color: Colors.redAccent),
                         ),
                         onPressed: () {
                           widget.game.closeManual();
                         },
-                        child: const Text(
-                          "SAIR [B]",
+                        child: Text(
+                          I18n.t('b_voltar'),
                           style: TextStyle(
                             fontFamily: 'pixelFont',
-                            color: Colors.redAccent,
-                            fontSize: 12,
+                            color: Palette.amarelo,
+                            fontSize: footerFontSize,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -139,55 +147,13 @@ class _ManualOverlayState extends State<ManualOverlay> {
   }
 
   String _getManualContent() {
-    return " PRÓLOGO: QUEDA NA ESCURIDÃO\n"
-        "Nenhum cavaleiro retornou com vida de Gnothrok.\n"
-        "Explore o labirinto e desça as escadarias ocultas!\n\n"
-        " MODO EXPLORAÇÃO (Navegação)\n"
-        "- Seta [▲]/[▼]: Anda para frente/trás.\n"
-        "- Seta [◄]/[►]: Gira a visão em 90 graus.\n"
-        "- Botão [A]: Interagir / Passar turno.\n"
-        "- Botão [B]: Abre / fecha inventário.\n"
-        " MODO COMBATE (Batalhas)\n"
-        "- Seta [◄]/[►]: Deslocamento lateral\n"
-        "- Clique duplo [◄◄] / [►►]: Dash\n"
-        "- Seta [▲]: Alterna a Magia/Item selecionado\n"
-        "- Seta [▼]: Levanta o escudo.\n"
-        "- Botão [A]: Ataca.\n"
-        "- Botão [B]: Usa a Magia/Item selecionado.\n\n"
-        " ATRIBUTOS & EVOLUÇÃO (Altares)\n"
-        "Gaste Essências acumuladas nos Altares para\n"
-        "adquirir 3 pontos de melhoria de status:\n"
-        "1. FORÇA (STR): Dano físico e Regeneração de Stamina.\n"
-        "2. CONSTITUIÇÃO (CON): Aumenta HP e Stamina.\n"
-        "3. SABEDORIA (WIS): Aumenta Mana e dano mágico.\n\n"
-      /*  "🔮 MAGIAS EM DESTAQUE\n"
-        "- Tiro Perfurante (10 Mana): Onda cinza que fura\n"
-        "  e hita todas as fileiras de monstros de uma vez.\n"
-        "- Olho de Slime (12 Mana): Projétil rebatedor\n"
-        "  estilo Pinball. Quica 12 vezes nas paredes e\n"
-        "  aplica Stun de 1.5s (paralisia) nos monstros.\n\n"
-        "👾 BESTIÁRIO DAS PROFUNDEZAS\n"
-        "- Gelatina (Slime): Salta erraticamente.\n"
-        "- Aranha: Dá botes verticais rápidos do teto.\n"
-        "- Lacaio (Goblin): Corre para as paredes se\n"
-        "  ficar encurralado na linha de frente.\n"
-        "- Mímico: Baú falso. Só toma dano quando abre\n"
-        "  a boca para golpear.\n"
-        "- Morcego: Mergulha na diagonal vindo do alto.\n"
-        "- Orc Comum: Lê sua mente e ergue o escudo em\n"
-        "  tempo real se você tentar atacá-lo.\n\n"
-        "👑 SUPREMO: ORC CHEFE (BOSS)\n"
-        "Possui 250 HP e habilidades implacáveis:\n"
-        "- Ataque Pesado (Aura Vermelha): Demora 1.2s\n"
-        "  para carregar, dá 30 de dano e é INDEFENSÁVEL.\n"
-        "  Você deve desviar usando o Dash horizontal!\n"
-        "- Berrante (Aura Verde): Canaliza por 1.5s e\n"
-        "  invoca um Goblin Lacaio na linha de trás.\n\n"
-        "💎 RECOMPENSAS EM FILA REATIVA\n"
-        "Ao vencer, os saques de essências e drops são\n"
-        "empilhados em uma fila de mensagens. Pressione\n"
-        "[A] para esvaziar a fila e ler uma por uma.\n"
-        "O combate só fecha quando a lista acabar!" */
-        ;
+    return "${I18n.t('man_prologue_title')}\n"
+           "${I18n.t('man_prologue_text')}\n\n"
+           "${I18n.t('man_explo_title')}\n"
+           "${I18n.t('man_explo_text')}\n\n"
+           "${I18n.t('man_combat_title')}\n"
+           "${I18n.t('man_combat_text')}\n\n"
+           "${I18n.t('man_attrib_title')}\n"
+           "${I18n.t('man_attrib_text')}\n\n";
   }
 }

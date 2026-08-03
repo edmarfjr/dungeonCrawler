@@ -96,7 +96,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   // --- BESTIÁRIO ---
   Map<EnemyType, int> bestiaryKills = {};
-  int bestiaryCursor = 0;
+  ValueNotifier<int> bestiaryCursor = ValueNotifier<int>(0);
   int bestiaryScrollOffset = 0;
 
 
@@ -197,13 +197,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     _selectTextPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
     _dangerTextPaint = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
 
-    await FlameAudio.audioCache.loadAll([
-      'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
-      'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
-      'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
-      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav'
-    ]);
-    
     await images.loadAll([
       'itens/dagger.png', 'itens/armor.png', 'itens/potion.png', 'itens/potionVermelha.png',
       'itens/potionVerde.png', 'itens/potionAzul.png', 'itens/potionAmarela.png', 'itens/tanga.png',
@@ -355,14 +348,19 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     minimap = MinimapRenderer();
     add(minimap);
 
-    FlameAudio.bgm.initialize();
+    await AudioManager.init();
 
     await FlameAudio.audioCache.loadAll([
-      'music/8-bit-dungeon.mp3',
+      'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
+      'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
+      'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
+      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav'
+      'music/8-bit-dungeon.ogg',
       'music/main-menu.ogg',
-      'music/boss-battle.mp3',
-      'music/gameover.mp3'
+      'music/boss-battle.ogg',
+      'music/gameover.ogg'
     ]);
+
   }
 
   @override
@@ -768,7 +766,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.shop: _renderShop(canvas); break;
       case GameState.inventory: _renderInventory(canvas); break;
       case GameState.levelUp: _renderLevelUp(canvas); break;
-      case GameState.bestiary: _renderBestiary(canvas); break;
       default: break;
     }
 
@@ -1250,110 +1247,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
   }
 
-  void _renderBestiary(Canvas canvas) {
-    //double scaleFactor = isDesktopLayout ? (size.y / 720.0).clamp(0.1, 5.0) : (size.x / 500.0).clamp(0.1, 5.0);
-    //double logicalWidth = size.x ;
-    //double logicalHeight = size.y ;
-
-    double boxW = size.x ;
-    double boxH = size.y ;
-    double startX = (size.x - boxW) / 2;
-    double startY = (size.y - boxH) / 2;
-
-    int visibleItems = 9;
-    double itemH = 30;
-    double font = 14;
-    double fontTitle = 22;
-    
-    double leftW = boxW * 0.45;
-    double rightW = boxW * 0.55;
-
-    double rightX = startX + leftW + 20;
-    double rightY = startY + 60;
-
-    double descriYOffset = 40;
-
-    if (isDesktopLayout){
-      itemH = 50;
-      font = 26;
-      fontTitle = 44;
-      rightY += 20;
-      descriYOffset = 60;
-    }
-
-    // Fundo
-    canvas.drawRect(Rect.fromLTWH(startX, startY, boxW, boxH), Paint()..color = Palette.preto);
-    //canvas.drawRect(Rect.fromLTWH(startX, startY, boxW, boxH), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
-
-    // Título
-    final titlePainter = TextPainter(text: TextSpan(text: I18n.t('bestiario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: fontTitle, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
-    titlePainter.paint(canvas, Offset(startX + (boxW - titlePainter.width) / 2, startY + 15));
-
-    // Lista de Inimigos (Esquerda)
-    canvas.save();
-    canvas.clipRect(Rect.fromLTWH(startX, startY + 60, leftW, boxH - 80));
-
-    
-
-    if (bestiaryCursor < bestiaryScrollOffset) bestiaryScrollOffset = bestiaryCursor;
-    if (bestiaryCursor >= bestiaryScrollOffset + visibleItems) bestiaryScrollOffset = bestiaryCursor - visibleItems + 1;
-
-    for (int i = 0; i < EnemyType.values.length; i++) {
-      double yPos = startY + 60 + ((i - bestiaryScrollOffset) * itemH);
-      if (yPos < startY + 50 || yPos > startY + boxH - 20) continue;
-
-      EnemyType type = EnemyType.values[i];
-      int kills = bestiaryKills[type] ?? 0;
-      int reqKills = _getEnemyReqKills(type);
-      bool unlocked = kills >= reqKills;
-      bool selected = (i == bestiaryCursor);
-
-      Color textColor = selected ? Palette.amarelo : (unlocked ? Palette.branco : Palette.cinzaEsc);
-      String nameStr = unlocked ? I18n.t(type.name).toUpperCase() : "???";
-      String prefix = selected ? "> " : "  ";
-
-      TextPainter(text: TextSpan(text: "$prefix$nameStr", style: TextStyle(fontFamily: 'pixelFont', color: textColor, fontSize: font)), textDirection: TextDirection.ltr)
-        ..layout(maxWidth: leftW)
-        ..paint(canvas, Offset(startX + 10, yPos));
-    }
-    canvas.restore();
-
-    // Divisória
-    canvas.drawLine(Offset(startX + leftW, startY + descriYOffset+20), Offset(startX + leftW, startY + boxH - 20), Paint()..color = Palette.cinzaEsc..strokeWidth = 4);
-
-    // Detalhes do Inimigo (Direita)
-    EnemyType selectedType = EnemyType.values[bestiaryCursor];
-    int kills = bestiaryKills[selectedType] ?? 0;
-    int reqKills = _getEnemyReqKills(selectedType);
-    bool unlocked = kills >= reqKills;
-
-    if (!unlocked) {
-      TextPainter(text: TextSpan(text: I18n.t('desconhecido'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.vermelho, fontSize: fontTitle)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(rightX, rightY));
-      TextPainter(text: TextSpan(text: I18n.t('derrote_mais').replaceAll('{kills}', (reqKills - kills).toString()), style: TextStyle(fontFamily: 'pixelFont', color: Palette.cinzaCla, fontSize: font)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(rightX, rightY + descriYOffset));
-    } else {
-      Map<String, dynamic> info = _getEnemyInfo(selectedType);
-      TextPainter(text: TextSpan(text: selectedType.name.toUpperCase(), style: TextStyle(fontFamily: 'pixelFont', color: Palette.verdeCla, fontSize: fontTitle)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(rightX, rightY));
-
-      // Desenha a Sprite do Inimigo (Pega o frame parado)
-      ui.Image? spr = enemySheets[selectedType];
-      
-      if (spr != null) {
-        double FrameSize = spr.height.toDouble()/2;
-        Rect src = Rect.fromLTWH(0, 0, FrameSize, FrameSize); // Assumindo 4 frames de animação
-        Rect dst = Rect.fromLTWH(rightX, rightY + 40, 96, 96);
-        canvas.drawImageRect(spr, src, dst, Paint());
-      }
-
-      String statsText = "Abates: $kills\nHP: ${info['hp']}\nDMG: ${info['dmg']}\n\n${info['desc']}";
-      TextPainter(text: TextSpan(text: statsText, style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: font)), textDirection: TextDirection.ltr)
-        ..layout(maxWidth: rightW - 40)
-        ..paint(canvas, Offset(rightX, rightY + 150));
-    }
-
-    // Ajuda de Rodapé
-    TextPainter(text: TextSpan(text: I18n.t('b_voltar'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: font)), textDirection: TextDirection.ltr)..layout()..paint(canvas, Offset(startX + boxW - 130, startY + boxH - 30));
-  }
-
   void _renderMessageQueue(Canvas canvas) {
     double boxWidth = isDesktopLayout ? size.x * 0.5 : size.x * 0.85;
     double border = isDesktopLayout ? 8 : 4;
@@ -1418,6 +1311,17 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(currentState == GameState.mainMenu) overlays.remove('MainMenu');
     previousState2 = currentState; 
     currentState = GameState.bestiary; 
+    bestiaryCursor.value = 0;
+    overlays.add('BestiaryMenu'); // <-- ADICIONADO: Chama o novo Overlay Flutter!
+  }
+
+  // <-- ADICIONADO: Função para fechar o Bestiário via Overlay
+  void closeBestiary() {
+    AudioManager.playSfx('sfx/decline.wav');
+    currentState = previousState2; 
+    overlays.remove('BestiaryMenu');
+    if (currentState == GameState.mainMenu) overlays.add('MainMenu');
+    if (currentState == GameState.paused) overlays.add('PauseMenu');
   }
 
   void openShop() {
@@ -1619,7 +1523,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         if (isLeft) startInput(GameInput.left);
         if (isRight) startInput(GameInput.right);
       } 
-      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused, GameState.settings, GameState.bestiary].contains(currentState)) {
+      else if ([GameState.inventory, GameState.combat, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused, 
+      GameState.settings, GameState.bestiary].contains(currentState)) {
         if (isUp) startInput(GameInput.up);
         if (isDown) startInput(GameInput.down);
 
@@ -1736,7 +1641,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     overlays.add('MainMenu');
     
     //AudioManager.playBgm('music/main-menu.ogg'); 
-    // (Ajuste para .mp3 se tiver voltado atrás na conversão)
+    // (Ajuste para .ogg se tiver voltado atrás na conversão)
   }
 
   void _handleExplorationInput(GameInput input) {
@@ -2100,7 +2005,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       AudioManager.playBgm('music/main-menu.ogg');
     }
     if (isMainMenuAnimating) return;
-    int maxOptions = hasSavedGame ? 4 : 5; 
+    int maxOptions = hasSavedGame ? 3 : 4; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
     if (input == GameInput.buttonA) {
@@ -2120,22 +2025,19 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
-  void _handleBestiaryInput(GameInput input) {
+    void _handleBestiaryInput(GameInput input) {
     if (input == GameInput.up) {
-      bestiaryCursor--;
-      if (bestiaryCursor < 0) bestiaryCursor = EnemyType.values.length - 1;
+      bestiaryCursor.value--;
+      if (bestiaryCursor.value < 0) bestiaryCursor.value = EnemyType.values.length - 1;
       AudioManager.playSfx('sfx/hover.wav');
     } 
     else if (input == GameInput.down) {
-      bestiaryCursor++;
-      if (bestiaryCursor >= EnemyType.values.length) bestiaryCursor = 0;
+      bestiaryCursor.value++;
+      if (bestiaryCursor.value >= EnemyType.values.length) bestiaryCursor.value = 0;
       AudioManager.playSfx('sfx/hover.wav');
     } 
     else if (input == GameInput.buttonB || input == GameInput.pause) {
-      AudioManager.playSfx('sfx/decline.wav');
-      currentState = previousState2; // Retorna de onde veio (MainMenu ou PauseMenu)
-      if (currentState == GameState.mainMenu) overlays.add('MainMenu');
-      if (currentState == GameState.paused) overlays.add('PauseMenu');
+      closeBestiary();
     }
   }
 
@@ -2422,7 +2324,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _endEncounter() {
     playerCombatStats.currentPhase = CombatPhase.exiting; playerCombatStats.animTimer = 1; 
     if(isBoss){
-      AudioManager.playBgm('music/8-bit-dungeon.mp3');
+      AudioManager.playBgm('music/8-bit-dungeon.ogg');
     }
     isMimic = false; isBoss = false;
   }   
@@ -2433,7 +2335,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     combatOverlay.startEncounter(enemies);
     playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 0.5;
     if(isBoss){
-      AudioManager.playBgm('music/boss-battle.mp3');
+      AudioManager.playBgm('music/boss-battle.ogg');
     }
   }
 
@@ -2489,12 +2391,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
     isRunStartAnimating = true;
     runStartAnimTimer = 0.0;
-    AudioManager.playBgm('music/8-bit-dungeon.mp3');
+    AudioManager.playBgm('music/8-bit-dungeon.ogg');
   }
 
   void handlePlayerDeath() async { 
-    apagaSave();
-    AudioManager.playBgm('music/gameover.mp3');
+    //apagaSave();
+    AudioManager.playBgm('music/gameover.ogg');
     for (var e in combatOverlay.enemies) {
       e.isAlive = false;
     }
@@ -2530,12 +2432,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
-  int _getEnemyReqKills(EnemyType type) {
+  int getEnemyReqKills(EnemyType type) {
     if (type.name.contains('boss') || type.name == 'mimic') return 1;
     return 10;
   }
 
-  Map<String, dynamic> _getEnemyInfo(EnemyType type) {
+  Map<String, dynamic> getEnemyInfo(EnemyType type) {
     int hp = 20; int dmg = 3; String desc = "";
 
     switch(type) {

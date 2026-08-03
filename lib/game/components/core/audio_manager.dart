@@ -7,6 +7,7 @@ class AudioManager {
   static String? currentTrack;      
   static bool _isBgmInitialized = false;
   static bool _isBgmPausedInternally = false;
+  
   // Níveis de volume para a Interface (0 a 10)
   static int bgmVolumeLevel = 3;
   static int sfxVolumeLevel = 10;
@@ -14,6 +15,27 @@ class AudioManager {
   // Multiplicadores reais para o motor de áudio (0.0 a 1.0)
   static double _bgmVolume = 0.3;
   static double _sfxVolume = 1.0;
+
+  // NOVO: Mapa de AudioPools para evitar a criação de instâncias nativas repetidas!
+  static final Map<String, AudioPool> _sfxPools = {};
+
+  // NOVO: Função de inicialização obrigatória. Deve ser chamada no onLoad do jogo!
+  static Future<void> init() async {
+    // Lista de todos os efeitos sonoros rápidos do jogo
+    final sfxFiles = [
+      'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
+      'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
+      'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
+      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav'
+    ];
+
+    // Criamos um "Pool" (Piscina) para cada som. 
+    // maxPlayers: 3 significa que até 3 sons iguais podem tocar ao mesmo tempo sem cancelar o anterior.
+    // Isso move o processamento pesado do momento do combate para a tela de carregamento (Splash).
+    for (var file in sfxFiles) {
+      _sfxPools[file] = await FlameAudio.createPool(file, minPlayers: 1, maxPlayers: 3);
+    }
+  }
 
   static void applyVolumes() {
     // A música costuma ser muito alta, então o máximo (10) será 50% do volume real
@@ -30,7 +52,13 @@ class AudioManager {
 
   static void playSfx(String file, {double volume = 1.0}) {
     if (sfxVolumeLevel > 0) {
-      FlameAudio.play(file, volume: _sfxVolume * volume);
+      if (_sfxPools.containsKey(file)) {
+        // Se o som está no pool (RAM), dispara instantaneamente com ZERO custo de CPU!
+        _sfxPools[file]!.start(volume: _sfxVolume * volume);
+      } else {
+        // Fallback: Se você esquecer de registrar algum som no init(), ele roda da forma antiga.
+        FlameAudio.play(file, volume: _sfxVolume * volume);
+      }
     }
   }
 
@@ -67,7 +95,7 @@ class AudioManager {
       if (_isBgmInitialized) {
         FlameAudio.bgm.resume();
       } else {
-        FlameAudio.bgm.play(currentTrack!, volume: 0.3);
+        FlameAudio.bgm.play(currentTrack!, volume: _bgmVolume);
         _isBgmInitialized = true;
       }
     }
@@ -89,12 +117,13 @@ class AudioManager {
         if (_isBgmInitialized) {
           FlameAudio.bgm.resume();
         } else {
-          FlameAudio.bgm.play(currentTrack!, volume: 0.3);
+          FlameAudio.bgm.play(currentTrack!, volume: _bgmVolume);
           _isBgmInitialized = true;
         }
       }
     }
   }
+
   static void changeSfxVolume(int delta) {
     sfxVolumeLevel = (sfxVolumeLevel + delta).clamp(0, 10); // Mantém entre 0 e 10
     applyVolumes();
@@ -124,5 +153,4 @@ class AudioManager {
       }
     }
   }
-
 }

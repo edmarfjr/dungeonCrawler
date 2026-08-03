@@ -150,8 +150,6 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
             break;
           case TileType.shrine:
             tilePaint.color = Palette.roxo;
-            tilePaint.style = PaintingStyle.stroke;
-            tilePaint.strokeWidth = 2;
             canvas.drawRect(Rect.fromLTWH(renderX, renderY, tileSize, tileSize), tilePaint);
             break;
           case TileType.brokenShrine:

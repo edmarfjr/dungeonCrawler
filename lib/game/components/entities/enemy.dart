@@ -636,7 +636,7 @@ class OrcEnemy extends Enemy {
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -807,7 +807,7 @@ class OrcChefe extends Enemy {
     bool isSelfAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
                            currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.45) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.45 && isFrontRow) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -963,7 +963,7 @@ class BugEnemy extends Enemy {
       isFleeing = false;
     }
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1346,7 +1346,7 @@ class InfectadoEnemy extends Enemy {
                            currentPhase == CombatPhase.active2 || 
                            currentPhase == CombatPhase.recovery2;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1629,7 +1629,7 @@ class EsqueletoEnemy extends Enemy {
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1732,7 +1732,7 @@ class JesterEnemy extends Enemy {
                            currentPhase == CombatPhase.active || 
                            currentPhase == CombatPhase.recovery;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
       animTimer = 0.5; 
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
@@ -1842,7 +1842,7 @@ class NagaEnemy extends Enemy {
                            currentPhase == CombatPhase.active2 || 
                            currentPhase == CombatPhase.recovery2;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer<=0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {
       currentPhase = CombatPhase.idle;
@@ -1994,7 +1994,7 @@ class HandEnemy extends Enemy {
     bool isSelfAttacking = currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery ||
                            currentPhase == CombatPhase.windup2 || currentPhase == CombatPhase.active2 || currentPhase == CombatPhase.recovery2;
 
-    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3) {
+    if (isPlayerAttacking && !isSelfAttacking && distanceToPlayer <= 0.3 && isFrontRow) {
       currentPhase = CombatPhase.guard;
       animTimer = 0.5; 
     } else if (currentPhase == CombatPhase.guard && !isPlayerAttacking) {

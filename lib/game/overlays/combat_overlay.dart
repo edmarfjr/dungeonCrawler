@@ -510,8 +510,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     return Rect.fromCenter(
       center: Offset(playerCX, playerCY),
-      width: 100 * baseSizeMultiplier, 
-      height: 140 * baseSizeMultiplier
+      width: 60 * baseSizeMultiplier, 
+      height: 130 * baseSizeMultiplier
     );
   }
 
@@ -521,12 +521,12 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     double playerCY = logicalSize.y - 65 - ((196 * baseSizeMultiplier) / 2) - 60.0; 
     
     bool wide = playerStats.equippedWeapon?.isWide ?? false;
-    double hitWidth = wide ? 140.0 : 70.0;
+    double hitWidth = wide ? 120.0 : 60.0;
     
     return Rect.fromCenter(
       center: Offset(playerCX, playerCY),
       width: hitWidth * baseSizeMultiplier, 
-      height: 120 * baseSizeMultiplier
+      height: 80 * baseSizeMultiplier
     );
   }
 

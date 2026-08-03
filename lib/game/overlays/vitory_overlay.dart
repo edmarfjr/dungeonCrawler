@@ -21,7 +21,6 @@ class VictoryCutsceneOverlay extends StatefulWidget {
 }
 
 class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
-  // === DEFINA AQUI AS CENAS DO SEU FINAL ===
   final List<CutsceneFrame> framesRuim = [
     CutsceneFrame('assets/images/tilesets/tunel.png', "finalRuim1"),
     CutsceneFrame('assets/images/tilesets/paisagemAlien.png', "finalRuim2"),
@@ -34,7 +33,7 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
     CutsceneFrame('assets/images/tilesets/retratoFeliz.png', 'finalBom3'),
   ];
 
-  List<CutsceneFrame> frames =[];
+  List<CutsceneFrame> frames = [];
 
   int currentFrame = 0;
   String visibleText = "";
@@ -45,17 +44,18 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
   double _opacity = 0.0;
   bool _isFadingOut = false;
 
-
   @override
   void initState() {
     super.initState();
     widget.game.victoryInputNotifier.addListener(_handleInput);
     AudioManager.playBgm('music/main-menu.ogg'); 
+    
     if(widget.game.finalBom){
       frames = framesBom;
-    }else{
+    } else {
       frames = framesRuim;
     }
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _opacity = 1.0);
     });
@@ -95,19 +95,16 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
 
     setState(() {
       if (isTyping) {
-        // Pular a digitação (mostra tudo de uma vez)
         isTyping = false;
         typingTimer?.cancel();
-        String fullText = frames[currentFrame].text;
+        String fullText = I18n.t(frames[currentFrame].text); 
         charIndex = fullText.length;
         visibleText = fullText;
       } else {
-        // Avançar para a próxima cena
         if (currentFrame < frames.length - 1) {
           currentFrame++;
           _startTyping();
         } else {
-          // Fim da cutscene -> Fade out para o menu principal
           _isFadingOut = true;
           _opacity = 0.0;
         }
@@ -124,6 +121,14 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDesktop = widget.game.isDesktopLayout;
+    
+    double fontSize = isDesktop ? 26.0 : 15.0;
+    double paddingHorizontal = isDesktop ? widget.game.size.x * 0.15 : 20.0;
+    double paddingVertical = isDesktop ? 40.0 : 20.0;
+    
+    double borderWidth = isDesktop ? 8.0 : 4.0;
+
     return GestureDetector(
       onTap: _handleInput,
       child: Container(
@@ -135,17 +140,15 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
           duration: const Duration(milliseconds: 800),
           onEnd: () {
             if (_opacity == 0.0 && mounted) {
-              // Quando o fade out terminar, reseta e vai para o menu principal
               widget.game.apagaSave();
               widget.game.quitToMainMenu();
             }
           },
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.symmetric(horizontal: paddingHorizontal, vertical: paddingVertical),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // A IMAGEM DA CENA ATUAL (com errorBuilder para evitar crash)
                 Expanded(
                   flex: 3,
                   child: Image.asset(
@@ -157,24 +160,29 @@ class _VictoryCutsceneOverlayState extends State<VictoryCutsceneOverlay> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                // A CAIXA DE TEXTO ESTILO RPG
+                SizedBox(height: isDesktop ? 30 : 15),
+                
                 Expanded(
-                  flex: 2,
+                  flex: isDesktop ? 1 : 2, 
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(isDesktop ? 24.0 : 16.0),
                     decoration: BoxDecoration(
                       color: Palette.preto,
+                      border: Border.all(color: Palette.marromCla, width: borderWidth),
                     ),
-                    child: Text(
-                      visibleText,
-                      style: const TextStyle(
-                        fontFamily: 'pixelFont',
-                        color: Palette.branco,
-                        fontSize: 16,
-                        height: 1.5,
-                        decoration: TextDecoration.none,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Text(
+                        visibleText,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'pixelFont',
+                          color: Palette.branco,
+                          fontSize: fontSize,
+                          height: 1.5,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ),
                   ),

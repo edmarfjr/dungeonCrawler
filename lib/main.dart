@@ -2,6 +2,7 @@ import 'package:a_blade_in_the_abyss/game/components/core/game_button.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/settings_manager.dart';
 import 'package:a_blade_in_the_abyss/game/dungeon_game.dart';
+import 'package:a_blade_in_the_abyss/game/overlays/bestiary_overlay.dart';
 import 'package:a_blade_in_the_abyss/game/overlays/crt_overlay_widget.dart';
 import 'package:a_blade_in_the_abyss/game/overlays/gameover_overlay.dart';
 import 'package:a_blade_in_the_abyss/game/overlays/intro_overlay.dart';
@@ -84,6 +85,7 @@ class _GameScreenState extends State<GameScreen> {
         'ManualMenu': (context, game) => ManualOverlay(game: game as DungeonCrawlerGame),
         'Victory': (context, game) => VictoryCutsceneOverlay(game: game as DungeonCrawlerGame),
         'settings': (context, game) => SettingsMenuOverlay(game: game as DungeonCrawlerGame),
+        'BestiaryMenu': (context, game) => BestiaryOverlay(game: game as DungeonCrawlerGame),
       },
       initialActiveOverlays: const ['Splash'],
     );
