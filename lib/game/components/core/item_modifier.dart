@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:a_blade_in_the_abyss/game/components/entities/item.dart';
+
 class ItemModifier {
   final String name; 
   final String id; 
@@ -68,18 +70,45 @@ class ItemModifier {
     powerMultiplier: 1.4, valueMultiplier: 2.0
   );
 
-  // Lista para sorteio
-  static const List<ItemModifier> _pool = [
-    rusty, sharp, balanced, heavy, light, broken, masterwork, magical
+  static const ItemModifier reinforced = ItemModifier(
+    name: "Reforçado", id: "mod_reinforced", 
+    powerMultiplier: 1.3, weightModifier: 1, valueMultiplier: 1.5
+  );
+
+  static const ItemModifier impenetrable = ItemModifier(
+    name: "Impenetrável", id: "mod_impenetrable", 
+    powerMultiplier: 1.6, weightModifier: 2, staMultiplier: 1.2, valueMultiplier: 2.0
+  );
+
+   // === LISTAS SEPARADAS POR TIPO ===
+  
+  // Pool de Armas (Inclui Afiado, Balanceado, etc)
+  static const List<ItemModifier> _weaponPool = [
+    rusty, sharp, balanced, unbalanced, heavy, light, broken, masterwork, magical,
   ];
 
-  // Função para pegar um modificador aleatório
-  // passamos uma chance de vir "normal" (sem modificador)
-  static ItemModifier getRandomModifier({double chanceForNormal = 0.4}) {
+  // Pool de Defesa (Inclui Reforçado, Impenetrável, etc)
+  static const List<ItemModifier> _armorShieldPool = [
+    rusty, heavy, light, broken, masterwork, magical, reinforced, impenetrable,
+  ];
+
+  // Função atualizada para receber o ItemType
+  static ItemModifier getRandomModifier(ItemType type, {double chanceForNormal = 0.4}) {
     final rand = Random();
     if (rand.nextDouble() < chanceForNormal) {
       return normal;
     }
-    return _pool[rand.nextInt(_pool.length)];
+    
+    // Escolhe a lista correta baseada no tipo do item
+    List<ItemModifier> pool;
+    if (type == ItemType.weapon) {
+      pool = _weaponPool;
+    } else if (type == ItemType.armor || type == ItemType.shield) {
+      pool = _armorShieldPool;
+    } else {
+      return normal; // Prevenção de erros para consumíveis/outros
+    }
+
+    return pool[rand.nextInt(pool.length)];
   }
 }

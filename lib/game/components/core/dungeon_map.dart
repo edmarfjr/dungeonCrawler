@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:a_blade_in_the_abyss/game/components/entities/item.dart';
 
-enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, boss, crate, poison, shop, font, fontPoison, teleport, secretWall, lore }
+enum TileType {entry, wall, floor, door, chest, openChest, spike, shrine, brokenShrine, boss, crate, openCrate, poison, shop, font, fontPoison, teleport, secretWall, lore }
 enum Direction { north, east, south, west } 
 
 class DungeonMap {

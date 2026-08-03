@@ -55,8 +55,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late Map<EnemyType, ui.Image> enemySlashSprites;
   late ui.Image playerSheet, playerSlashSprite1, playerSlashSprite2;
   late ui.Image weaponSheet, armorSheet, shieldSheet;
-  late ui.Image keySprite, doorTexture, doorTexture2, chestSprite, crateSprite, openChestSprite;
-  late ui.Image trapImage, trapImage2, trapImage3, roamerSprite, bossSprite, shrineSprite;
+  late ui.Image keySprite, doorTexture, doorTexture2, chestSprite, crateSprite, openCrateSprite, openChestSprite;
+  late ui.Image trapImage, trapImage2, trapImage3, roamerSprite, bossSprite, shrineSprite, brokenShrineSprite;
 
   // --- FILA DE MENSAGENS ---
   final List<GameMessage> _messageQueue = []; 
@@ -244,11 +244,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     roamerSprite = await images.load('tilesets/enemy.png');
     bossSprite = await images.load('tilesets/boss.png');
     shrineSprite = await images.load('tilesets/altar.png');
+    brokenShrineSprite = await images.load('tilesets/altarQuebrado.png');
     keySprite = await images.load('itens/key.png');     
     doorTexture = await images.load('tilesets/trapdoor.png');
     doorTexture2 = await images.load('tilesets/trapdoor2.png');
     chestSprite = await images.load('tilesets/bau.png');
     crateSprite = await images.load('tilesets/crate.png');
+    openCrateSprite = await images.load('tilesets/openCrate.png');
     openChestSprite = await images.load('tilesets/bauAberto.png');
     trapImage = await images.load('tilesets/trap.png');
     trapImage2 = await images.load('tilesets/trap2.png');
@@ -334,7 +336,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       trapImage: [trapImage,trapImage2,trapImage3], roamerImage: roamerSprite, bossImage: bossSprite,
       shrineImage: shrineSprite, openChestImage: openChestSprite, crateImage: crateSprite,
       shopImage: shopImg, fontImage: fontImg, secretWallImage: [sWallImg1,sWallImg2,sWallImg3,sWallImg4],
-      darkRoomImage: [darkRoomImg,darkRoomImg2,darkRoomImg3], loreImage: loreImg,
+      darkRoomImage: [darkRoomImg,darkRoomImg2,darkRoomImg3], loreImage: loreImg, openCrateImage: openCrateSprite,
+      brokenShrineImage: brokenShrineSprite
     );
     renderer.size = size; 
     add(renderer);
@@ -1489,7 +1492,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     resetGame();
     AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver'); overlays.remove('Victory');
     currentState = GameState.mainMenu; overlays.add('MainMenu');
-    //AudioManager.playBgm('music/main-menu.ogg');
+    AudioManager.playBgm('music/main-menu.ogg');
   }
 
   // ===========================================================================
@@ -1600,8 +1603,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        EncounterManager.triggerSpecificEncounter(this, EnemyType.goblin);
-        //EncounterManager.triggerRandomEncounter(this);
+        //EncounterManager.triggerSpecificEncounter(this, EnemyType.goblin);
+        EncounterManager.triggerRandomEncounter(this);
       } 
 
       // Variáveis auxiliares (o D-Pad do controle também ativa estas)
@@ -2051,7 +2054,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         playerCombatStats.str += tempStr; playerCombatStats.con += tempCon; playerCombatStats.wis += tempWis;
         playerCombatStats.recalculateMaxHp();
         playerCombatStats.recalculateMaxInventory();
-        dungeon.grid[player.y][player.x] = TileType.floor;
+        dungeon.grid[player.y][player.x] = TileType.brokenShrine;
         showMessage(I18n.t('atrib_melhorados'));
         currentState = GameState.exploration;
       } else {
@@ -2093,9 +2096,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _handleMainMenuInput(GameInput input) {
-    //if (AudioManager.currentTrack != 'music/main-menu.ogg') {
-    //  AudioManager.playBgm('music/main-menu.ogg');
-    //}
+    if (AudioManager.currentTrack != 'music/main-menu.ogg') {
+      AudioManager.playBgm('music/main-menu.ogg');
+    }
     if (isMainMenuAnimating) return;
     int maxOptions = hasSavedGame ? 4 : 5; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
@@ -2143,7 +2146,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     dungeon.advanceSpikes(); dungeon.advancePoison(); dungeon.advanceTeleport();
     playerCombatStats.recoverMana();
     
-    if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 3) {
+    if (dungeon.getTile(player.x, player.y) == TileType.spike && dungeon.spikeState == 2) {
       playerCombatStats.hp -= 5; shakeScreen(0.3, 10.0); playerCombatStats.applyHitStun(0.3); 
       showMessage(I18n.t('trap1'));
       if (playerCombatStats.hp <= 0) handlePlayerDeath();
@@ -2300,7 +2303,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
     else if (playerTile == TileType.crate) {
       int chance = Random().nextInt(100);
-      dungeon.grid[player.y][player.x] = TileType.floor; 
+      dungeon.grid[player.y][player.x] = TileType.openCrate; 
       
       if (chance < 40) { showMessage(I18n.t('caixa_vazia')); } 
       else {

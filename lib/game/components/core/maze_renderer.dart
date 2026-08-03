@@ -19,12 +19,14 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
   final ui.Image keyImage;
   final ui.Image chestImage;
   final ui.Image crateImage;
+  final ui.Image openCrateImage;
   final ui.Image openChestImage;
   final List <ui.Image> trapImage;
   final ui.Image roamerImage;
   final ui.Image bossImage;
   final ui.Image shopImage;
   final ui.Image shrineImage;
+  final ui.Image brokenShrineImage;
   final ui.Image fontImage;
   final ui.Image loreImage;
   final List <ui.Image> darkRoomImage;
@@ -64,10 +66,12 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     required this.shrineImage,
     required this.openChestImage,
     required this.crateImage,
+    required this.openCrateImage,
     required this.shopImage,
     required this.fontImage,
     required this.loreImage,
     required this.darkRoomImage,
+    required this.brokenShrineImage,
   });
 
   void triggerWallBump({required bool forward}) {
@@ -270,6 +274,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
             _drawBillboardItem(canvas, cx, cz, crateImage, 0.5, 0.1, Colors.white);
           }
 
+          if (tile == TileType.openCrate && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, openCrateImage, 0.5, 0.1, Colors.white);
+          }
+
           if (tile == TileType.boss && gameRef.currentState == GameState.exploration) {
             _drawBillboardItem(canvas, cx, cz, bossImage, 0.6, 0.0, Colors.white);
           }
@@ -284,6 +292,10 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
 
           if (tile == TileType.shrine && gameRef.currentState == GameState.exploration) {
             _drawBillboardItem(canvas, cx, cz, shrineImage, 0.5, 0.1, Colors.white);
+          }
+
+          if (tile == TileType.brokenShrine && gameRef.currentState == GameState.exploration) {
+            _drawBillboardItem(canvas, cx, cz, brokenShrineImage, 0.5, 0.1, Colors.white);
           }
 
           if (tile == TileType.lore && gameRef.currentState == GameState.exploration) {

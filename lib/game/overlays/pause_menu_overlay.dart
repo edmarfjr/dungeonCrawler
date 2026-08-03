@@ -218,9 +218,9 @@ class _MapPainter extends CustomPainter {
     final paintBoss = Paint()..color = Palette.vermelhoCla;
     final paintChest = Paint()..color = Palette.amarelo;
     final paintKey = Paint()..color = Palette.laranja;
-    final paintSpike = Paint()..color = map.spikeState == 3 ? Palette.cinza : Palette.cinzaMed;
-    final paintTele = Paint()..color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinzaMed;
-    final paintPoison = Paint()..color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinzaMed;
+    final paintSpike = Paint()..color = map.spikeState == 2 ? Palette.cinza : Palette.cinzaEsc;
+    final paintTele = Paint()..color = map.teleportState == 3 || map.teleportState == 4 ? Palette.rosa : Palette.cinzaEsc;
+    final paintPoison = Paint()..color = map.poisonState == 3 || map.poisonState == 4 ? Palette.verde : Palette.cinzaEsc;
     final paintShrine = Paint()..color = Palette.roxo;
     final paintCrate = Paint()..color = Palette.marromEsc;
     final paintShop = Paint()..color = Palette.azulCla;
@@ -234,7 +234,7 @@ class _MapPainter extends CustomPainter {
         bool isExplored = map.explored[y][x]; 
         
         if (!isExplored) {
-          continue;
+        //  continue;
         }
 
         Rect tileRect = Rect.fromLTWH(offsetX + x * tileSize, offsetY + y * tileSize, tileSize, tileSize);

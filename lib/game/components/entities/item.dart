@@ -11,7 +11,6 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/i18n.dart';
 
-  
 enum ItemType { weapon, armor, shield, consumable, spell, coin, gem }
 
 class Item {
@@ -22,7 +21,6 @@ class Item {
   final Color cor;
   final int manaCost;
   int quantity;
-
   final bool hasReach;
   final bool hasStun;
   final bool noShield;
@@ -47,14 +45,10 @@ class Item {
    String get displayName {
     String baseTranslated = I18n.t(name);
     
-    // Se tiver um modificador válido, traduz ele e anexa ao nome
     if (modifier != null && modifier!.id != 'mod_normal') {
       String modTranslated = I18n.t(modifier!.id);
-      // O formato "Base (Modificador)" resolve o problema de gênero gramatical!
-      return '$baseTranslated ($modTranslated)'; 
+      return '$baseTranslated [$modTranslated]'; 
     }
-    
-    // Se não tiver, retorna apenas o nome traduzido
     return baseTranslated;
   }
 
@@ -88,13 +82,11 @@ class Item {
     if (type != ItemType.weapon && type != ItemType.armor && type != ItemType.shield) {
       return; 
     }
+    ItemModifier randomMod = ItemModifier.getRandomModifier(type);
 
-    ItemModifier randomMod = ItemModifier.getRandomModifier();
-    
     if (randomMod == ItemModifier.normal) {
       return; 
     }
-
     modifier = randomMod;
 
     power = (power * randomMod.powerMultiplier).roundToDouble();
@@ -102,12 +94,9 @@ class Item {
     str = max(0, str + randomMod.strModifier); 
     peso = max(0, peso + randomMod.weightModifier);
     staCust = (staCust * randomMod.staMultiplier).roundToDouble();
-
   }
 
 }
-
-
 
 class ItemDatabase {
   static Item get adaga => Item('adaga', ItemType.weapon, 'itens/dagger.png', 5,staCust: 3.0 ,description: 'd_adaga', cor: Colors.white, onUse: (item, game) {
