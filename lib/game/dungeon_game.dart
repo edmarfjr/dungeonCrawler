@@ -354,7 +354,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
       'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
       'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
-      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav'
+      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav',
       'music/8-bit-dungeon.ogg',
       'music/main-menu.ogg',
       'music/boss-battle.ogg',
