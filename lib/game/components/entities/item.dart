@@ -129,13 +129,13 @@ class ItemDatabase {
 
   });
 
-  static Item get espadaMagica => Item('espada_magica', ItemType.weapon, 'itens/magicSword.png', 10,staCust: 8.0 ,description: 'd_espada_magica',projetil:true,hasChargeAttack:true,value:20, cor: Colors.white, onUse: (item, game) {
+  static Item get espadaMagica => Item('espada_magica', ItemType.weapon, 'itens/magicSword.png', 10,staCust: 8.0 ,description: 'd_espada_magica',isWide: true,projetil:true,hasChargeAttack:true,value:20, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 3;
-    game.playerCombatStats.offYWeapon = 0;
+    game.playerCombatStats.offYWeapon = 12;
 
   });
 

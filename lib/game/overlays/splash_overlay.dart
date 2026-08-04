@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/palette.dart';
 import 'package:a_blade_in_the_abyss/game/dungeon_game.dart';
-import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
+//import 'package:a_blade_in_the_abyss/game/components/core/audio_manager.dart';
 
 class SplashOverlay extends StatefulWidget {
   final DungeonCrawlerGame game;
@@ -47,13 +47,13 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
 
     setState(() {
       _isTransitioning = true;
-      _opacity = 0.0; // Inicia o Fade-Out
+      _opacity = 0.0; 
     });
     
     _autoAdvanceTimer?.cancel();
 
     if (!autoAdvance) {
-      AudioManager.playSfx('sfx/confirm.wav');
+      //AudioManager.playSfx('sfx/confirm.wav');
     }
   }
 
@@ -66,7 +66,6 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    // Puxa a informação se o jogo está no formato de PC ou Mobile
     final bool isDesktop = widget.game.isDesktopLayout;
 
     return GestureDetector(
@@ -88,7 +87,6 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
           },
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Ajusta o tamanho da fonte e margens dinamicamente
               final double fontSize = isDesktop 
                   ? (constraints.maxWidth * 0.015).clamp(12.0, 24.0) 
                   : (constraints.maxWidth * 0.035).clamp(10.0, 16.0); 
@@ -97,7 +95,6 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                   ? (constraints.maxHeight * 0.05).clamp(20.0, 50.0)
                   : (constraints.maxHeight * 0.15).clamp(20.0, 40.0);
 
-              // Usamos um Stack para separar a imagem do texto e controlar o "fit" livremente
               return Stack(
                 alignment: Alignment.center,
                 children: [
@@ -106,12 +103,9 @@ class _SplashOverlayState extends State<SplashOverlay> with SingleTickerProvider
                     'assets/images/splash.png',
                     width: double.infinity,
                     height: double.infinity,
-                    // No PC: O "contain" mostra a imagem 100% sem cortes, com laterais pretas.
-                    // No Mobile: O "cover" expande para preencher a telinha em pé.
                     fit: isDesktop ? BoxFit.contain : BoxFit.cover,
                   ),
                   
-                  // 2. O TEXTO DOS CRÉDITOS
                   Positioned(
                     bottom: bottomPadding,
                     child: Text(

@@ -81,7 +81,7 @@ class SettingsMenuOverlay extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 _buildMenuOption(
-                  title: I18n.t('opt_back'),
+                  title: I18n.t('b_voltar'),
                   index: 4, currentIndex: cursorIndex,
                 ),
               ],

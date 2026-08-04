@@ -245,7 +245,7 @@ class _BestiaryOverlayState extends State<BestiaryOverlay> {
             
           const SizedBox(height: 20),
           Text(
-            "Abates: $kills\nHP: ${info['hp']}\nDMG: ${info['dmg']}\n\n${info['desc']}",
+            "${I18n.t('abates')} $kills\nHP: ${info['hp']}\nDMG: ${info['dmg']}\n\n${info['desc']}",
             style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: listFontSize),
           ),
         ],

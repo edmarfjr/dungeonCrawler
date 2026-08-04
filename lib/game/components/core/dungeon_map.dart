@@ -177,6 +177,7 @@ class DungeonMap {
     } 
     if (level % 3 == 0){
       grid[selectedKey.y][selectedKey.x] = TileType.boss;
+      keyPosition = null;
     }else{
       keyPosition = selectedKey;
     }

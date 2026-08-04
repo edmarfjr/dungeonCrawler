@@ -29,11 +29,9 @@ class AudioManager {
       'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav'
     ];
 
-    // Criamos um "Pool" (Piscina) para cada som. 
-    // maxPlayers: 3 significa que até 3 sons iguais podem tocar ao mesmo tempo sem cancelar o anterior.
-    // Isso move o processamento pesado do momento do combate para a tela de carregamento (Splash).
     for (var file in sfxFiles) {
-      _sfxPools[file] = await FlameAudio.createPool(file, minPlayers: 1, maxPlayers: 3);
+      _sfxPools[file] = await FlameAudio.createPool(file, minPlayers: 1, maxPlayers: 10);
+      await Future.delayed(const Duration(milliseconds: 50));
     }
   }
 

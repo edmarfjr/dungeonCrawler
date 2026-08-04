@@ -355,10 +355,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
       'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
       'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav',
-      'music/8-bit-dungeon.ogg',
-      'music/main-menu.ogg',
-      'music/boss-battle.ogg',
-      'music/gameover.ogg'
+      'music/8-bit-dungeon.wav',
+      'music/main-menu.wav',
+      'music/boss-battle.wav',
+      'music/gameover.mp3'
     ]);
 
   }
@@ -1117,7 +1117,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double logicalWidth =size.x / scaleFactor;
     //double logicalHeight = size.y / scaleFactor;
     double boxWidth = logicalWidth * 0.7;
-    double startY = 70;
+    double startY = 30;
     double fontScale = 1.5;
     
     double border = 8;
@@ -1396,7 +1396,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     resetGame();
     AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver'); overlays.remove('Victory');
     currentState = GameState.mainMenu; overlays.add('MainMenu');
-    AudioManager.playBgm('music/main-menu.ogg');
+    AudioManager.playBgm('music/main-menu.wav');
   }
 
   // ===========================================================================
@@ -1640,8 +1640,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     overlays.remove('Splash');
     overlays.add('MainMenu');
     
-    //AudioManager.playBgm('music/main-menu.ogg'); 
-    // (Ajuste para .ogg se tiver voltado atrás na conversão)
+    AudioManager.playBgm('music/main-menu.wav'); 
   }
 
   void _handleExplorationInput(GameInput input) {
@@ -2001,9 +2000,9 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _handleMainMenuInput(GameInput input) {
-    if (AudioManager.currentTrack != 'music/main-menu.ogg') {
-      AudioManager.playBgm('music/main-menu.ogg');
-    }
+    //if (AudioManager.currentTrack != 'music/main-menu.wav') {
+    //  AudioManager.playBgm('music/main-menu.wav');
+   //}
     if (isMainMenuAnimating) return;
     int maxOptions = hasSavedGame ? 3 : 4; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
@@ -2324,7 +2323,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void _endEncounter() {
     playerCombatStats.currentPhase = CombatPhase.exiting; playerCombatStats.animTimer = 1; 
     if(isBoss){
-      AudioManager.playBgm('music/8-bit-dungeon.ogg');
+      AudioManager.playBgm('music/8-bit-dungeon.wav');
     }
     isMimic = false; isBoss = false;
   }   
@@ -2335,7 +2334,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     combatOverlay.startEncounter(enemies);
     playerCombatStats.currentPhase = CombatPhase.entering; playerCombatStats.animTimer = 0.5;
     if(isBoss){
-      AudioManager.playBgm('music/boss-battle.ogg');
+      AudioManager.playBgm('music/boss-battle.wav');
     }
   }
 
@@ -2353,6 +2352,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.currentPhase = CombatPhase.idle;
 
     playerCombatStats.recalculateMaxHp();
+    playerCombatStats.recalculateMaxInventory();
 
     _initializeInventory();
     dungeon.level = 1;
@@ -2387,16 +2387,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     currentState = GameState.exploration;
     overlays.remove('Intro');
     
-    // NOVA MATEMÁTICA: Usando o Viewport para posicionar texto
     combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
     isRunStartAnimating = true;
     runStartAnimTimer = 0.0;
-    AudioManager.playBgm('music/8-bit-dungeon.ogg');
+    AudioManager.playBgm('music/8-bit-dungeon.wav');
   }
 
   void handlePlayerDeath() async { 
     //apagaSave();
-    AudioManager.playBgm('music/gameover.ogg');
+    AudioManager.playBgm('music/gameover.mp3');
     for (var e in combatOverlay.enemies) {
       e.isAlive = false;
     }
@@ -2426,14 +2425,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           try {
             var type = EnemyType.values.firstWhere((e) => e.name == parts[0]);
             bestiaryKills[type] = int.parse(parts[1]);
-          } catch (e) { /* Ignora se o inimigo for removido do jogo no futuro */ }
+          } catch (e) {}
         }
       }
     }
   }
 
   int getEnemyReqKills(EnemyType type) {
-    if (type.name.contains('boss') || type.name == 'mimic') return 1;
+    if (type.name.contains('boss') || type.name == 'mimic' || type.name == 'goblinShop'
+    || type.name == 'tentaculo' || type.name == 'garra') return 1;
     return 10;
   }
 
@@ -2441,12 +2441,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     int hp = 20; int dmg = 3; String desc = "";
 
     switch(type) {
+      // --- ALL FLOORS ---
+      case EnemyType.mimic: hp = 60; dmg = 10; desc = I18n.t('desc_mimic'); break;
+      case EnemyType.goblinShop: hp = 150; dmg = 15; desc = I18n.t('desc_goblinShop'); break;
+
       // --- FLOOR 1 (Slime / Goblin / Spider / Bat) ---
       case EnemyType.slime: hp = 50; dmg = 3; desc = I18n.t('desc_slime'); break;
       case EnemyType.goblin: hp = 60; dmg = 5; desc = I18n.t('desc_goblin'); break;
       case EnemyType.spider: hp = 30; dmg = 3; desc = I18n.t('desc_spider'); break;
       case EnemyType.bat: hp = 40; dmg = 5; desc = I18n.t('desc_bat'); break;
-      case EnemyType.mimic: hp = 60; dmg = 10; desc = I18n.t('desc_mimic'); break;
       case EnemyType.orc: hp = 80; dmg = 12; desc = I18n.t('desc_orc'); break;
       case EnemyType.boss1: hp = 300; dmg = 20; desc = I18n.t('desc_boss1'); break;
 
@@ -2466,15 +2469,14 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case EnemyType.naga: hp = 250; dmg = 20; desc = I18n.t('desc_naga'); break;
       case EnemyType.mao: hp = 150; dmg = 15; desc = I18n.t('desc_mao'); break;
       case EnemyType.doll: hp = 70; dmg = 15; desc = I18n.t('desc_doll'); break;
-      case EnemyType.goblinShop: hp = 150; dmg = 15; desc = I18n.t('desc_goblinShop'); break;
       case EnemyType.boss3: hp = 300; dmg = 25; desc = I18n.t('desc_boss3'); break;
 
       // --- FLOOR 4 (Aberrations / Cult) ---
       case EnemyType.aberraBruto: hp = 120; dmg = 30; desc = I18n.t('desc_aberraBruto'); break;
       case EnemyType.aberraVoa: hp = 80; dmg = 20; desc = I18n.t('desc_aberraVoa'); break;
-      case EnemyType.aberraBesta: hp = 100; dmg = 30; desc = I18n.t('desc_aberraBesta'); break;
+      case EnemyType.aberraBesta: hp = 100; dmg = 20; desc = I18n.t('desc_aberraBesta'); break;
       case EnemyType.aberraArv: hp = 120; dmg = 30; desc = I18n.t('desc_aberraArv'); break;
-      case EnemyType.aberraCult: hp = 100; dmg = 30; desc = I18n.t('desc_aberraCult'); break;
+      case EnemyType.aberraCult: hp = 100; dmg = 20; desc = I18n.t('desc_aberraCult'); break;
       case EnemyType.aberraOvo: hp = 100; dmg = 0; desc = I18n.t('desc_aberraOvo'); break;
       case EnemyType.tentaculo: hp = 200; dmg = 15; desc = I18n.t('desc_tentaculo'); break;
       case EnemyType.boss4: hp = 500; dmg = 25; desc = I18n.t('desc_boss4'); break;
