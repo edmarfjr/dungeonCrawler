@@ -18,6 +18,8 @@ class AudioManager {
 
   // NOVO: Mapa de AudioPools para evitar a criação de instâncias nativas repetidas!
   static final Map<String, AudioPool> _sfxPools = {};
+  
+  static final Map<String, int> _lastPlayedTime = {};
 
   // NOVO: Função de inicialização obrigatória. Deve ser chamada no onLoad do jogo!
   static Future<void> init() async {
@@ -48,13 +50,24 @@ class AudioManager {
     }
   }
 
-  static void playSfx(String file, {double volume = 1.0}) {
+   static void playSfx(String file, {double volume = 1.0}) {
     if (sfxVolumeLevel > 0) {
+      // --- ANTI-SPAM (DEBOUNCE) DE ÁUDIO ---
+      // Previne que o mesmo som seja tocado dezenas de vezes num único milissegundo,
+      // o que causa travamentos (lag) na thread nativa do celular.
+      int now = DateTime.now().millisecondsSinceEpoch;
+      if (_lastPlayedTime.containsKey(file)) {
+        if (now - _lastPlayedTime[file]! < 60) { // 60ms de respiro
+          return; // Ignora o som para salvar processamento!
+        }
+      }
+      _lastPlayedTime[file] = now;
+
       if (_sfxPools.containsKey(file)) {
-        // Se o som está no pool (RAM), dispara instantaneamente com ZERO custo de CPU!
+        // Se o som está no pool (RAM), dispara instantaneamente
         _sfxPools[file]!.start(volume: _sfxVolume * volume);
       } else {
-        // Fallback: Se você esquecer de registrar algum som no init(), ele roda da forma antiga.
+        // Fallback: Se você esquecer de registrar algum som no init()
         FlameAudio.play(file, volume: _sfxVolume * volume);
       }
     }
