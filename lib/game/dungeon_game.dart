@@ -25,7 +25,8 @@ import 'package:a_blade_in_the_abyss/game/components/entities/player_projectile.
 import 'package:a_blade_in_the_abyss/game/overlays/combat_overlay.dart';
 
 enum GameInput { up, down, left, right, buttonA, buttonB, pause }
-enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, victory, settings, splash, bestiary }
+enum GameState { mainMenu, intro, exploration, combat, paused, gameOver, inventory, levelUp, manual, shop, victory, settings, splash, 
+bestiary, dying }
 enum ShopPhase { main, buy, sell, confirmSell, steal }
 
 class GameMessage {
@@ -524,6 +525,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     switch (currentState) {
       case GameState.exploration: _updateExploration(dt); break;
       case GameState.combat: _updateCombat(dt); break;
+      case GameState.dying:
+        // O jogador está afundando na tela. Esperamos o timer acabar!
+        if (playerCombatStats.animTimer <= 0) {
+          currentState = GameState.gameOver; 
+          overlays.add('GameOver');
+        }
+        break;
       default: break;
     }
   }
@@ -580,7 +588,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       return; 
     }
     
-    if (playerCombatStats.currentPhase == CombatPhase.entering || playerCombatStats.currentPhase == CombatPhase.exiting) return;
+    if (playerCombatStats.currentPhase == CombatPhase.entering || playerCombatStats.currentPhase == CombatPhase.exiting  || playerCombatStats.currentPhase == CombatPhase.die) return;
     if (activeMessage != null) return; 
 
     if (currentState == GameState.combat && playerCombatStats.isCharging) {
@@ -1380,7 +1388,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void togglePause() {
-    if(currentState == GameState.mainMenu || currentState == GameState.gameOver) return;
+    if(currentState == GameState.mainMenu || currentState == GameState.gameOver|| currentState == GameState.dying) return;
     if (currentState == GameState.exploration || currentState == GameState.combat) {
       previousState = currentState; currentState = GameState.paused; AudioManager.pauseBgm(); overlays.add('PauseMenu');
     } else if (currentState == GameState.paused) {
@@ -1589,7 +1597,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       case GameState.manual: 
         if (input == GameInput.buttonB) { AudioManager.playSfx('sfx/decline.wav'); closeManual(); }
         break;
-      //default: break;
+      default: break;
     }
     if(input == GameInput.pause && !(currentState == GameState.settings || currentState == GameState.mainMenu || currentState == GameState.gameOver || currentState == GameState.victory)) togglePause();
   }
@@ -2056,6 +2064,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if (dungeon.getTile(player.x, player.y) == TileType.poison && (dungeon.poisonState == 3 || dungeon.poisonState == 4)) {
       playerCombatStats.poisonTmr = 10; shakeScreen(0.3, 10.0); playerCombatStats.applyHitStun(0.3); 
       showMessage(I18n.t('trap2'));
+      if (playerCombatStats.hp <= 0) handlePlayerDeath();
     }
 
     if (dungeon.getTile(player.x, player.y) == TileType.teleport && (dungeon.teleportState == 3 || dungeon.teleportState == 4)) {
@@ -2276,7 +2285,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           }
         }
     }
-    if (playerCombatStats.hp < 0) playerCombatStats.hp = 0;
+    if (playerCombatStats.hp <= 0) {
+      playerCombatStats.hp = 0;
+      handlePlayerDeath();
+    }
   }
 
   void _useOrEquipItem(Item item) async {
@@ -2395,11 +2407,15 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void handlePlayerDeath() async { 
     //apagaSave();
+    if (currentState == GameState.dying || currentState == GameState.gameOver) return;
     AudioManager.playBgm('music/gameover.mp3');
     for (var e in combatOverlay.enemies) {
       e.isAlive = false;
     }
-    currentState = GameState.gameOver; overlays.add('GameOver');
+    playerCombatStats.currentPhase = CombatPhase.die;
+    playerCombatStats.animTimer = 1.2; 
+    playerCombatStats.applyFlashEffect(1.2, Palette.vermelho); 
+    currentState = GameState.dying;
   }
 
   void apagaSave() async{

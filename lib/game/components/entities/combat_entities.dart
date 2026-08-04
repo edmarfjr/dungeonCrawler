@@ -202,7 +202,7 @@ class PlayerCombatStats {
         comboCount = 0; // O tempo acabou! Reseta o combo para o primeiro golpe.
       }
     }
-    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.entering || currentPhase == CombatPhase.exiting) {
+    if (currentPhase == CombatPhase.windup || currentPhase == CombatPhase.active || currentPhase == CombatPhase.recovery || currentPhase == CombatPhase.entering || currentPhase == CombatPhase.exiting || currentPhase == CombatPhase.die) {
       animTimer -= dt;
       if (animTimer <= 0) {
         switch (currentPhase) {
@@ -211,6 +211,7 @@ class PlayerCombatStats {
           case CombatPhase.recovery: currentPhase = CombatPhase.idle; attackHit = false; break;
           case CombatPhase.entering: currentPhase = CombatPhase.idle; break;
           case CombatPhase.exiting: break; 
+          case CombatPhase.die: break; 
           default: currentPhase = CombatPhase.idle; break;
         }
       }

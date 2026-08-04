@@ -370,7 +370,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           playerGuardTicker.update(dt); weaponGuardTicker.update(dt); armorGuardTicker.update(dt); shieldGuardTicker.update(dt); 
           break;
         case CombatPhase.hit: 
-          break; 
+        case CombatPhase.die: // <-- CORREÇÃO: Força a animação de "golpeado" enquanto morre!
+          playerHitTicker.update(dt); weaponHitTicker.update(dt); armorHitTicker.update(dt); shieldHitTicker.update(dt); 
+          break;
         case CombatPhase.entering: 
         case CombatPhase.exiting: 
           playerIdleTicker.update(dt); weaponIdleTicker.update(dt); armorIdleTicker.update(dt); shieldIdleTicker.update(dt); 
@@ -416,7 +418,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       }
     }
 
-    if (gameRef.currentState == GameState.combat) {
+    if (gameRef.currentState == GameState.combat || gameRef.currentState == GameState.dying) {
       _drawAttackEffects(canvas);
       _drawPlayer(canvas);
       if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
@@ -556,7 +558,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawPlayer(Canvas canvas) {
-    if (playerStats.invencibleTmr>0 && (playerStats.invencibleTmr * 15).toInt() % 2 == 0) return;
+    //if (playerStats.invencibleTmr>0 && (playerStats.invencibleTmr * 15).toInt() % 2 == 0) return;
     
     // Rescale Correto garantindo que não fique gigante (viewportRect)
     double baseSizeMultiplier = (viewportRect.width / 500.0).clamp(0.5, 3.0);
@@ -566,7 +568,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     if (playerStats.currentPhase == CombatPhase.walk) { yOffset = -(sin(_walkTimer * 12) * 4).abs() * -1; } 
     else if (playerStats.currentPhase == CombatPhase.entering) { yOffset = playerHeight * (1.0 - ((duration - playerStats.animTimer) / duration).clamp(0.0, 1.0)); } 
-    else if (playerStats.currentPhase == CombatPhase.exiting) { yOffset = playerHeight * ((duration - playerStats.animTimer) / duration).clamp(0.0, 1.0); }
+    else if (playerStats.currentPhase == CombatPhase.exiting || playerStats.currentPhase == CombatPhase.die) { yOffset = playerHeight * ((duration - playerStats.animTimer) / duration).clamp(0.0, 1.0); }
 
     double xPixel = (logicalWidth / 2) + (playerStats.strafePosition * viewportRect.width * 0.35) - (playerWidth / 2);
     
@@ -587,7 +589,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       case CombatPhase.recovery: activeTicker = playerAttackRecoveryTicker; activeWeaponTicker = weaponAttackRecoveryTicker; activeArmorTicker = armorAttackRecoveryTicker; activeShieldTicker = shieldAttackRecoveryTicker; break;
       case CombatPhase.guard: activeTicker = playerGuardTicker; activeWeaponTicker = weaponGuardTicker; activeArmorTicker = armorGuardTicker; activeShieldTicker = shieldGuardTicker; break;
       case CombatPhase.walk: activeTicker = playerWalkTicker; activeWeaponTicker = weaponWalkTicker; activeArmorTicker = armorWalkTicker; activeShieldTicker = shieldWalkTicker; break;
-      case CombatPhase.hit: activeTicker = playerHitTicker; activeWeaponTicker = weaponHitTicker; activeArmorTicker = armorHitTicker; activeShieldTicker = shieldHitTicker; break;
+      case CombatPhase.hit:
+      case CombatPhase.die:
+        activeTicker = playerHitTicker; activeWeaponTicker = weaponHitTicker; activeArmorTicker = armorHitTicker; activeShieldTicker = shieldHitTicker; break;
       default: activeTicker = playerIdleTicker; activeWeaponTicker = weaponIdleTicker; activeArmorTicker = armorIdleTicker; activeShieldTicker = shieldIdleTicker; break;
     }
 
@@ -654,15 +658,19 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   }
 
   void _drawHorizontalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
+    double border = 2;
+    if(isDesktopLayout)border = 4;
     canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(x, y, w * r.clamp(0.0, 1.0), h), Paint()..color = c);
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.marromCla..style = PaintingStyle.stroke..strokeWidth = border);
   }
 
   void _drawVerticalBar(Canvas canvas, double x, double y, double w, double h, Color c, double r) {
+    double border = 2;
+    if(isDesktopLayout)border = 4;
     canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.preto);
     canvas.drawRect(Rect.fromLTWH(x, y, w , h * r.clamp(0.0, 1.0)), Paint()..color = c);
-    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawRect(Rect.fromLTWH(x, y, w, h), Paint()..color = Palette.marromCla..style = PaintingStyle.stroke..strokeWidth = border);
   }
 
   // ============================================================================
