@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:async'; 
-//import 'package:gamepads/gamepads.dart'; 
+import 'package:gamepads/gamepads.dart'; 
 import 'package:a_blade_in_the_abyss/game/components/core/encounter_manager.dart';
 import 'package:a_blade_in_the_abyss/game/components/core/save_manager.dart';
 import 'package:a_blade_in_the_abyss/main.dart';
@@ -38,7 +38,7 @@ class GameMessage {
 class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // --- ESTADOS E MANAGERS ---
   bool isDesktopLayout = false;
-  //StreamSubscription<GamepadEvent>? _gamepadSubscription; 
+  StreamSubscription<GamepadEvent>? _gamepadSubscription; 
   GameState currentState = GameState.splash;
   GameState previousState = GameState.splash;
   GameState previousState2 = GameState.splash;
@@ -50,6 +50,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late MinimapRenderer minimap;
   late PlayerCombatStats playerCombatStats;
   late CombatOverlay combatOverlay;
+
+  bool finalBom = false;
+  bool hasSpecialItemUnlocked = false;
+
 
   // --- DICIONÁRIOS DE ASSETS ---
   late Map<EnemyType, ui.Image> enemySheets;
@@ -87,7 +91,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   int encounterEssence = 0;
   int mapSize = 30;
   List<Item> encounterDrop = [];
-  bool finalBom = false;
+
 
   // --- VARIÁVEIS DA DARK ROOM E SALA SECRETA ---
   bool isDarkRoom = false;
@@ -112,10 +116,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   final ValueNotifier<bool> crtFilterEnabled = ValueNotifier<bool>(true);
 
   // --- HELPERS DA UI PRÉ-COMPILADOS (Otimização) ---
-  late final TextPaint _normalTextPaint;
-  late final TextPaint _titleTextPaint;
-  late final TextPaint _selectTextPaint;
-  late final TextPaint _dangerTextPaint;
+  //late final TextPaint _normalTextPaint;
+  //late final TextPaint _titleTextPaint;
+  //late final TextPaint _selectTextPaint;
+  //late final TextPaint _dangerTextPaint;
 
   // --- lista de lore ---
    List<String> loreTxt = ['lore1','lore2','lore3','lore4','lore5','lore6','lore7','lore8','lore9','lore10'];
@@ -185,18 +189,20 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final prefs = await SharedPreferences.getInstance();
     hasSavedGame = prefs.containsKey('save_game');
 
+    hasSpecialItemUnlocked = prefs.getBool('special_item_unlocked') ?? false;
+
     await loadBestiary();
 
-  /*  try {
+    try {
       _gamepadSubscription = Gamepads.events.listen(_onGamepadEvent);
     } catch (e) {
       debugPrint('Gamepads não suportado ou erro: $e');
     }
-*/
-    _normalTextPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
-    _titleTextPaint = TextPaint(style: const TextStyle(color: Palette.amarelo, fontSize: 24, fontFamily: 'pixelFont'));
-    _selectTextPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
-    _dangerTextPaint = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
+
+    //_normalTextPaint = TextPaint(style: const TextStyle(color: Palette.branco, fontSize: 16, fontFamily: 'pixelFont'));
+    //_titleTextPaint = TextPaint(style: const TextStyle(color: Palette.amarelo, fontSize: 24, fontFamily: 'pixelFont'));
+    //_selectTextPaint = TextPaint(style: const TextStyle(color: Palette.verdeCla, fontSize: 16, fontFamily: 'pixelFont'));
+    //_dangerTextPaint = TextPaint(style: const TextStyle(color: Palette.vermelho, fontSize: 16, fontFamily: 'pixelFont'));
 
     await images.loadAll([
       'itens/dagger.png', 'itens/armor.png', 'itens/potion.png', 'itens/potionVermelha.png',
@@ -210,7 +216,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
       'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png', 'itens/potionPreta.png',
       'itens/potionLaranja.png', 'itens/ruby.png', 'itens/esmeralda.png', 'itens/safira.png', 'itens/magicSword.png',
-      'itens/aberrantAxe.png', 'itens/aberrantShield.png', 'itens/cura.png'
+      'itens/aberrantAxe.png', 'itens/aberrantShield.png', 'itens/cura.png', 'itens/zSaber.png'
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
@@ -386,6 +392,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.bloquel, 
       ItemDatabase.healthPotion,
     ];
+
+    if(hasSpecialItemUnlocked) {
+      playerCombatStats.inventory.add(ItemDatabase.zSaber);
+    }
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
     playerCombatStats.equippedShield = playerCombatStats.inventory[2];
@@ -1401,6 +1411,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void quitToMainMenu() {
+    if (finalBom) {
+      hasSpecialItemUnlocked = true;
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setBool('special_item_unlocked', true);
+      });
+    }
     resetGame();
     AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver'); overlays.remove('Victory');
     currentState = GameState.mainMenu; overlays.add('MainMenu');
@@ -1410,7 +1426,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   // GERENCIAMENTO DE INPUTS (KEYBOARD)
   // ===========================================================================
-  /*
+  
   void _onGamepadEvent(GamepadEvent event) {
     // event.value retorna 1.0 quando pressionado e 0.0 quando solto (para botões normais)
     bool isPressed = event.value > 0.5; 
@@ -1474,7 +1490,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     }
   }
 
-  */
 
   @override
   KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {

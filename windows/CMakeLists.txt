@@ -1,5 +1,7 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+
+set(CMAKE_SYSTEM_VERSION 10.0.26100.0)
 project(a_blade_in_the_abyss LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change

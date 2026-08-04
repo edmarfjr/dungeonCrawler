@@ -149,6 +149,16 @@ class ItemDatabase {
 
   });
 
+  static Item get zSaber => Item('zSaber', ItemType.weapon, 'itens/zSaber.png', 10,staCust: 5.0 ,description: 'd_zSaber', str:5,value:6, cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 2;
+    game.playerCombatStats.offYWeapon = 0;
+
+  });
+
   static Item get claymore => Item('claymore', ItemType.weapon, 'itens/claymore.png', str:8, 15,staCust: 6.0 ,description: 'd_claymore',value:12,isWide: true ,cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
