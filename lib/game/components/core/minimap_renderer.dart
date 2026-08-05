@@ -27,7 +27,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     double logicalHeight = gameRef.size.y / scaleFactor;
 
     // Ajusta o tamanho dos blocos para caber perfeitamente na HUD do PC ou Mobile
-    double tileSize = isDesktop ? 11.5 : 4.5;
+    double tileSize = isDesktop ? 11.5 : 4.0;
 
     int viewDiameter = (viewRadius * 2) + 1; 
     double mapWidth = viewDiameter * tileSize;
@@ -44,11 +44,11 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
       startX = rightPanelX + (panelWidth - mapWidth) / 2;
       startY = 35; 
     } else {
-      double topHudHeight = 4;
-      double margin = 0;
+      double topHudHeight = 0;
+      //double margin = 0;
       // Mobile: Canto superior direito da tela de exploração (com margem de respiro)
-      startX = logicalWidth - mapWidth - 2;
-      startY = topHudHeight + 0;
+      startX = logicalWidth - mapWidth - 3;
+      startY = topHudHeight + 9;
     }
 
     // Salva o canvas para aplicar a escala
@@ -61,10 +61,12 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     final backgroundRect = Rect.fromLTWH(startX, startY, mapWidth, mapHeight);
 
     // 4. Fundo do Minimapa e Borda externa
-    canvas.drawRect(
+    /*canvas.drawRect(
       Rect.fromLTWH(startX - 4, startY - 4, mapWidth + 8, mapHeight + 8), 
       Paint()..color = Palette.marromCla
     );
+    */
+    
     canvas.drawRect(backgroundRect, Paint()..color = Palette.preto);
     
     // Salva novamente apenas para o Clipping interno do minimapa
@@ -254,7 +256,10 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     canvas.drawPath(playerPath, Paint()..color = Palette.vermelho);
     canvas.drawRect(Rect.fromLTWH(-sizeArrow/3, -sizeArrow, sizeArrow/1.5, sizeArrow/1.5), Paint()..color = Palette.branco);
 
+    
+
     // Restaura o Clipping interno do minimapa
     canvas.restore();
+    
   }
 }

@@ -149,7 +149,7 @@ class ItemDatabase {
 
   });
 
-  static Item get zSaber => Item('zSaber', ItemType.weapon, 'itens/zSaber.png', 10,staCust: 5.0 ,description: 'd_zSaber', str:5,value:6, cor: Colors.white, onUse: (item, game) {
+  static Item get zSaber => Item('zSaber', ItemType.weapon, 'itens/zSaber.png', 10,staCust: 5.0, hasChargeAttack: true ,description: 'd_zSaber', str:5,value:6, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
