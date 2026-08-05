@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 
 enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
 garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv, aberraCult,
-aberraOvo, tentaculo, boss4 }
+aberraOvo, alien, tentaculo, boss4 }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
   final EnemyType type;
@@ -2625,6 +2625,76 @@ class AberraBestaEnemy extends Enemy {
     }
 
     strafePosition = strafePosition.clamp(-limit, limit);
+  }
+}
+
+class AlienEnemy extends Enemy {
+  bool isFleeing = false;
+  AlienEnemy() : super(name: 'alien',
+    type: EnemyType.alien, color: Palette.azulCla, hp: 100, maxHp: 100, dropEssence: 20, width: 144, height: 144, speed: 0.6, damage: 30,
+    hurtboxWidth: 72, hurtboxHeight: 144, hurtboxOffsetY: 0,isMelee: false,
+    hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: [ItemDatabase.meat2]
+  );
+
+  @override 
+  void onHitStun() { 
+    isFleeing = true; 
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    checkAttackPadrao(dt,player,screenSize);
+  }
+  
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
+    if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+      isFleeing = true;
+    }
+
+    if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
+      isFleeing = false;
+    }
+
+    if (isFleeing) {
+      double dir = -(player.strafePosition - strafePosition).sign;
+      if (dir == 0) dir = 1.0;
+      strafePosition += dir * speed * dt;
+    } else {
+      if (distanceToPlayer > 0.01) {
+        double dir = (player.strafePosition - strafePosition).sign;
+        strafePosition += dir * speed * dt;
+      }
+    }
+
+    strafePosition = strafePosition.clamp(-limit, limit);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); 
+
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true;
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition, yPosition + visualYOffset - 0.2, 0.0, -0.2, this, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+      ));
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition + 0.2, yPosition + visualYOffset - 0.15, 0.0, -0.2, this, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+      ));
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition - 0.2, yPosition + visualYOffset - 0.15, 0.0, -0.2, this, isHoming: true, grav: 0.5, imgPath: 'effects/bola2.png',radius: 50
+      ));
+    }
   }
 }
 

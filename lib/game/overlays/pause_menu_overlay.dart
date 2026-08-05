@@ -15,7 +15,7 @@ class PauseMenuOverlay extends StatelessWidget {
     final bool isDesktop = game.isDesktopLayout;
     
     return Container(
-      color: Palette.preto.withOpacity(0.85),
+      color: Palette.preto.withOpacity(1),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double availableW = constraints.maxWidth;

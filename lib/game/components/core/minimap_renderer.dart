@@ -27,7 +27,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     double logicalHeight = gameRef.size.y / scaleFactor;
 
     // Ajusta o tamanho dos blocos para caber perfeitamente na HUD do PC ou Mobile
-    double tileSize = isDesktop ? 11.5 : 4.0;
+    double tileSize = isDesktop ? 11.5 : 3.8;
 
     int viewDiameter = (viewRadius * 2) + 1; 
     double mapWidth = viewDiameter * tileSize;
@@ -48,7 +48,7 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
       //double margin = 0;
       // Mobile: Canto superior direito da tela de exploração (com margem de respiro)
       startX = logicalWidth - mapWidth - 3;
-      startY = topHudHeight + 9;
+      startY = topHudHeight + 10;
     }
 
     // Salva o canvas para aplicar a escala

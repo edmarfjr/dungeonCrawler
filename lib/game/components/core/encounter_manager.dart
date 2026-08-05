@@ -19,7 +19,7 @@ class EncounterManager {
     } else if (level < 10) {
       iniPool = [() => EsqueletoEnemy(), () => DollEnemy(), () => InfectadoEnemy(), () => JesterEnemy(), () => NagaEnemy(), () => HandEnemy()];
     } else {
-      iniPool = [() => AberraArvEnemy(), () => AberraBestaEnemy(), () => AberraBrutoEnemy(), () => AberraVoaEnemy(), () => AberraOvoEnemy(), () => AberraCultistaEnemy()];
+      iniPool = [() => AlienEnemy(), () => AberraArvEnemy(), () => AberraBestaEnemy(), () => AberraBrutoEnemy(), () => AberraVoaEnemy(), () => AberraOvoEnemy(), () => AberraCultistaEnemy()];
     }
 
     int numEnemies = Random().nextInt(4) + 1; 
@@ -121,6 +121,7 @@ class EncounterManager {
         case EnemyType.aberraArv: newEnemy = AberraArvEnemy(); break;  
         case EnemyType.aberraCult: newEnemy = AberraCultistaEnemy(); break;  
         case EnemyType.aberraOvo: newEnemy = AberraOvoEnemy(); break;  
+        case EnemyType.alien: newEnemy = AlienEnemy(); break;  
         case EnemyType.boss4:
           game.isBoss = true;
           var cult1 = AberraCultistaEnemy()..strafePosition = 0.5..isFrontRow = false;

@@ -70,11 +70,18 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   
 
-   Color get corBordaHud {
+  Color get corBordaHud {
     if(dungFloor < 4) return Palette.VinhoEsc;
-    else if(dungFloor >= 4 && dungFloor < 7) return Palette.VerdeEsc;
-    else if(dungFloor >= 7 && dungFloor < 10) return Palette.RoxoEsc;
+    else if(dungFloor >= 4 && dungFloor < 7) return Palette.marromCla;
+    else if(dungFloor >= 7 && dungFloor < 10) return Palette.Indigo;
     else return Palette.vermelhoEsc;
+  }
+
+  Color get corFundoHud {
+    if(dungFloor < 4) return Palette.azulEsc;
+    else if(dungFloor >= 4 && dungFloor < 7) return Palette.PlumEsc;
+    else if(dungFloor >= 7 && dungFloor < 10) return Palette.RoxoEsc;
+    else return Palette.VinhoEsc;
   }
 
   // ============================================================================
@@ -510,7 +517,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
   void _drawBottomBarBackground(Canvas canvas) {
     Rect rect = Rect.fromLTWH(0, logicalHeight - logicalHeight*0.145 - 8, logicalWidth, logicalHeight*0.145 + 8);
-    canvas.drawRect(rect, Paint()..color = Palette.azulEsc);
+    canvas.drawRect(rect, Paint()..color = corFundoHud);
     canvas.drawImageRect(
       gameRef.hudBaixo,
       Rect.fromLTWH(0, 0, gameRef.hudBaixo.width.toDouble(), gameRef.hudBaixo.height.toDouble()),
@@ -705,7 +712,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     //canvas.drawRect(Rect.fromLTWH(0, 0, panelWidth, logicalHeight), Paint()..color = Palette.preto); // Moldura
     //canvas.drawRect(Rect.fromLTWH(4, -4, panelWidth-4, logicalHeight+8), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 8);
     
-    canvas.drawRect(Rect.fromLTWH(0, 0, panelWidth, logicalHeight), Paint()..color = Palette.azulEsc);
+    canvas.drawRect(Rect.fromLTWH(0, 0, panelWidth, logicalHeight), Paint()..color = corFundoHud);
     canvas.drawImageRect(
           gameRef.hudEsq, 
           Rect.fromLTWH(0, 0, gameRef.hudEsq.width.toDouble(), gameRef.hudEsq.height.toDouble()),
@@ -722,21 +729,21 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     _drawText(canvas, "${playerStats.essence}", panelWidth / 2, 60, 32, Palette.branco, alignCenter: true);
     //canvas.drawRect(Rect.fromLTWH(0, -4, panelWidth-2, 69), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
-    _drawText(canvas, '${playerStats.str}', panelWidth / 2 + 45, 134, 32, Palette.branco, alignCenter: true);
-    _drawText(canvas, '${playerStats.con}', panelWidth / 2 + 45, 190, 32, Palette.branco, alignCenter: true);
-    _drawText(canvas, '${playerStats.wis}', panelWidth / 2 + 45, 244, 32, Palette.branco, alignCenter: true);
+    _drawText(canvas, '${playerStats.str}', panelWidth / 2 + 45, 130, 32, Palette.branco, alignCenter: true);
+    _drawText(canvas, '${playerStats.con}', panelWidth / 2 + 45, 186, 32, Palette.branco, alignCenter: true);
+    _drawText(canvas, '${playerStats.wis}', panelWidth / 2 + 45, 240, 32, Palette.branco, alignCenter: true);
     //canvas.drawRect(Rect.fromLTWH(0, -4, panelWidth-2, 169), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
 
 
     // Barras de Status
     //_drawText(canvas, "HP", 58, 170, 16, Palette.branco);
-    _drawVerticalBar(canvas, 58, 358, 40, playerStats.maxHp * 4, Palette.vermelho, playerStats.hp / playerStats.maxHp);
+    _drawVerticalBar(canvas, 58, 342, 40, playerStats.maxHp * 3, Palette.vermelho, playerStats.hp / playerStats.maxHp);
     
     //_drawText(canvas, "ST", 118, 170, 16, Palette.branco);
-    _drawVerticalBar(canvas, 110, 358, 40, playerStats.con * 12, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
+    _drawVerticalBar(canvas, 110, 342, 40, playerStats.con * 9, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
     
     //_drawText(canvas, "MP", 178, 170, 16, Palette.branco);
-    _drawVerticalBar(canvas, 162, 358, 40, playerStats.wis * 12, Palette.azulCla, playerStats.mana / (playerStats.wis * 3));
+    _drawVerticalBar(canvas, 162, 342, 40, playerStats.wis * 9, Palette.azulCla, playerStats.mana / (playerStats.wis * 3));
 
 
     // Bússola e Chave na exploração
@@ -755,7 +762,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     //canvas.drawRect(Rect.fromLTWH(rightX, -4, panelWidth-4, logicalHeight+8), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 8);
     //canvas.drawRect(Rect.fromLTWH(rightX, -4, panelWidth-4, 225), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
     
-    canvas.drawRect(Rect.fromLTWH(rightX, 0, panelWidth, logicalHeight), Paint()..color = Palette.azulEsc);
+    canvas.drawRect(Rect.fromLTWH(rightX, 0, panelWidth, logicalHeight), Paint()..color = corFundoHud);
     canvas.drawImageRect(
           gameRef.hudDir, 
           Rect.fromLTWH(0, 0, gameRef.hudDir.width.toDouble(), gameRef.hudDir.height.toDouble()),
@@ -851,7 +858,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
   void _drawPlayerUI(Canvas canvas) {
     // Fundo sólido garantido no Topo
     double boxHeight = logicalHeight*0.145+1;
-    canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, boxHeight), Paint()..color = Palette.azulEsc);
+    canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, boxHeight), Paint()..color = corFundoHud);
     //canvas.drawRect(Rect.fromLTWH(-2, 2, logicalWidth+4, boxHeight), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
     canvas.drawImageRect(
           gameRef.hudCima, 
@@ -867,15 +874,16 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       Paint()..colorFilter = ColorFilter.mode(corBordaHud, BlendMode.modulate)
     );
 
-    _drawHorizontalBar(canvas, 20, 30, playerStats.maxHp * 3, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
-    _drawHorizontalBar(canvas, 20, 47, playerStats.con * 9, 12, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
-    _drawHorizontalBar(canvas, 20, 64, playerStats.wis * 9, 12, Palette.azulCla, playerStats.mana / (playerStats.wis * 3));
+    double barX = 22;
+    _drawHorizontalBar(canvas, barX, 30, playerStats.maxHp * 3, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
+    _drawHorizontalBar(canvas, barX, 47, playerStats.con * 9, 12, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
+    _drawHorizontalBar(canvas, barX, 64, playerStats.wis * 9, 12, Palette.azulCla, playerStats.mana / (playerStats.wis * 3));
     
     //inventario
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
       Item sel = playerStats.consumables[gameRef.selectedConsumableIndex];
-      double bxSize = 60;
-      double boxX = logicalWidth - (bxSize + 10);
+      double bxSize = 55;
+      double boxX = logicalWidth - (bxSize + 15);
       double boxY = boxHeight/2 - bxSize/2 - 2;
       
       canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.preto);
@@ -935,9 +943,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       case Direction.west:  direc = 'dir_o'; break;
     }
       TextPainter(
-          text: TextSpan(text: I18n.t(direc).toUpperCase(), style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 24)),
+          text: TextSpan(text: I18n.t(direc).toUpperCase(), style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)),
           textDirection: TextDirection.ltr,
-        )..layout()..paint(canvas, Offset(logicalWidth/2 - I18n.t(direc).length*6 , 8));
+        )..layout()..paint(canvas, Offset(logicalWidth/2 - I18n.t(direc).length*6 , 11));
 
         double statusY = logicalHeight - logicalHeight*0.145/2 -15;
 
@@ -955,7 +963,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         textDirection: TextDirection.ltr,
       )..layout();
 
-      double targetX = (logicalWidth * 0.16) - (strPainter.width / 2);
+      double targetX = (logicalWidth * 0.149) - (strPainter.width / 2);
 
       strPainter.paint(canvas, Offset(targetX, statusY));
 
@@ -979,7 +987,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         textDirection: TextDirection.ltr,
       )..layout();
 
-      targetX = (logicalWidth * 0.489) - (wisPainter.width / 2);
+      targetX = (logicalWidth * 0.5) - (wisPainter.width / 2);
 
       wisPainter.paint(canvas, Offset(targetX, statusY));
 
@@ -991,9 +999,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
         textDirection: TextDirection.ltr,
       )..layout();
 
-      targetX = (logicalWidth * 0.775) - (essenPainter.width / 2);
+      targetX = (logicalWidth * 0.785) - (essenPainter.width / 2);
 
-      essenPainter.paint(canvas, Offset(targetX, statusY + 5));
+      essenPainter.paint(canvas, Offset(targetX, statusY + 10));
 
     }else{
       
@@ -1011,8 +1019,8 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
 
     int displayIndex = 0; 
 
-    Rect rect = Rect.fromLTWH(0, logicalHeight - logicalHeight*0.145, logicalWidth, logicalHeight*0.145 -10);
-    canvas.drawRect(rect, Paint()..color = Palette.azulEsc);
+    Rect rect = Rect.fromLTWH(0, logicalHeight - logicalHeight*0.145 + 12, logicalWidth, logicalHeight*0.145 -30);
+    canvas.drawRect(rect, Paint()..color = corFundoHud);
 
     for (int i = 0; i < enemies.length; i++) {
       if (!enemies[i].isAlive) continue;

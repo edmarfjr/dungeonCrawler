@@ -291,6 +291,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.aberraArv: await images.load('actors/aberraFixo.png'),
       EnemyType.aberraCult: await images.load('actors/aberraCultista.png'),
       EnemyType.aberraOvo: await images.load('actors/aberraOvo.png'),
+      EnemyType.alien: await images.load('actors/alien.png'),
       EnemyType.boss4: await images.load('actors/boss4.png'),
       EnemyType.tentaculo: await images.load('actors/tentaculo.png'),
     };
@@ -1435,65 +1436,60 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // ===========================================================================
   
   void _onGamepadEvent(GamepadEvent event) {
-    // event.value retorna 1.0 quando pressionado e 0.0 quando solto (para botões normais)
-    bool isPressed = event.value > 0.5; 
-    String key = event.key.toLowerCase(); // Ex: "dpad_left", "button_a"
+    // Ignora pequenos movimentos residuais das alavancas analógicas (Deadzone 20%)
+    if (event.type == KeyType.analog && event.value.abs() < 0.2) {
+      String key = event.key.toLowerCase();
+      // O joystick voltou para o centro, fazemos o personagem parar!
+      if (key.contains('x')) {
+         stopInput(GameInput.left);
+         stopInput(GameInput.right);
+      } else if (key.contains('y')) {
+         stopInput(GameInput.up);
+         stopInput(GameInput.down);
+      }
+      return;
+    }
 
+    // Variável isPressed ativada se passarmos dos 50% de toque no analógico/gatilho
+    bool isPressed = event.value > 0.5 || event.value < -0.5; 
+    String key = event.key.toLowerCase(); 
+
+    // === MAPEAMENTO DE ANALÓGICO ESQUERDO ===
+    if (key.contains('leftjoystickx') || key.contains('leftthumbstickx') || key.contains('axis_0')) {
+      if (event.value < -0.5) { startInput(GameInput.left); stopInput(GameInput.right); }
+      else if (event.value > 0.5) { startInput(GameInput.right); stopInput(GameInput.left); }
+      return;
+    }
+    if (key.contains('leftjoysticky') || key.contains('leftthumbsticky') || key.contains('axis_1')) {
+      // Eixo Y geralmente é invertido (negativo é para cima)
+      if (event.value < -0.5) { startInput(GameInput.up); stopInput(GameInput.down); }
+      else if (event.value > 0.5) { startInput(GameInput.down); stopInput(GameInput.up); }
+      return;
+    }
+
+    // === MAPEAMENTO DO D-PAD E BOTÕES FRONTAIS ===
     if (isPressed) {
-      if (key.contains('dpad_left')) {
-        leftPressed = true;
-        // Igual ao teclado: só chamamos o startInput imediato em menus e combate (para o dash!)
-        if ([GameState.combat, GameState.settings, GameState.levelUp, GameState.inventory, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
-          startInput(GameInput.left);
-        }
-      }
-      else if (key.contains('dpad_right')) {
-        rightPressed = true;
-        if ([GameState.combat, GameState.settings, GameState.levelUp, GameState.inventory, GameState.shop, GameState.manual, GameState.mainMenu, GameState.paused].contains(currentState)) {
-          startInput(GameInput.right);
-        }
-      }
-      else if (key.contains('dpad_up')) {
-        upPressed = true;
-        startInput(GameInput.up);
-      }
-      else if (key.contains('dpad_down')) {
-        downPressed = true;
-        startInput(GameInput.down);
-      }
-      else if (key.contains('button_a') || key.contains('button_cross')) {
-        startInput(GameInput.buttonA);
-      }
-      else if (key.contains('button_b') || key.contains('button_circle') || key.contains('button_x')) {
-        startInput(GameInput.buttonB);
-      }
-      else if (key.contains('button_start') || key.contains('button_select') || key.contains('button_options') || key.contains('button_menu')) {
-        togglePause();
-      }
+      if (key.contains('dpadleft')) startInput(GameInput.left);
+      else if (key.contains('dpadright')) startInput(GameInput.right);
+      else if (key.contains('dpadup')) startInput(GameInput.up);
+      else if (key.contains('dpaddown')) startInput(GameInput.down);
+      
+      // Botão A no Xbox / Cruz na PlayStation
+      else if (key == 'a' || key.contains('button_cross') || key.contains('button_0')) startInput(GameInput.buttonA);
+      
+      // Botão B no Xbox / Círculo na PlayStation
+      else if (key == 'b' || key.contains('button_circle') || key.contains('button_1')) startInput(GameInput.buttonB);
+      
+      // Botão Menu / Options / Start
+      else if (key.contains('start') || key.contains('button_options') || key.contains('button_menu')) togglePause();
     } else {
-      // Soltou o botão (Dispara as paradas e cancelamentos)
-      if (key.contains('dpad_left')) {
-        leftPressed = false;
-        stopInput(GameInput.left);
-      }
-      else if (key.contains('dpad_right')) {
-        rightPressed = false;
-        stopInput(GameInput.right);
-      }
-      else if (key.contains('dpad_up')) {
-        upPressed = false;
-        stopInput(GameInput.up);
-      }
-      else if (key.contains('dpad_down')) {
-        downPressed = false;
-        stopInput(GameInput.down);
-      }
-      else if (key.contains('button_a') || key.contains('button_cross')) {
-        stopInput(GameInput.buttonA);
-      }
-      else if (key.contains('button_b') || key.contains('button_circle') || key.contains('button_x')) {
-        stopInput(GameInput.buttonB);
-      }
+      // Soltou o botão (Dispara as paradas para interromper combos ou defesas)
+      if (key.contains('dpadleft')) stopInput(GameInput.left);
+      else if (key.contains('dpadright')) stopInput(GameInput.right);
+      else if (key.contains('dpadup')) stopInput(GameInput.up);
+      else if (key.contains('dpaddown')) stopInput(GameInput.down);
+      else if (key == 'a'|| key.contains('button_cross') || key.contains('button_0')) stopInput(GameInput.buttonA);
+      else if (key == 'b' || key.contains('button_circle') || key.contains('button_1')) stopInput(GameInput.buttonB);
     }
   }
 
@@ -1537,8 +1533,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        //EncounterManager.triggerSpecificEncounter(this, EnemyType.goblin);
-        EncounterManager.triggerRandomEncounter(this);
+        EncounterManager.triggerSpecificEncounter(this, EnemyType.alien);
+        //EncounterManager.triggerRandomEncounter(this);
       } 
 
       // Variáveis auxiliares (o D-Pad do controle também ativa estas)
