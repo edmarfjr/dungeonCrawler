@@ -13,7 +13,7 @@ class EncounterManager {
     List<Enemy Function()> iniPool = [];
 
     if (level < 4) {
-      iniPool = [() => SlimeEnemy(), () => GoblinEnemy(), () => GoblinRangeEnemy(), () => SpiderEnemy(), () => BatEnemy(), () => OrcEnemy()];
+      iniPool = [() => SlimeEnemy(), () => BlackMoldEnemy(), () => GoblinEnemy(), () => GoblinRangeEnemy(), () => SpiderEnemy(), () => BatEnemy(), () => OrcEnemy()];
     } else if (level < 7) {
       iniPool = [() => OvoEnemy(), () => WormEnemy(), () => FungoEnemy(), () => Fungo2Enemy(), () => BugEnemy(), () => InfectadoEnemy()];
     } else if (level < 10) {
@@ -47,6 +47,7 @@ class EncounterManager {
     
     switch (type) {
         case EnemyType.slime: newEnemy = SlimeEnemy(); break;
+        case EnemyType.blackMold: newEnemy = BlackMoldEnemy(); break;
         case EnemyType.goblin: newEnemy = GoblinEnemy(); break;
         case EnemyType.goblinRange: newEnemy = GoblinRangeEnemy(); break;
         case EnemyType.spider: newEnemy = SpiderEnemy(); break;

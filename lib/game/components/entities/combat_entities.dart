@@ -81,6 +81,8 @@ class PlayerCombatStats {
 
   double invencibleTmr = 0;
 
+  double blindTmr = 0;
+
   List<Item> get consumables => inventory.where((i) => i.type == ItemType.consumable || i.type == ItemType.spell).toList();
 
   void recalculateMaxHp() {
@@ -157,13 +159,16 @@ class PlayerCombatStats {
     if(invencibleTmr > 0) {
       invencibleTmr -= dt;
     }
-    
     if(staminaInfiniteTmr > 0) {
       staminaInfiniteTmr -= dt;
     }
     if(buffForcaTmr > 0) {
       buffForcaTmr -= dt;
     }
+    if(blindTmr > 0) {
+      blindTmr -= dt;
+    }
+
     /*
     if (cansado){
       if(moveSpeed != moveSpeedIni * 0.75) {
@@ -276,6 +281,10 @@ class PlayerCombatStats {
       width: size * multiplier, 
       height: size * multiplier
     );
+  }
+
+  void applyBlind(double d) {
+    blindTmr = d;
   }
 
 }

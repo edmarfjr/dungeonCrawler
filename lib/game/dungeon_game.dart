@@ -52,6 +52,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   late CombatOverlay combatOverlay;
 
   bool finalBom = false;
+  bool finalTanga = false;
+  bool desbloqueiaPenetrador = false;
   bool hasSpecialItemUnlocked = false;
 
 
@@ -124,6 +126,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   // --- lista de lore ---
    List<String> loreTxt = ['lore1','lore2','lore3','lore4','lore5','lore6','lore7','lore8','lore9','lore10'];
 
+  
+
   // ===========================================================================
   // GETTERS AUXILIARES
   // ===========================================================================
@@ -190,6 +194,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     hasSavedGame = prefs.containsKey('save_game');
 
     hasSpecialItemUnlocked = prefs.getBool('special_item_unlocked') ?? false;
+    desbloqueiaPenetrador = prefs.getBool('desbloqueiaPenetrador') ?? false;
 
     await loadBestiary();
 
@@ -216,7 +221,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
       'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png', 'itens/potionPreta.png',
       'itens/potionLaranja.png', 'itens/ruby.png', 'itens/esmeralda.png', 'itens/safira.png', 'itens/magicSword.png',
-      'itens/aberrantAxe.png', 'itens/aberrantShield.png', 'itens/cura.png', 'itens/zSaber.png', 'itens/handCannon.png'
+      'itens/aberrantAxe.png', 'itens/aberrantShield.png', 'itens/cura.png', 'itens/zSaber.png', 'itens/handCannon.png',
+      'itens/penetrador.png'
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
@@ -264,6 +270,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     enemySheets = {
       EnemyType.slime: await images.load('actors/slime.png'),
+      EnemyType.blackMold: await images.load('actors/slimePreto.png'),
       EnemyType.goblin: await images.load('actors/goblin.png'),
       EnemyType.goblinRange: await images.load('actors/goblin_range.png'),
       EnemyType.spider: await images.load('actors/spider.png'),
@@ -307,6 +314,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     enemySlashSprites = {
       EnemyType.slime: await images.load('effects/golpe.png'), 
+      EnemyType.blackMold: await images.load('effects/bola.png'), 
       EnemyType.goblin: await images.load('effects/golpe.png'),
       EnemyType.goblinRange: await images.load('effects/range.png'),
       EnemyType.orc: await images.load('effects/golpe2.png'),
@@ -372,7 +380,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'sfx/hit.wav', 'sfx/block.wav', 'sfx/encounter.wav', 'sfx/attack.wav',
       'sfx/enemy_die.wav', 'sfx/use_item.wav', 'sfx/fire.wav', 'sfx/charge.wav',
       'sfx/poison.wav', 'sfx/confirm.wav', 'sfx/hover.wav', 'sfx/step.wav',
-      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav', 'sfx/decline.wav',
+      'sfx/landing.wav', 'sfx/denied.wav', 'sfx/thunder.wav', 'sfx/claw.wav',
+      'sfx/decline.wav', 'sfx/explosion.wav', 'sfx/shot.wav',
       'music/8-bit-dungeon.wav',
       'music/main-menu.wav',
       'music/boss-battle.wav',
@@ -407,6 +416,11 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(hasSpecialItemUnlocked) {
       playerCombatStats.inventory.add(ItemDatabase.zSaber);
     }
+    
+    if(desbloqueiaPenetrador) {
+      playerCombatStats.inventory.add(ItemDatabase.penetrador);
+    }
+
     playerCombatStats.equippedWeapon = playerCombatStats.inventory[0];
     playerCombatStats.equippedArmor = playerCombatStats.inventory[1];
     playerCombatStats.equippedShield = playerCombatStats.inventory[2];
@@ -1429,6 +1443,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         prefs.setBool('special_item_unlocked', true);
       });
     }
+    if (desbloqueiaPenetrador) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setBool('desbloqueiaPenetrador', true);
+      });
+    }
+    
     resetGame();
     AudioManager.stopBgm(); overlays.remove('PauseMenu'); overlays.remove('GameOver'); overlays.remove('Victory');
     currentState = GameState.mainMenu; overlays.add('MainMenu');
@@ -1537,7 +1557,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        EncounterManager.triggerSpecificEncounter(this, EnemyType.esqueletoRange);
+        EncounterManager.triggerSpecificEncounter(this, EnemyType.blackMold);
         //EncounterManager.triggerRandomEncounter(this);
       } 
 
@@ -2385,6 +2405,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     playerCombatStats.str = 5; playerCombatStats.con = 5; playerCombatStats.wis = 5;
     playerCombatStats.hp = playerCombatStats.maxHp; playerCombatStats.stamina = playerCombatStats.con*3; playerCombatStats.mana = playerCombatStats.wis*3;
     playerCombatStats.currentPhase = CombatPhase.idle;
+
+    playerCombatStats.poisonTmr = 0;
 
     playerCombatStats.recalculateMaxHp();
     playerCombatStats.recalculateMaxInventory();

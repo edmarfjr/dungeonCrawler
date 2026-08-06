@@ -439,6 +439,12 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       _drawAttackEffects(canvas);
       _drawPlayer(canvas);
       if (gameRef.showHitboxes) _drawDebugBoxes(canvas);
+      if(playerStats.blindTmr > 0) {
+        canvas.drawRect(Rect.fromLTWH(0, 0, logicalWidth, logicalHeight), Paint()..color = Palette.preto.withOpacity(playerStats.blindTmr.clamp(0.0, 0.5)));
+        canvas.drawCircle(Offset(logicalWidth * 0.5, logicalHeight * 0.5), logicalWidth * 0.25, Paint()..color = Palette.preto.withOpacity(playerStats.blindTmr.clamp(0.0, 1.0)));
+        canvas.drawCircle(Offset(logicalWidth * 0.75, logicalHeight * 0.25), logicalWidth * 0.15, Paint()..color = Palette.preto.withOpacity(playerStats.blindTmr.clamp(0.0, 1.0)));
+        canvas.drawCircle(Offset(logicalWidth * 0.25, logicalHeight * 0.75), logicalWidth * 0.15, Paint()..color = Palette.preto.withOpacity(playerStats.blindTmr.clamp(0.0, 1.0)));
+      }
     }
 
     for (var child in children) {

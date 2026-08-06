@@ -22,9 +22,10 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   bool corNormal = true;
   bool travouMira = false;
   double alvoX = 0;
+  bool isBlind ;
   
 
-  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{this.waitTmr = 0, this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5, this.imgPath = ''})
+  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{this.waitTmr = 0, this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5, this.imgPath = '', this.isBlind = false})
       : super(
           anchor: Anchor.center, 
           priority: 100,           
@@ -99,6 +100,9 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
       if (myHitbox.overlaps(gameRef.playerCombatStats.getHurtbox(gameRef.size))) {
         
         gameRef.applyEnemyDamage(owner); 
+        if(isBlind){
+          gameRef.playerCombatStats.applyBlind(3.0);
+        }
         removeFromParent();
         
         if (gameRef.playerCombatStats.hp <= 0) {

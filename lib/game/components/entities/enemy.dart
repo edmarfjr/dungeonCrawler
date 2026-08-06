@@ -13,7 +13,7 @@ import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, goblinRange, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
+enum EnemyType { slime, blackMold, spider, goblin, goblinRange, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
 garra, esqueleto, esqueletoRange, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv, aberraCult,
 aberraOvo, alien, tentaculo, boss4 }
 
@@ -189,6 +189,9 @@ abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGam
           gameRef.showMessage("Você encontrou a Chave da Masmorra!");
           if(type == EnemyType.boss4 && gameRef.playerCombatStats.equippedWeapon?.name == 'espada_magica'){
             gameRef.finalBom = true;
+          }
+          if(type == EnemyType.boss4 && gameRef.playerCombatStats.equippedWeapon?.name == 'tanga'){
+            gameRef.finalTanga = true;
           }
         }
         isAlive = false; 
@@ -449,6 +452,49 @@ class SlimeEnemy extends Enemy {
     strafePosition += currentDir * speed * dt;
     if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
     if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
+  }
+}
+
+class BlackMoldEnemy extends Enemy {
+  double moveTimer = 0.0;
+  double currentDir = 1.0;
+
+  BlackMoldEnemy() : super(name: 'blackMold',
+    type: EnemyType.blackMold, color: Palette.cinzaEsc, hp: 40, maxHp: 40, dropEssence: 8, width: 144, height: 144, speed: 0.3,
+    isMelee: false,
+    hurtboxWidth: 130, hurtboxHeight: 70, hurtboxOffsetY: 0,
+    hitboxWidth: 0, hitboxHeight: 0, hitboxOffsetY: 0,
+    drop: [ItemDatabase.slimeEye]
+  );
+
+  @override
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+    moveTimer -= dt;
+    if (moveTimer <= 0) {
+      currentDir = (Random().nextInt(3) - 1).toDouble();
+      moveTimer = 1.0 + Random().nextDouble() * 1.5;
+    }
+    strafePosition += currentDir * speed * dt;
+    if (strafePosition >= limit) { strafePosition = limit; currentDir = -1.0; }
+    if (strafePosition <= -limit) { strafePosition = -limit; currentDir = 1.0; }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt); 
+
+    if (gameRef.currentState == GameState.paused || gameRef.currentState == GameState.settings) return;
+
+    if (currentPhase == CombatPhase.active && !attackHit) {
+      attackHit = true;
+      gameRef.combatOverlay.add(ArcProjectile(
+        strafePosition, yPosition + visualYOffset, 0.0, -0.4, this, grav: 0.6, imgPath: 'effects/bola3.png',radius: 50, isBlind:true,
+      ));
+    }
   }
 }
 

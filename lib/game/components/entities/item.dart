@@ -146,7 +146,15 @@ class ItemDatabase {
     game.playerCombatStats.critChance = 5;
     game.playerCombatStats.critMultiplier = 2;
     game.playerCombatStats.offYWeapon = 0;
+  });
 
+  static Item get penetrador => Item('penetrador', ItemType.weapon, 'itens/penetrador.png', 6,staCust: 5.0 ,description: 'd_penetrador', str:5,value:6, cor: Colors.white, onUse: (item, game) {
+    game.playerCombatStats.windupTime = 0.1;
+    game.playerCombatStats.activeTime = 0.1;
+    game.playerCombatStats.recoveryTime = 0.1;
+    game.playerCombatStats.critChance = 5;
+    game.playerCombatStats.critMultiplier = 2;
+    game.playerCombatStats.offYWeapon = 0;
   });
 
   static Item get zSaber => Item('zSaber', ItemType.weapon, 'itens/zSaber.png', 10,staCust: 5.0, hasChargeAttack: true ,description: 'd_zSaber', str:5,value:6, cor: Colors.white, onUse: (item, game) {
@@ -378,7 +386,7 @@ class ItemDatabase {
       item.quantity++;
       return;
     }
-    AudioManager.playSfx('sfx/fire.wav');
+    AudioManager.playSfx('sfx/explosion.wav');
     game.playerCombatStats.applyEffect(0.5,Palette.laranja) ;
     for (var enemy in game.combatOverlay.enemies) {
       if (enemy.isAlive) { 
@@ -514,7 +522,7 @@ class ItemDatabase {
       return;
     }
 
-    AudioManager.playSfx('sfx/fire.wav');
+    AudioManager.playSfx('sfx/shot.wav');
     game.playerCombatStats.applyEffect(0.5,Palette.laranja) ;
 
     final ui.Image img = await game.images.load('effects/bola.png');

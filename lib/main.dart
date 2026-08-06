@@ -14,11 +14,16 @@ import 'package:a_blade_in_the_abyss/game/overlays/splash_overlay.dart';
 import 'package:a_blade_in_the_abyss/game/overlays/vitory_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
+import 'package:flame/flame.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart'; // Importante para detectar a plataforma
+import 'package:flutter/foundation.dart'; 
+import 'dart:io';
+import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); 
+
+  await Flame.device.fullScreen();
   
   // Trava orientação se não for Desktop
   if (!isDesktopPlatform) {
@@ -26,6 +31,22 @@ void main() async {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+  }
+
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = const WindowOptions(
+      title: 'A Blade in the Abyss', // O nome do seu jogo
+      fullScreen: true,              // Força a tela cheia clássica sem bordas
+      center: true,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.setFullScreen(true);
+      await windowManager.show();
+      await windowManager.focus();
+    });
   }
 
   await SettingsManager.init();
