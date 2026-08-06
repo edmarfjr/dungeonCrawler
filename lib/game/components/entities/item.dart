@@ -109,7 +109,7 @@ class ItemDatabase {
     
   });
 
-  static Item get varinha => Item('varinha', ItemType.weapon, 'itens/varinha.png', 5,staCust: 3.0 ,description: 'd_varinha',projetil:true, cor: Colors.white, onUse: (item, game) {
+  static Item get varinha => Item('varinha', ItemType.weapon, 'itens/varinha.png', 5,staCust: 3.0 ,description: 'd_varinha',value:5,projetil:true, cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.windupTime = 0.1;
     game.playerCombatStats.activeTime = 0.1;
     game.playerCombatStats.recoveryTime = 0.1;
@@ -307,21 +307,21 @@ class ItemDatabase {
 
   });
 
-   static Item get healthPotion => Item('potVerm', ItemType.consumable, 'itens/potionVermelha.png', 40, 
+   static Item get healthPotion => Item('potVerm', ItemType.consumable, 'itens/potionVermelha.png', 40, value:5,
     quantity: 1, description: 'd_potVerm', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
     game.playerCombatStats.applyEffect(0.5,Palette.vermelho) ;
     game.showMessage(I18n.t('recupera_hp').replaceFirst('[hp]', item.power.toString()));
   });
 
-  static Item get meat => Item('carne', ItemType.consumable, 'itens/meat.png', 10, 
+  static Item get meat => Item('carne', ItemType.consumable, 'itens/meat.png', 10,  value:3,
     quantity: 1, description: 'd_carne', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
     game.playerCombatStats.applyEffect(0.5,Palette.vermelho) ;
     game.showMessage(I18n.t('recupera_hp').replaceFirst('[hp]', item.power.toString()));
   });
 
-  static Item get meat2 => Item('carne2', ItemType.consumable, 'itens/meat2.png', 50, 
+  static Item get meat2 => Item('carne2', ItemType.consumable, 'itens/meat2.png', 50,  value:5,
     quantity: 1, description: 'd_carne2', cor: Colors.white, onUse: (item, game) {
     if(Random().nextBool()){
       game.playerCombatStats.hp = min(game.playerCombatStats.maxHp, game.playerCombatStats.hp + item.power);
@@ -334,14 +334,14 @@ class ItemDatabase {
     }
   });
 
-  static Item get manaPotion => Item('potAzul', ItemType.consumable, 'itens/potionAzul.png', 100, 
+  static Item get manaPotion => Item('potAzul', ItemType.consumable, 'itens/potionAzul.png', 100,  value:5,
     quantity: 1, description: 'd_potAzul', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.mana = min(game.playerCombatStats.wis*3, game.playerCombatStats.mana + item.power);
     game.playerCombatStats.applyEffect(0.5,Palette.azul) ;
     game.showMessage(I18n.t('recupera_mana').replaceFirst('[mana]', item.power.toString()));
   });
 
-  static Item get staminaPotion => Item('potVerde', ItemType.consumable, 'itens/potionVerde.png', 50, 
+  static Item get staminaPotion => Item('potVerde', ItemType.consumable, 'itens/potionVerde.png', 50,  value:5,
     quantity: 1, description: 'd_potVerde', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.cansado = false;
     game.playerCombatStats.stamina = game.playerCombatStats.con*3;
@@ -350,28 +350,28 @@ class ItemDatabase {
     game.showMessage(I18n.t('recupera_stamina'));
   });
 
-  static Item get reflexPotion => Item('potAmarela', ItemType.consumable, 'itens/potionAmarela.png', 50, 
+  static Item get reflexPotion => Item('potAmarela', ItemType.consumable, 'itens/potionAmarela.png', 50, value:5, 
     quantity: 1, description: 'd_potAmarela', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.reflex = true;
     game.showMessage(I18n.t('reflexo'));
     game.playerCombatStats.applyEffect(0.5,Palette.amarelo) ;
   });
 
-  static Item get strPotion => Item('potPreta', ItemType.consumable, 'itens/potionPreta.png', 50, 
+  static Item get strPotion => Item('potPreta', ItemType.consumable, 'itens/potionPreta.png', 50, value:5, 
     quantity: 1, description: 'd_potPreta', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.buffForcaTmr = 10;
     game.showMessage(I18n.t('forcaBns'));
     game.playerCombatStats.applyEffect(0.5,Palette.cinza) ;
   });
 
-  static Item get bugOrgan => Item('orgao', ItemType.consumable, 'itens/organ.png', 50, 
+  static Item get bugOrgan => Item('orgao', ItemType.consumable, 'itens/organ.png', 50,  value:5,
     quantity: 1, description: 'd_orgao', cor: Colors.white, onUse: (item, game) {
     game.playerCombatStats.poisonTmr = 0;
     game.playerCombatStats.applyEffect(0.5,Palette.vermelhoCla) ;
     game.showMessage("Você se sente melhor!");
   });
 
-  static Item get bomb => Item('bomba', ItemType.consumable, 'itens/bomb.png', 30, 
+  static Item get bomb => Item('bomba', ItemType.consumable, 'itens/bomb.png', 30,  value:3,
     quantity: 1, description: 'd_bomba', cor: Colors.white, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
@@ -394,7 +394,7 @@ class ItemDatabase {
     }
   });
 
-  static Item get web => Item('teia', ItemType.consumable, 'itens/web.png', 0, 
+  static Item get web => Item('teia', ItemType.consumable, 'itens/web.png', 0,  value:2,
     quantity: 1, description: 'd_teia', cor: Colors.white, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
@@ -409,7 +409,7 @@ class ItemDatabase {
     }
   });
 
-  static Item get faca => Item('faca', ItemType.consumable, 'itens/faca.png', 3, 
+  static Item get faca => Item('faca', ItemType.consumable, 'itens/faca.png', 3,  value:1,
     quantity: 1, description: 'd_faca', cor: Colors.white, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
@@ -478,7 +478,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get bola => Item('bola', ItemType.consumable, 'itens/bola.png', 5, 
+  static Item get bola => Item('bola', ItemType.consumable, 'itens/bola.png', 5,  value:5,
     quantity: 1, description: 'd_bola', cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
@@ -506,7 +506,7 @@ class ItemDatabase {
     ));
   });
 
-  static Item get handCannon => Item('handCannon', ItemType.consumable, 'itens/handCannon.png', 50, 
+  static Item get handCannon => Item('handCannon', ItemType.consumable, 'itens/handCannon.png', 50, value:5,
     quantity: 1, description: 'd_handCannon', cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
@@ -592,7 +592,7 @@ class ItemDatabase {
   });
 
   static Item get cura => Item('cura', ItemType.spell, 'itens/cura.png', 5, 
-    manaCost: 15, value:16, quantity: 1, description: 'd_cura', cor: Colors.white, onUse: (item, game) {
+    manaCost: 15, value:8, quantity: 1, description: 'd_cura', cor: Colors.white, onUse: (item, game) {
     if (game.currentState != GameState.combat) {
       game.showMessage(I18n.t('guarda_batalha'));
       item.quantity++;

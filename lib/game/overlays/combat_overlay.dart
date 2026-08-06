@@ -915,25 +915,26 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       }
 
     }
-    if (gameRef.currentState == GameState.exploration && gameRef.player.hasKey) {
-      double bxSize = 55;
-      double keyX = logicalWidth/2 + bxSize;
-      double keyY = boxHeight/2 - bxSize/2;
-      
-      canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.preto);
-      try {
-        canvas.drawImageRect(
-          gameRef.keySprite, 
-          Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
-          Rect.fromLTWH(keyX, keyY, bxSize, bxSize),
-          Paint()..colorFilter = const ColorFilter.mode(Palette.branco, BlendMode.modulate)
-        );
-      } catch (e) {}
-      canvas.drawRect(Rect.fromLTWH(keyX, keyY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
-      
-    }
 
     if (gameRef.currentState == GameState.exploration) {
+
+      if(gameRef.player.hasKey){
+        double bxSize = 55;
+        double boxX = logicalWidth - (bxSize + 15);
+        double boxY = boxHeight/2 - bxSize/2 - 2;
+        
+        canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.preto);
+        
+        try {
+          canvas.drawImageRect(
+            gameRef.keySprite, 
+            Rect.fromLTWH(0, 0, gameRef.keySprite.width.toDouble(), gameRef.keySprite.height.toDouble()),
+            Rect.fromLTWH(boxX, boxY, bxSize, bxSize),
+            Paint()..colorFilter = const ColorFilter.mode(Palette.amarelo, BlendMode.modulate)
+          );
+        } catch (e) {}
+        //canvas.drawRect(Rect.fromLTWH(boxX, boxY, bxSize, bxSize), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = 4);
+      }
       
       String direc = 'dir_n';
       switch (gameRef.player.facing) {
@@ -947,65 +948,65 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
           textDirection: TextDirection.ltr,
         )..layout()..paint(canvas, Offset(logicalWidth/2 - I18n.t(direc).length*6 , 11));
 
-        double statusY = logicalHeight - logicalHeight*0.145/2 -15;
-
-      String strTxt = '${playerStats.str}';
-      String conTxt = '${playerStats.con}';
-      String wisTxt = '${playerStats.wis}';
-      String essenTxt = '${playerStats.essence}';
-
       
-      final strPainter = TextPainter(
-        text: TextSpan(
-          text: strTxt, 
-          style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
 
-      double targetX = (logicalWidth * 0.149) - (strPainter.width / 2);
-
-      strPainter.paint(canvas, Offset(targetX, statusY));
-
-      final conPainter = TextPainter(
-        text: TextSpan(
-          text: conTxt, 
-          style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      targetX = (logicalWidth * 0.325) - (conPainter.width / 2);
-
-      conPainter.paint(canvas, Offset(targetX, statusY));
-
-      final wisPainter = TextPainter(
-        text: TextSpan(
-          text: wisTxt, 
-          style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      targetX = (logicalWidth * 0.5) - (wisPainter.width / 2);
-
-      wisPainter.paint(canvas, Offset(targetX, statusY));
-
-      final essenPainter = TextPainter(
-        text: TextSpan(
-          text: essenTxt, 
-          style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      targetX = (logicalWidth * 0.785) - (essenPainter.width / 2);
-
-      essenPainter.paint(canvas, Offset(targetX, statusY + 10));
-
-    }else{
-      
     }
+
+    double statusY = logicalHeight - logicalHeight*0.145/2 -15;
+
+    String strTxt = '${playerStats.str}';
+    String conTxt = '${playerStats.con}';
+    String wisTxt = '${playerStats.wis}';
+    String essenTxt = '${playerStats.essence}';
+
+    
+    final strPainter = TextPainter(
+      text: TextSpan(
+        text: strTxt, 
+        style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    double targetX = (logicalWidth * 0.149) - (strPainter.width / 2);
+
+    strPainter.paint(canvas, Offset(targetX, statusY));
+
+    final conPainter = TextPainter(
+      text: TextSpan(
+        text: conTxt, 
+        style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    targetX = (logicalWidth * 0.325) - (conPainter.width / 2);
+
+    conPainter.paint(canvas, Offset(targetX, statusY));
+
+    final wisPainter = TextPainter(
+      text: TextSpan(
+        text: wisTxt, 
+        style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    targetX = (logicalWidth * 0.5) - (wisPainter.width / 2);
+
+    wisPainter.paint(canvas, Offset(targetX, statusY));
+
+    final essenPainter = TextPainter(
+      text: TextSpan(
+        text: essenTxt, 
+        style: const TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 20)
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    targetX = (logicalWidth * 0.785) - (essenPainter.width / 2);
+
+    essenPainter.paint(canvas, Offset(targetX, statusY + 10));
 
     
 

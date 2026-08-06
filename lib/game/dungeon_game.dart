@@ -402,7 +402,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga, 
       ItemDatabase.bloquel, 
       ItemDatabase.healthPotion,
-      ItemDatabase.handCannon,
     ];
 
     if(hasSpecialItemUnlocked) {
@@ -1379,7 +1378,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     List<Item> consumiveis = [
       ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.staminaPotion, ItemDatabase.reflexPotion,
       ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.web, ItemDatabase.slimeEye,
-      ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.strPotion
+      ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.strPotion, ItemDatabase.handCannon
     ];
 
     List<Item> unownedItens = items.where((equip) => !playerCombatStats.inventory.any((invItem) => invItem.name == equip.name)).toList();
@@ -2413,6 +2412,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void startGame() {
     resetGame();
+    apagaSave();
     currentState = GameState.intro; 
     overlays.remove('GameOver');
     overlays.remove('MainMenu');
