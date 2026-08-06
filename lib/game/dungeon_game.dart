@@ -2031,7 +2031,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _handleMainMenuInput(GameInput input) {
     if (isMainMenuAnimating) return;
-    int maxOptions = hasSavedGame ? 4 : 5; 
+    int maxOptions = hasSavedGame ? 5 : 4; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
     if (input == GameInput.buttonA) {
