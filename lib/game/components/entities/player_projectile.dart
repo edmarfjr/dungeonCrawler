@@ -17,15 +17,16 @@ class PlayerProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGam
   Map<Enemy, double> hitEnemies = {};
   double dieTmr;
   ui.Image img;
+  bool acertaFundo;
 
   bool isFlip;
   double _flipTimer = 0.0; 
   final double _flipInterval = 0.15;
 
   // O 'super(size, anchor)' avisa ao Flame o tamanho oficial deste objeto
-  PlayerProjectile(this.strafeX, this.yPos, this.speed, this.power, this.color, 
-      {this.isFlip = false, this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 0.5, required this.img}) 
-      : super(size: Vector2(144, 144), anchor: Anchor.center
+  PlayerProjectile(this.strafeX, this.yPos, this.speed, this.power, this.color,
+      {this.isFlip = false, this.acertaFundo = false, this.dieTmr = 2, this.yDir = -1, this.isPiercing = false, double width = 80, double height = 180, this.hitCooldown = 0.5, required this.img}) 
+      : super(size: Vector2(img.width.toDouble()*6, img.height.toDouble()*6), anchor: Anchor.center
       ){
         sprite = Sprite(img);
         paint = Paint()..colorFilter = ColorFilter.mode(color, BlendMode.modulate);
@@ -71,7 +72,7 @@ class PlayerProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGam
     for (var enemy in gameRef.combatOverlay.enemies) {
       bool isImmune = hitEnemies.containsKey(enemy) && hitEnemies[enemy]! > 0;
       
-      if (!isImmune && !enemy.isDying && enemy.isFrontRow && enemy.isVulnerable && myHitbox.overlaps(enemy.getHurtbox(gameRef.size))) {
+      if (!isImmune && !enemy.isDying && (enemy.isFrontRow || acertaFundo) && enemy.isVulnerable && myHitbox.overlaps(enemy.getHurtbox(gameRef.size))) {
         enemy.hp -= power;
         enemy.applyHitStun(0.3);
         

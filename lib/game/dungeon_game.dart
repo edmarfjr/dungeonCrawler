@@ -216,7 +216,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'itens/steelArmor.png', 'itens/bronzeArmor.png', 'itens/towerShield.png', 'itens/gambeson.png',
       'itens/varinha.png', 'itens/zweihander.png', 'itens/chainMail.png', 'itens/raio.png', 'itens/potionPreta.png',
       'itens/potionLaranja.png', 'itens/ruby.png', 'itens/esmeralda.png', 'itens/safira.png', 'itens/magicSword.png',
-      'itens/aberrantAxe.png', 'itens/aberrantShield.png', 'itens/cura.png', 'itens/zSaber.png'
+      'itens/aberrantAxe.png', 'itens/aberrantShield.png', 'itens/cura.png', 'itens/zSaber.png', 'itens/handCannon.png'
     ]);
 
     final ui.Image wallImg = await images.load('tilesets/wall.png');
@@ -265,6 +265,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     enemySheets = {
       EnemyType.slime: await images.load('actors/slime.png'),
       EnemyType.goblin: await images.load('actors/goblin.png'),
+      EnemyType.goblinRange: await images.load('actors/goblin_range.png'),
       EnemyType.spider: await images.load('actors/spider.png'),
       EnemyType.mimic: await images.load('actors/mimic.png'),
       EnemyType.orc: await images.load('actors/orc.png'),
@@ -279,6 +280,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.garra: await images.load('actors/garra.png'),
       EnemyType.boss2: await images.load('actors/boss2.png'),
       EnemyType.esqueleto: await images.load('actors/esqueleto.png'),
+      EnemyType.esqueletoRange: await images.load('actors/esqueletoRange.png'),
       EnemyType.jester: await images.load('actors/jester.png'),
       EnemyType.naga: await images.load('actors/naga.png'),
       EnemyType.mao: await images.load('actors/mao.png'),
@@ -306,6 +308,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     enemySlashSprites = {
       EnemyType.slime: await images.load('effects/golpe.png'), 
       EnemyType.goblin: await images.load('effects/golpe.png'),
+      EnemyType.goblinRange: await images.load('effects/range.png'),
       EnemyType.orc: await images.load('effects/golpe2.png'),
       EnemyType.boss1: await images.load('effects/golpe.png'),
       EnemyType.spider: await images.load('effects/bite.png'), 
@@ -318,6 +321,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       EnemyType.boss2: await images.load('effects/spore.png'), 
       EnemyType.infectado: await images.load('effects/soco.png'), 
       EnemyType.esqueleto: await images.load('effects/golpeLargo.png'), 
+      EnemyType.esqueletoRange: await images.load('effects/range.png'), 
       EnemyType.jester: await images.load('effects/bola.png'), 
       EnemyType.mao: await images.load('effects/bola.png'), 
       EnemyType.naga: await images.load('effects/golpe.png'), 
@@ -398,6 +402,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       ItemDatabase.tanga, 
       ItemDatabase.bloquel, 
       ItemDatabase.healthPotion,
+      ItemDatabase.handCannon,
     ];
 
     if(hasSpecialItemUnlocked) {
@@ -1533,7 +1538,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        EncounterManager.triggerSpecificEncounter(this, EnemyType.alien);
+        EncounterManager.triggerSpecificEncounter(this, EnemyType.esqueletoRange);
         //EncounterManager.triggerRandomEncounter(this);
       } 
 
@@ -2027,7 +2032,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   void _handleMainMenuInput(GameInput input) {
     if (isMainMenuAnimating) return;
-    int maxOptions = hasSavedGame ? 3 : 4; 
+    int maxOptions = hasSavedGame ? 4 : 5; 
     if (input == GameInput.up) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value - 1 + maxOptions) % maxOptions; }
     if (input == GameInput.down) { AudioManager.playSfx('sfx/hover.wav'); mainMenuCursor.value = (mainMenuCursor.value + 1) % maxOptions; }
     if (input == GameInput.buttonA) {
@@ -2237,7 +2242,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else {
         List<Item> allConsumables = [
             ItemDatabase.healthPotion, ItemDatabase.manaPotion, ItemDatabase.bomb, ItemDatabase.staminaPotion,
-            ItemDatabase.reflexPotion, ItemDatabase.meat, ItemDatabase.faca, ItemDatabase.bugOrgan, ItemDatabase.strPotion
+            ItemDatabase.reflexPotion, ItemDatabase.meat, ItemDatabase.faca, ItemDatabase.bugOrgan, 
+            ItemDatabase.strPotion, ItemDatabase.handCannon, 
           ];
         Item droppedItem = allConsumables[Random().nextInt(allConsumables.length)];
         droppedItem.quantity = 1;

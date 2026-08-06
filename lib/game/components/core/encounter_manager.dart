@@ -13,11 +13,11 @@ class EncounterManager {
     List<Enemy Function()> iniPool = [];
 
     if (level < 4) {
-      iniPool = [() => SlimeEnemy(), () => GoblinEnemy(), () => SpiderEnemy(), () => BatEnemy(), () => OrcEnemy()];
+      iniPool = [() => SlimeEnemy(), () => GoblinEnemy(), () => GoblinRangeEnemy(), () => SpiderEnemy(), () => BatEnemy(), () => OrcEnemy()];
     } else if (level < 7) {
       iniPool = [() => OvoEnemy(), () => WormEnemy(), () => FungoEnemy(), () => Fungo2Enemy(), () => BugEnemy(), () => InfectadoEnemy()];
     } else if (level < 10) {
-      iniPool = [() => EsqueletoEnemy(), () => DollEnemy(), () => InfectadoEnemy(), () => JesterEnemy(), () => NagaEnemy(), () => HandEnemy()];
+      iniPool = [() => EsqueletoEnemy(), () => EsqueletoRangeEnemy(), () => DollEnemy(), () => InfectadoEnemy(), () => JesterEnemy(), () => NagaEnemy(), () => HandEnemy()];
     } else {
       iniPool = [() => AlienEnemy(), () => AberraArvEnemy(), () => AberraBestaEnemy(), () => AberraBrutoEnemy(), () => AberraVoaEnemy(), () => AberraOvoEnemy(), () => AberraCultistaEnemy()];
     }
@@ -48,6 +48,7 @@ class EncounterManager {
     switch (type) {
         case EnemyType.slime: newEnemy = SlimeEnemy(); break;
         case EnemyType.goblin: newEnemy = GoblinEnemy(); break;
+        case EnemyType.goblinRange: newEnemy = GoblinRangeEnemy(); break;
         case EnemyType.spider: newEnemy = SpiderEnemy(); break;
         case EnemyType.orc: newEnemy = OrcEnemy(); break;
         case EnemyType.bat: newEnemy = BatEnemy(); break;
@@ -100,6 +101,7 @@ class EncounterManager {
         case EnemyType.fungo2: newEnemy = Fungo2Enemy(); break;
         case EnemyType.infectado: newEnemy = InfectadoEnemy(); break;
         case EnemyType.esqueleto: newEnemy = EsqueletoEnemy(); break;
+        case EnemyType.esqueletoRange: newEnemy = EsqueletoRangeEnemy(); break;
         case EnemyType.mao: newEnemy = HandEnemy(); break;
         case EnemyType.doll: newEnemy = DollEnemy(); break;
         case EnemyType.goblinShop: newEnemy = GoblinShopEnemy(); break;

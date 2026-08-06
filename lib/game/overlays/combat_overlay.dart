@@ -875,9 +875,9 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
     );
 
     double barX = 22;
-    _drawHorizontalBar(canvas, barX, 30, playerStats.maxHp * 3, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
-    _drawHorizontalBar(canvas, barX, 47, playerStats.con * 9, 12, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
-    _drawHorizontalBar(canvas, barX, 64, playerStats.wis * 9, 12, Palette.azulCla, playerStats.mana / (playerStats.wis * 3));
+    _drawHorizontalBar(canvas, barX, boxHeight*0.31, playerStats.maxHp * 3, 12, Palette.vermelho, playerStats.hp / playerStats.maxHp);
+    _drawHorizontalBar(canvas, barX, boxHeight*0.51, playerStats.con * 9, 12, Palette.verdeCla, playerStats.stamina / (playerStats.con * 3));
+    _drawHorizontalBar(canvas, barX, boxHeight*0.71, playerStats.wis * 9, 12, Palette.azulCla, playerStats.mana / (playerStats.wis * 3));
     
     //inventario
     if (gameRef.selectedConsumableIndex < playerStats.consumables.length && gameRef.currentState == GameState.combat) {
@@ -905,7 +905,7 @@ class CombatOverlay extends PositionComponent with HasGameRef<DungeonCrawlerGame
       TextPainter(
         text: TextSpan(text: amountText, style: TextStyle(fontFamily: 'pixelFont', color: sel.type == ItemType.spell ? Palette.azul : Palette.branco, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
-      )..layout()..paint(canvas, Offset(boxX + bxSize/2 - amountText.length*3, bxSize + 15));
+      )..layout()..paint(canvas, Offset(boxX + bxSize/2 - amountText.length*3, bxSize + boxHeight*0.15));
       
       if(playerStats.reflex){
         TextPainter(

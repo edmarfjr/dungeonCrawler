@@ -37,6 +37,8 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
     double startX = 0;
     double startY = 0;
 
+    double boxHeight = logicalHeight*0.145+1;
+
     if (isDesktop) {
       double panelWidth = 260.0;
       double rightPanelX = logicalWidth - panelWidth;
@@ -44,11 +46,10 @@ class MinimapRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGa
       startX = rightPanelX + (panelWidth - mapWidth) / 2;
       startY = 35; 
     } else {
-      double topHudHeight = 0;
       //double margin = 0;
       // Mobile: Canto superior direito da tela de exploração (com margem de respiro)
       startX = logicalWidth - mapWidth - 3;
-      startY = topHudHeight + 10;
+      startY = boxHeight/2 - mapHeight/2 + boxHeight*0.03;
     }
 
     // Salva o canvas para aplicar a escala

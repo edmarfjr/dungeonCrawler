@@ -13,8 +13,8 @@ import 'package:flame/components.dart';
 import 'package:flame/sprite.dart';
 import 'package:flutter/material.dart';
 
-enum EnemyType { slime, spider, goblin, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
-garra, esqueleto, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv, aberraCult,
+enum EnemyType { slime, spider, goblin, goblinRange, mimic, orc, bat, boss1, bug, worm, ovo, fungo, fungo2, infectado, boss2, 
+garra, esqueleto, esqueletoRange, jester, naga, mao, doll, goblinShop, boss3, aberraBruto, aberraVoa, aberraBesta, aberraArv, aberraCult,
 aberraOvo, alien, tentaculo, boss4 }
 
 abstract class Enemy extends PositionComponent with HasGameRef<DungeonCrawlerGame> {
@@ -468,6 +468,68 @@ class GoblinEnemy extends Enemy {
   @override
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     checkAttackPadrao(dt,player,screenSize);
+  }
+  
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+
+    if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) {
+      isFleeing = true;
+    }
+    if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) {
+      isFleeing = false;
+    }
+
+    if (isFleeing) {
+      double dir = -(player.strafePosition - strafePosition).sign;
+      if (dir == 0) dir = 1.0; 
+      strafePosition += dir * speed * dt;
+    } else {
+      if (distanceToPlayer > 0.01) {
+        double dir = (player.strafePosition - strafePosition).sign;
+        strafePosition += dir * speed * dt;
+      }
+    }
+    
+    strafePosition = strafePosition.clamp(-limit, limit);
+  }
+}
+
+class GoblinRangeEnemy extends Enemy {
+  bool isFleeing = false;
+  GoblinRangeEnemy() : super(name: 'goblinRange',
+    type: EnemyType.goblinRange, color: Palette.verde, hp: 50, maxHp: 50, dropEssence: 15, width: 144, height: 144, speed: 0.6, damage: 5,
+    hurtboxWidth: 60, hurtboxHeight: 90, hurtboxOffsetY: 0,
+    hitboxWidth: 30, hitboxHeight: 144, hitboxOffsetY: 120, hitboxOffsetX: 10, maxAttackCooldown: 1.0,drop: [ItemDatabase.faca]
+  );
+
+  @override 
+  void onHitStun() { 
+    isFleeing = true; 
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scaleX = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scaleX;
+    
+    double baseSizeMultiplier = (gameRef.combatOverlay.viewportRect.width / 500.0).clamp(1.0, 3.0);
+    double reachPixels = 20 * baseSizeMultiplier;
+
+    attackCooldown -= dt;
+    bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
+
+    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 1; 
+      attackCooldown = maxAttackCooldown;
+    }
   }
   
   @override 
@@ -1657,6 +1719,70 @@ class EsqueletoEnemy extends Enemy {
   @override 
   void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
     checkAttackPadrao(dt,player,screenSize,dist:40);
+  }
+}
+
+class EsqueletoRangeEnemy extends Enemy {
+  bool isFleeing = false;
+  EsqueletoRangeEnemy() : super(name: 'esqueletoRange',
+    type: EnemyType.esqueletoRange,  damage: 15,
+    color: Palette.cinza, // Cor do escudo/armadura
+    hp: 120, maxHp: 120, dropEssence: 30, width: 144, height: 144, speed: 0.62,
+    hurtboxWidth: 80, hurtboxHeight: 140, hurtboxOffsetY: 0,
+    hitboxWidth: 30, hitboxHeight: 144, hitboxOffsetY: 120,drop: [],
+    imunePoison: true,
+  ) {
+    isMelee = true;
+  }
+
+  @override 
+  void updateBehavior(double dt, PlayerCombatStats player) {
+    double distanceToPlayer = (player.strafePosition - strafePosition).abs();
+    double strafeRange = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double halfWidthPixels = (hurtboxWidth * finalScale) / 2.0;
+    double normalizedOffset = halfWidthPixels / strafeRange;
+    double limit = 0.95 - normalizedOffset;
+    
+    bool isSelfAttacking = currentPhase == CombatPhase.windup || 
+                           currentPhase == CombatPhase.active || 
+                           currentPhase == CombatPhase.recovery;
+
+
+    if (!isSelfAttacking) {
+      if (!isFleeing && distanceToPlayer < 0.4 && attackCooldown > 0) isFleeing = true;
+      if (isFleeing && (strafePosition <= -limit || strafePosition >= limit)) isFleeing = false;
+
+      if (isFleeing) {
+        double dir = -(player.strafePosition - strafePosition).sign;
+        if (dir == 0) dir = 1.0;
+        strafePosition += dir * speed * dt;
+      } else {
+        if (distanceToPlayer > 0.01) {
+          double dir = (player.strafePosition - strafePosition).sign;
+          strafePosition += dir * speed * dt;
+        }
+      }
+
+      strafePosition = strafePosition.clamp(-limit, limit);
+    }
+  }
+
+  @override
+  void checkAttackDecision(double dt, PlayerCombatStats player, Vector2 screenSize) {
+    double scaleX = gameRef.combatOverlay.viewportRect.width * 0.35;
+    double distancePixels = (player.strafePosition - strafePosition).abs() * scaleX;
+    
+    double baseSizeMultiplier = (gameRef.combatOverlay.viewportRect.width / 500.0).clamp(1.0, 3.0);
+    double reachPixels = 20 * baseSizeMultiplier;
+
+    attackCooldown -= dt;
+    bool isCloseY = type == EnemyType.spider ? yPosition >= 0.4 : true;
+
+    if (distancePixels <= reachPixels && isCloseY && attackCooldown <= 0 && currentPhase == CombatPhase.idle && isFrontRow) {
+      currentPhase = CombatPhase.windup;
+      animTimer = 1; 
+      attackCooldown = maxAttackCooldown;
+    }
   }
 }
 

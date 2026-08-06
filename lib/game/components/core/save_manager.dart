@@ -96,6 +96,7 @@ class SaveManager {
       // itens
       ItemDatabase.faca, ItemDatabase.bomb, ItemDatabase.meat, ItemDatabase.meat2, ItemDatabase.web, ItemDatabase.slimeEye,
       ItemDatabase.bugOrgan, ItemDatabase.bola, ItemDatabase.coin, ItemDatabase.rubi,  ItemDatabase.esmeralda, ItemDatabase.safira,
+      ItemDatabase.handCannon, 
       // magias
       ItemDatabase.firePillar, ItemDatabase.piercingShot, ItemDatabase.toxicCloud, ItemDatabase.thunderStorm, ItemDatabase.cura,
     ];

@@ -506,6 +506,22 @@ class ItemDatabase {
     ));
   });
 
+  static Item get handCannon => Item('handCannon', ItemType.consumable, 'itens/handCannon.png', 50, 
+    quantity: 1, description: 'd_handCannon', cor: Colors.white, onUse: (item, game) async {
+    if (game.currentState != GameState.combat) {
+      game.showMessage(I18n.t('guarda_batalha'));
+      item.quantity++;
+      return;
+    }
+
+    AudioManager.playSfx('sfx/fire.wav');
+    game.playerCombatStats.applyEffect(0.5,Palette.laranja) ;
+
+    final ui.Image img = await game.images.load('effects/bola.png');
+    game.combatOverlay.add(PlayerProjectile(game.playerCombatStats.strafePosition, 0.75 , 5, item.power , Palette.cinzaEsc,acertaFundo: true, width: 16, height: 16, img : img));
+   
+  });
+
   static Item get firePillar => Item('firePillar', ItemType.spell, 'itens/fire.png', 5, 
     manaCost: 10, value:6, description: 'd_firePillar', cor: Colors.white, onUse: (item, game) async {
     if (game.currentState != GameState.combat) {
