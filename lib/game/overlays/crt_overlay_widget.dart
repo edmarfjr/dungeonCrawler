@@ -120,14 +120,15 @@ class CrtPainter extends CustomPainter {
     shader.setFloat(1, size.height);
     shader.setFloat(2, time);
 
-    shader.setFloat(3, 0.2);  // Densidade 
-    shader.setFloat(4, 0.70); // Grossura 
+    shader.setFloat(3, 0.15);  // Densidade 
+    shader.setFloat(4, 0.40); // Grossura 
     shader.setFloat(5, 0.2);  // Alpha 
 
-    shader.setFloat(6, 0.2);  // Tamanho matriz
-    shader.setFloat(7, 0.08); // Alpha matriz
+    shader.setFloat(6, 0.25);  // Tamanho matriz
+    shader.setFloat(7, 0.1); // Alpha matriz
 
-    var paint = Paint()..shader = shader;
+    var paint = Paint()..shader = shader
+                      ..blendMode = BlendMode.multiply;
     
     canvas.drawRect(Offset.zero & size, paint);
   }

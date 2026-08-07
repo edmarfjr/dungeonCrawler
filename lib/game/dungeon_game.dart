@@ -93,6 +93,10 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   int encounterEssence = 0;
   int mapSize = 30;
   List<Item> encounterDrop = [];
+  bool _analogLeft = false;
+  bool _analogRight = false;
+  bool _analogUp = false;
+  bool _analogDown = false;
 
 
   // --- VARIÁVEIS DA DARK ROOM E SALA SECRETA ---
@@ -140,7 +144,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   
   int get levelUpCost {
     int totalLevel = (playerCombatStats.str + playerCombatStats.con + playerCombatStats.wis).toInt();
-    return 50 + (totalLevel * 15);
+    return 50 + (totalLevel * 10);
   }
 
   int _getPlayerCoins() {
@@ -1132,23 +1136,27 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       double promptHeight = 100;
       double promptX = (size.x - promptWidth) / 2;
       double promptY = (size.y - promptHeight) / 2;
-      final promptRect = Rect.fromLTWH(promptX, promptY, promptWidth, promptHeight);
 
+      double fontSize = isDesktopLayout ? 24 : 16;
+      
       double border = 2;
 
       if (isDesktopLayout){
-        promptWidth = size.x * 0.6;
+        promptWidth = size.x * 0.4;
         border = 8;
+        promptX = (size.x - promptWidth) / 2;
       }
+
+      final promptRect = Rect.fromLTWH(promptX, promptY, promptWidth, promptHeight);
       
       canvas.drawRect(promptRect, Paint()..color = Palette.preto);
       canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
 
-      final titleSpan = TextSpan(text: I18n.t('pass_turn'), style: const TextStyle(color: Palette.branco, fontSize: 18, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
+      final titleSpan = TextSpan(text: I18n.t('pass_turn'), style: TextStyle(color: Palette.branco, fontSize: fontSize*1.2, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
       titlePainter.paint(canvas, Offset(promptX, promptY + 15));
 
-      final optionsSpan =  TextSpan(text: I18n.t('optsA_B'), style: TextStyle(color: Palette.amarelo, fontSize: 16, fontFamily: 'pixelFont'));
+      final optionsSpan =  TextSpan(text: I18n.t('optsA_B'), style: TextStyle(color: Palette.amarelo, fontSize: fontSize, fontFamily: 'pixelFont'));
       final optionsPainter = TextPainter(text: optionsSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
       optionsPainter.paint(canvas, Offset(promptX, promptY + 45));
   }
@@ -1261,15 +1269,23 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void _renderLevelUp(Canvas canvas) {
-      final overlayRect = Rect.fromLTWH(0, 0, size.x, size.y * 0.66);
-      canvas.drawRect(overlayRect, Paint()..color = Palette.preto);
-      canvas.drawRect(overlayRect.deflate(15), Paint()..color = Palette.roxo..style = PaintingStyle.stroke..strokeWidth = 3);
+      double border = isDesktopLayout ? 8 : 4;
+      double fontSize = isDesktopLayout ? 24 : 16;
+      double boxWidth = isDesktopLayout ? size.x * 0.5 : size.x * 0.85; 
+      double boxHeight = isDesktopLayout ? size.y * 0.66 : size.y * 0.66; 
+      double txtX = (size.x) / 2;
+      double txtY = size.y / 2;
+      double boxX = (size.x) / 2;
+      double boxY = size.y/ 2;
+      
+      canvas.drawRect(Rect.fromCenter(center: Offset(boxX, boxY), width: boxWidth, height: boxHeight), Paint()..color = Palette.preto);
+      canvas.drawRect(Rect.fromCenter(center: Offset(boxX, boxY), width: boxWidth, height: boxHeight), Paint()..color = Palette.roxo..style = PaintingStyle.stroke..strokeWidth = border);
 
-      final titlePainter = TextPainter(text: TextSpan(text: I18n.t('distr_pontos'), style: TextStyle(color: Palette.roxo, fontSize: 22, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: size.x);
-      titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, 40));
+      final titlePainter = TextPainter(text: TextSpan(text: I18n.t('distr_pontos'), style: TextStyle(color: Palette.roxo, fontSize: fontSize*1.5, fontFamily: 'pixelFont', fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(maxWidth: size.x);
+      titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, size.y * 0.2));
 
-      final ptPainter = TextPainter(text: TextSpan(text: "${I18n.t('pontos_disponiveis')}: $pointsToDistribute", style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: 18, fontFamily: 'pixelFont')), textDirection: TextDirection.ltr)..layout();
-      ptPainter.paint(canvas, Offset((size.x - ptPainter.width) / 2, 100));
+      final ptPainter = TextPainter(text: TextSpan(text: "${I18n.t('pontos_disponiveis')}: $pointsToDistribute", style: TextStyle(color: pointsToDistribute > 0 ? Palette.amarelo : Palette.verde, fontSize: fontSize*1.2, fontFamily: 'pixelFont')), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
+      ptPainter.paint(canvas, Offset((size.x - ptPainter.width) / 2, size.y * 0.25));
 
       List<String> labels = [
         "${I18n.t('forca')}: ${playerCombatStats.str.toInt()} (+ $tempStr)",
@@ -1283,12 +1299,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         Color textColor = isSelected ? Colors.yellow : Colors.white;
         if (i == 3) textColor = isSelected ? Colors.greenAccent : Colors.purpleAccent;
         String prefix = isSelected ? "> " : "  ";
-        final labelPainter = TextPainter(text: TextSpan(text: "$prefix${labels[i]}", style: TextStyle(color: textColor, fontSize: 18, fontFamily: 'pixelFont', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)), textDirection: TextDirection.ltr)..layout();
-        labelPainter.paint(canvas, Offset(40, 160 + (i * 45)));
+        final labelPainter = TextPainter(text: TextSpan(text: "$prefix${labels[i]}", style: TextStyle(color: textColor, fontSize: fontSize*1.2, fontFamily: 'pixelFont', fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
+        labelPainter.paint(canvas, Offset(size.x/2-labelPainter.width/2, size.y * 0.35 + (i * fontSize*3)));
       }
 
-      final helpPainter = TextPainter(text: TextSpan(text: I18n.t('pontos_legenda'), style: TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'pixelFont')), textDirection: TextDirection.ltr)..layout();
-      helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, size.y * 0.66 - 40));
+      final helpPainter = TextPainter(text: TextSpan(text: I18n.t('pontos_legenda'), style: TextStyle(color: Colors.grey, fontSize: fontSize*0.6, fontFamily: 'pixelFont')), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
+      helpPainter.paint(canvas, Offset((size.x - helpPainter.width) / 2, (size.y * 0.5) + boxHeight/2 - fontSize));
   }
 
   void _renderMessageQueue(Canvas canvas) {
@@ -1456,42 +1472,56 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   // ===========================================================================
-  // GERENCIAMENTO DE INPUTS (KEYBOARD)
+  // GERENCIAMENTO DE INPUTS
   // ===========================================================================
   
   void _onGamepadEvent(GamepadEvent event) {
-    // Ignora pequenos movimentos residuais das alavancas analógicas (Deadzone 20%)
-    if (event.type == KeyType.analog && event.value.abs() < 0.2) {
-      String key = event.key.toLowerCase();
-      // O joystick voltou para o centro, fazemos o personagem parar!
-      if (key.contains('x')) {
-         stopInput(GameInput.left);
-         stopInput(GameInput.right);
-      } else if (key.contains('y')) {
-         stopInput(GameInput.up);
-         stopInput(GameInput.down);
+    String key = event.key.toLowerCase();
+
+    // === MAPEAMENTO DE ANALÓGICO ===
+    if (event.type == KeyType.analog) {
+      // EIXO X (Esquerda / Direita)
+      if (key.contains('x') || key.contains('axis_0')) {
+        if (event.value < -0.5) {
+          // Só inicia o movimento se a trava ainda estiver desligada
+          if (!_analogLeft) { startInput(GameInput.left); _analogLeft = true; }
+          // Se estava a ir para a direita, cancela imediatamente
+          if (_analogRight) { stopInput(GameInput.right); _analogRight = false; }
+          
+        } else if (event.value > 0.5) {
+          if (!_analogRight) { startInput(GameInput.right); _analogRight = true; }
+          if (_analogLeft) { stopInput(GameInput.left); _analogLeft = false; }
+          
+        } else if (event.value.abs() < 0.2) { 
+          // Entrou na zona morta (soltou o analógico) -> Para o movimento e liberta as travas!
+          if (_analogLeft) { stopInput(GameInput.left); _analogLeft = false; }
+          if (_analogRight) { stopInput(GameInput.right); _analogRight = false; }
+        }
+        return; // Sai da função para não acionar o código dos botões acidentalmente
       }
-      return;
-    }
 
-    // Variável isPressed ativada se passarmos dos 50% de toque no analógico/gatilho
-    bool isPressed = event.value > 0.5 || event.value < -0.5; 
-    String key = event.key.toLowerCase(); 
-
-    // === MAPEAMENTO DE ANALÓGICO ESQUERDO ===
-    if (key.contains('leftjoystickx') || key.contains('leftthumbstickx') || key.contains('axis_0')) {
-      if (event.value < -0.5) { startInput(GameInput.left); stopInput(GameInput.right); }
-      else if (event.value > 0.5) { startInput(GameInput.right); stopInput(GameInput.left); }
-      return;
-    }
-    if (key.contains('leftjoysticky') || key.contains('leftthumbsticky') || key.contains('axis_1')) {
-      // Eixo Y geralmente é invertido (negativo é para cima)
-      if (event.value < -0.5) { startInput(GameInput.up); stopInput(GameInput.down); }
-      else if (event.value > 0.5) { startInput(GameInput.down); stopInput(GameInput.up); }
-      return;
+      // EIXO Y (Cima / Baixo)
+      if (key.contains('y') || key.contains('axis_1')) {
+        if (event.value < -0.5) {
+          if (!_analogUp) { startInput(GameInput.up); _analogUp = true; }
+          if (_analogDown) { stopInput(GameInput.down); _analogDown = false; }
+          
+        } else if (event.value > 0.5) {
+          if (!_analogDown) { startInput(GameInput.down); _analogDown = true; }
+          if (_analogUp) { stopInput(GameInput.up); _analogUp = false; }
+          
+        } else if (event.value.abs() < 0.2) { 
+          // Entrou na zona morta (soltou o analógico)
+          if (_analogUp) { stopInput(GameInput.up); _analogUp = false; }
+          if (_analogDown) { stopInput(GameInput.down); _analogDown = false; }
+        }
+        return;
+      }
     }
 
     // === MAPEAMENTO DO D-PAD E BOTÕES FRONTAIS ===
+    bool isPressed = event.value > 0.5 || event.value < -0.5; 
+
     if (isPressed) {
       if (key.contains('dpadleft')) startInput(GameInput.left);
       else if (key.contains('dpadright')) startInput(GameInput.right);
@@ -1499,13 +1529,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       else if (key.contains('dpaddown')) startInput(GameInput.down);
       
       // Botão A no Xbox / Cruz na PlayStation
-      else if (key == 'a' || key.contains('button_cross') || key.contains('button_0')) startInput(GameInput.buttonA);
+      else if (key == 'x' ||key == 'a' || key.contains('button_cross') || key.contains('button_0')) startInput(GameInput.buttonA);
       
       // Botão B no Xbox / Círculo na PlayStation
-      else if (key == 'b' || key.contains('button_circle') || key.contains('button_1')) startInput(GameInput.buttonB);
+      else if (key == 'y' ||key == 'b' || key.contains('button_circle') || key.contains('button_1')) startInput(GameInput.buttonB);
       
       // Botão Menu / Options / Start
-      else if (key.contains('start') || key.contains('button_options') || key.contains('button_menu')) togglePause();
+      else if (key == 'start' || key.contains('button_options') || key.contains('button_menu')) togglePause();
     } else {
       // Soltou o botão (Dispara as paradas para interromper combos ou defesas)
       if (key.contains('dpadleft')) stopInput(GameInput.left);
@@ -2004,7 +2034,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (input == GameInput.buttonA && levelUpCursor == 3) {
       if (pointsToDistribute == 0) {
-        playerCombatStats.essence -= levelUpCost;
+        playerCombatStats.essence = max(playerCombatStats.essence - levelUpCost, 0);
         playerCombatStats.str += tempStr; playerCombatStats.con += tempCon; playerCombatStats.wis += tempWis;
         playerCombatStats.recalculateMaxHp();
         playerCombatStats.recalculateMaxInventory();
@@ -2394,6 +2424,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   }
 
   void resetGame() {
+    playerCombatStats.essence = 0;
     finalBom = false;
     runTime=0;
     for (var enemy in combatOverlay.enemies) {

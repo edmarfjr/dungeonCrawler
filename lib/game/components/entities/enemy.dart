@@ -1964,7 +1964,8 @@ class JesterEnemy extends Enemy {
           this,
           grav: 1,
           speedX: 6,
-          isHoming: true
+          isHoming: true,
+          anim: false,  
         ));
       }
 

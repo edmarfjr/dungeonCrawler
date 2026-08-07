@@ -221,7 +221,9 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       }
 
       for (int cz = 4; cz >= 0; cz--) {
-        for (int cx in [-3, 3, -2, 2, -1, 1, 0]) {
+        // A MÁGICA ACONTECE AQUI: Expandimos o labirinto de -8 até 8!
+        // Isto garante que há cenário de sobra para cobrir a tela durante os giros rápidos.
+        for (int cx in [-8, 8, -7, 7, -6, 6, -5, 5, -4, 4, -3, 3, -2, 2, -1, 1, 0]) {
           int mapX = player.x + (dx * cz) + (sideDx * cx);
           int mapY = player.y + (dy * cz) + (sideDy * cx);
           
@@ -239,15 +241,15 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
           _drawCeiling(canvas, cx, cz,floorImage[tileIdx], corChao);
 
           if (tile == TileType.wall) {
-            if (cx > 0) _drawLeftFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
-            if (cx < 0) _drawRightFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
-            if (cz > 0) _drawFrontFace(canvas, cx, cz, wallImage[tileIdx], corParede);
+            _drawLeftFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
+            _drawRightFace(canvas, cx, cz, wallImage[tileIdx], corParede); 
+            _drawFrontFace(canvas, cx, cz, wallImage[tileIdx], corParede);
           }
 
           if (tile == TileType.secretWall) {
-            if (cx > 0) _drawLeftFace(canvas, cx, cz, secretWallImage[tileIdx], corParede); 
-            if (cx < 0) _drawRightFace(canvas, cx, cz, secretWallImage[tileIdx], corParede); 
-            if (cz > 0) _drawFrontFace(canvas, cx, cz, secretWallImage[tileIdx], corParede);
+            _drawLeftFace(canvas, cx, cz, secretWallImage[tileIdx], corParede); 
+            _drawRightFace(canvas, cx, cz, secretWallImage[tileIdx], corParede); 
+            _drawFrontFace(canvas, cx, cz, secretWallImage[tileIdx], corParede);
           }
 
           if (tile == TileType.door) {
@@ -345,6 +347,7 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
     }
 
     canvas.restore();
+  
   }
 
   // --- NOVA PROJEÇÃO: Utiliza o tamanho do viewport ao invés da tela cheia!
@@ -440,6 +443,52 @@ class MazeRenderer extends PositionComponent with HasGameRef<DungeonCrawlerGame>
       [cx + 0.5, -0.5, cz.toDouble()], 
       [cx - 0.5, -0.5, cz.toDouble()], 
     ]);
+  }
+
+  // --- CORTINAS SÓLIDAS PARA VAZAMENTO DE CÂMERA ---
+  void _drawLeftBlocker(Canvas canvas, int cx, int cz) {
+    double x = cx - 0.5;
+    // Puxa o vértice para um valor X absurdamente negativo
+    Offset topLeft = _project(-10.0, -0.5, cz.toDouble());
+    Offset botLeft = _project(-10.0,  0.5, cz.toDouble());
+    Offset topRight = _project(x, -0.5, cz.toDouble());
+    Offset botRight = _project(x,  0.5, cz.toDouble());
+
+    // Calculamos o nível de escurecimento (Igual aos tiles normais)
+    double rawDarkness = (cz / 4.5).clamp(0.0, 1.0);
+    double darkness = (rawDarkness * 4).round() / 4.0;
+    Color blockerColor = Color.lerp(Colors.black, Colors.black, darkness)!;
+
+    Path path = Path()
+      ..moveTo(topLeft.dx, topLeft.dy)
+      ..lineTo(topRight.dx, topRight.dy)
+      ..lineTo(botRight.dx, botRight.dy)
+      ..lineTo(botLeft.dx, botLeft.dy)
+      ..close();
+
+    canvas.drawPath(path, Paint()..color = blockerColor);
+  }
+
+  void _drawRightBlocker(Canvas canvas, int cx, int cz) {
+    double x = cx + 0.5;
+    // Puxa o vértice para um valor X absurdamente positivo
+    Offset topLeft = _project(x, -0.5, cz.toDouble());
+    Offset botLeft = _project(x,  0.5, cz.toDouble());
+    Offset topRight = _project(10.0, -0.5, cz.toDouble());
+    Offset botRight = _project(10.0,  0.5, cz.toDouble());
+
+    double rawDarkness = (cz / 4.5).clamp(0.0, 1.0);
+    double darkness = (rawDarkness * 4).round() / 4.0;
+    Color blockerColor = Color.lerp(Colors.black, Colors.black, darkness)!;
+
+    Path path = Path()
+      ..moveTo(topLeft.dx, topLeft.dy)
+      ..lineTo(topRight.dx, topRight.dy)
+      ..lineTo(botRight.dx, botRight.dy)
+      ..lineTo(botLeft.dx, botLeft.dy)
+      ..close();
+
+    canvas.drawPath(path, Paint()..color = blockerColor);
   }
 
   void _drawSubdividedPolygon(Canvas canvas, ui.Image image, Color tintColor, List<List<double>> points3D) {

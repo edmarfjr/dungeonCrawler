@@ -17,6 +17,7 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   final bool isHoming;
   String imgPath;
   double waitTmr;
+  bool anim ;
   double _flipTimer = 0.0; 
   final double _flipInterval = 0.1;
   bool corNormal = true;
@@ -25,7 +26,16 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
   bool isBlind ;
   
 
-  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{this.waitTmr = 0, this.grav = 3.0,this.radius = 30, this.isHoming = false, this.speedX = 5, this.imgPath = '', this.isBlind = false})
+  ArcProjectile(this.strafeX, this.yPos, this.vx, this.vy, this.owner,{
+    this.waitTmr = 0,
+    this.grav = 3.0,
+    this.radius = 30, 
+    this.isHoming = false, 
+    this.speedX = 5, 
+    this.imgPath = '', 
+    this.isBlind = false,
+    this.anim = true,
+    })
       : super(
           anchor: Anchor.center, 
           priority: 100,           
@@ -60,15 +70,17 @@ class ArcProjectile extends SpriteComponent with HasGameRef<DungeonCrawlerGame> 
       alvoX = gameRef.playerCombatStats.strafePosition;
     }
 
-    _flipTimer += dt; 
+    if(anim){
+      _flipTimer += dt; 
 
-    if (_flipTimer >= _flipInterval) {
-      _flipTimer -= _flipInterval; 
-      corNormal = !corNormal;
-      if(corNormal){
-        paint = Paint()..colorFilter = ColorFilter.mode(Colors.white, BlendMode.modulate);
-      }else{
-        paint = Paint()..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
+      if (_flipTimer >= _flipInterval) {
+        _flipTimer -= _flipInterval; 
+        corNormal = !corNormal;
+        if(corNormal){
+          paint = Paint()..colorFilter = ColorFilter.mode(Colors.white, BlendMode.modulate);
+        }else{
+          paint = Paint()..colorFilter = ColorFilter.mode(owner.color, BlendMode.modulate);
+        }
       }
     }
 
