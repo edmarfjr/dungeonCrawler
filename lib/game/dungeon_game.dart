@@ -1587,8 +1587,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
         combatOverlay.addFloatingText('godMode: $godMode',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0);
       }
       if (event.logicalKey == LogicalKeyboardKey.keyV && currentState == GameState.exploration && !isRunStartAnimating){
-        EncounterManager.triggerSpecificEncounter(this, EnemyType.blackMold);
-        //EncounterManager.triggerRandomEncounter(this);
+        //EncounterManager.triggerSpecificEncounter(this, EnemyType.blackMold);
+        EncounterManager.triggerRandomEncounter(this);
       } 
 
       // Variáveis auxiliares (o D-Pad do controle também ativa estas)
