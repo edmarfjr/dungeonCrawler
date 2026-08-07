@@ -129,7 +129,6 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
   // --- lista de lore ---
    List<String> loreTxt = ['lore1','lore2','lore3','lore4','lore5','lore6','lore7','lore8','lore9','lore10'];
-
   
 
   // ===========================================================================
@@ -392,6 +391,13 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       'music/gameover.mp3'
     ]);
 
+  }
+
+  Color get corBordaHud {
+    if(dungeon.level < 4) return Palette.VinhoEsc;
+    else if(dungeon.level >= 4 && dungeon.level < 7) return Palette.marromCla;
+    else if(dungeon.level >= 7 && dungeon.level < 10) return Palette.Indigo;
+    else return Palette.vermelhoEsc;
   }
 
   @override
@@ -847,7 +853,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     
     var rect = Rect.fromLTWH(startX, startY, boxWidth, boxHeight);
     canvas.drawRect(rect, Paint()..color = Palette.preto);
-    canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+    canvas.drawRect(rect, Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
     
     // Centraliza o texto dentro da caixa dinâmica
     textPainter.paint(canvas, Offset(startX + (boxWidth - textPainter.width) / 2, startY + (boxHeight - textPainter.height) / 2));
@@ -995,7 +1001,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     double boxHeight = options.length * itemSize + 20;
 
     canvas.drawRect(Rect.fromLTWH(startX, startY-50, boxWidth, boxHeight+50), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(startX, startY-50, boxWidth, boxHeight+50), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+    canvas.drawRect(Rect.fromLTWH(startX, startY-50, boxWidth, boxHeight+50), Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
     
     // Título Principal
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('loja'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24*fontScale, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
@@ -1025,7 +1031,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if(isDesktopLayout) titleOffY = 40;
       
       canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight + 5), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight + 5), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight + 5), Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
       
       final subtitlePainter = TextPainter(text: TextSpan(text: I18n.t('comprar'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 20*fontScale)), textDirection: TextDirection.ltr)..layout();
       subtitlePainter.paint(canvas, Offset(startX + (boxWidth - subtitlePainter.width) / 2, startY - titleOffY));
@@ -1055,7 +1061,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       if(isDesktopLayout) titleOffY = 40;
       
       canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight + 5), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight + 5), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight + 5), Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
       
       final subtitlePainter = TextPainter(text: TextSpan(text: I18n.t('vender'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 20*fontScale)), textDirection: TextDirection.ltr)..layout();
       subtitlePainter.paint(canvas, Offset(startX + (boxWidth - subtitlePainter.width) / 2, startY - titleOffY));
@@ -1085,7 +1091,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       startY += 40*fontScale;
       
       canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, boxHeight), Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
       
       int valorVenda = (itemToSell!.value * 0.5).floor();
       if (valorVenda < 1) valorVenda = 1;
@@ -1139,7 +1145,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       double fontSize = isDesktopLayout ? 24 : 16;
       
-      double border = 2;
+      double border = 4;
 
       if (isDesktopLayout){
         promptWidth = size.x * 0.4;
@@ -1150,7 +1156,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       final promptRect = Rect.fromLTWH(promptX, promptY, promptWidth, promptHeight);
       
       canvas.drawRect(promptRect, Paint()..color = Palette.preto);
-      canvas.drawRect(promptRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(promptRect, Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
 
       final titleSpan = TextSpan(text: I18n.t('pass_turn'), style: TextStyle(color: Palette.branco, fontSize: fontSize*1.2, fontFamily: 'pixelFont', fontWeight: FontWeight.bold));
       final titlePainter = TextPainter(text: titleSpan, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout(minWidth: promptWidth, maxWidth: promptWidth);
@@ -1177,12 +1183,12 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     if(!isDesktopLayout){
       border = 4;
       itemSize = 40;
-      boxWidth = logicalWidth * 0.9;
+      boxWidth = logicalWidth * 0.8;
       fontScale = 1;
     } 
     double startX = size.x * 0.5 - boxWidth / 2;
     canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, playerCombatStats.maxInventory * itemSize + 70), Paint()..color = Palette.preto);
-    canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, playerCombatStats.maxInventory * itemSize + 70), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+    canvas.drawRect(Rect.fromLTWH(startX, startY, boxWidth, playerCombatStats.maxInventory * itemSize + 70), Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
     final titlePainter = TextPainter(text: TextSpan(text: I18n.t('inventario'), style: TextStyle(fontFamily: 'pixelFont', color: Palette.amarelo, fontSize: 24*fontScale, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
     titlePainter.paint(canvas, Offset((size.x - titlePainter.width) / 2, startY + 15));
 
@@ -1224,7 +1230,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       Rect descRectBorda = Rect.fromLTWH(startX, boxY, boxWidth, boxH);
       
       canvas.drawRect(descRect, Paint()..color = Palette.preto);
-      canvas.drawRect(descRectBorda, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(descRectBorda, Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
 
       TextPainter(
         text: TextSpan(
@@ -1239,7 +1245,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
     if (isActionMenuOpen) {
       canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.preto);
-      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(Rect.fromLTWH(size.x/2 - 75, size.y/2 - 40, 150, 80), Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
       TextPainter(text:  TextSpan(text: "${I18n.t('a_confirma')}\n${I18n.t('b_cancelar')}", style: TextStyle(fontFamily: 'pixelFont', color: Palette.branco, fontSize: 16)), textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout()..paint(canvas, Offset(size.x/2 - 50, size.y/2 - 20));
     }
     if (isItemActionMenuOpen) {
@@ -1255,7 +1261,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
 
       final menuRect = Rect.fromLTWH(menuX, menuY, menuWidth, menuHeight);
       canvas.drawRect(menuRect, Paint()..color = Palette.preto);
-      canvas.drawRect(menuRect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+      canvas.drawRect(menuRect, Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
 
       List<String> options = [I18n.t('eqpUse'), I18n.t('eqpDescarte'), I18n.t('cancel')];
       for (int i = 0; i < options.length; i++) {
@@ -1334,7 +1340,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
     final rect = Rect.fromLTWH(startX, startY, boxWidth, boxHeight);
 
     canvas.drawRect(rect, Paint()..color = Palette.preto);
-    canvas.drawRect(rect, Paint()..color = Palette.branco..style = PaintingStyle.stroke..strokeWidth = border);
+    canvas.drawRect(rect, Paint()..color = corBordaHud..style  = PaintingStyle.stroke..strokeWidth = border);
     
     // Centraliza o texto exatamente no meio da caixa recém-medida
     textPainter.paint(canvas, Offset(startX + (boxWidth - textPainter.width) / 2, startY + (boxHeight - textPainter.height) / 2));
@@ -2247,7 +2253,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
           }
           
           // NOVA MATEMÁTICA: Usando o Viewport para posicionar o nome da fase no PC ou no Mobile
-          combatOverlay.addFloatingText('-Floor ${dungeon.level}-$dung', Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2), Palette.branco, speedY: 0, tmr: 2);
+          combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
+          combatOverlay.addFloatingText('$dung}',Rect.fromLTWH(0, combatOverlay.logicalHeight/2 + combatOverlay.logicalHeight * 0.03 , combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
 
           if(dungeon.level >= 13){ currentState = GameState.victory; overlays.add('Victory'); }
         });
@@ -2475,8 +2482,8 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
   void finishIntro() {
     currentState = GameState.exploration;
     overlays.remove('Intro');
-    
-    combatOverlay.addFloatingText('-Floor ${dungeon.level}-${I18n.t('dung1')}',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
+    combatOverlay.addFloatingText('-Floor ${dungeon.level}-',Rect.fromLTWH(0, combatOverlay.logicalHeight/2, combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
+    combatOverlay.addFloatingText('${I18n.t('dung1')}',Rect.fromLTWH(0, combatOverlay.logicalHeight/2 + combatOverlay.logicalHeight * 0.03 , combatOverlay.logicalWidth, combatOverlay.logicalHeight/2),Palette.branco,speedY: 0,tmr:2);
     isRunStartAnimating = true;
     runStartAnimTimer = 0.0;
     AudioManager.playBgm('music/8-bit-dungeon.wav');
@@ -2490,7 +2497,7 @@ class DungeonCrawlerGame extends FlameGame with KeyboardEvents {
       e.isAlive = false;
     }
     playerCombatStats.currentPhase = CombatPhase.die;
-    playerCombatStats.animTimer = 1.2; 
+    playerCombatStats.animTimer = 0.9; 
     playerCombatStats.applyFlashEffect(1.2, Palette.vermelho); 
     currentState = GameState.dying;
   }

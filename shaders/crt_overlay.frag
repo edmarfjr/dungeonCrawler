@@ -3,11 +3,11 @@
 uniform vec2 uResolution;
 uniform float uTime;
 
-uniform float uDensidade; 
-uniform float uGrossura;  
-uniform float uAlpha;     
-uniform float uMTamanho;  // Controla o "tamanho" das células RGB
-uniform float uMAlpha;    // Intensidade das células RGB
+uniform float uDensidade; // Espaçamento das linhas
+uniform float uGrossura;  // Espessura da linha preta
+uniform float uAlpha;     // Força das scanlines
+uniform float uMTamanho;  // Tamanho das células RGB
+uniform float uMAlpha;    // Contraste da grelha RGB
 
 out vec4 fragColor;
 
@@ -20,48 +20,49 @@ void main() {
     float waveTear = smoothstep(0.98, 1.0, sin(rollPhase));
     float occasional = smoothstep(0.8, 1.0, sin(uTime * 0.3));
 
-    // A máscara base começa "Branca" (Branco no BlendMode.multiply não altera a imagem do jogo)
-    vec3 maskColor = vec3(1.0);
+    // A onda gera um pico de luz
+    float waveGlow = waveTear * occasional * 0.2;
 
-    // --- 2. MATRIZ RGB (Shadow Mask) ---
-    // Pega na coordenada X e cria blocos de repetição de 0 a 3
+    // --- 2. GRELHA RGB COM PRESERVAÇÃO DE LUMINÂNCIA ---
     float rgbPattern = mod(coord.x * uMTamanho, 3.0);
     
-    // O valor 'dim' dita o quão escuros ficam os canais apagados (quanto maior uMAlpha, mais escuro)
-    float dim = 1.0 - uMAlpha; 
+    // O Segredo: No modo Overlay do Flutter, o valor 0.5 é INVISÍVEL (neutro).
+    // Para colorir sem estragar a luz, empurramos a cor ativa para cima de 0.5
+    // e as cores inativas para baixo de 0.5.
+    float high = 0.5 + (uMAlpha * 0.5); // "Acende" o fósforo
+    float low  = 0.5 - (uMAlpha * 0.5); // "Apaga" os fósforos vizinhos
 
-    // Lógica do Fósforo: Se for a coluna do Vermelho, abafa o Verde e o Azul.
+    vec3 maskColor;
     if (rgbPattern < 1.0) {
-        maskColor = vec3(1.0, dim, dim); // Célula Vermelha
+        maskColor = vec3(high, low, low); // Fósforo Vermelho
     } else if (rgbPattern < 2.0) {
-        maskColor = vec3(dim, 1.0, dim); // Célula Verde
+        maskColor = vec3(low, high, low); // Fósforo Verde
     } else {
-        maskColor = vec3(dim, dim, 1.0); // Célula Azul
+        maskColor = vec3(low, low, high); // Fósforo Azul
     }
 
     // --- 3. SCANLINES (Linhas Horizontais) ---
     float densidade = uResolution.y * uDensidade;
     float ciclo = fract(uv.y * densidade);
     float scanline = step(uGrossura, ciclo);
-    // Transforma a linha preta num valor multiplicador
-    float scanIntensity = mix(1.0, 1.0 - uAlpha, 1.0 - scanline);
     
+    // Escurece ligeiramente a nossa base 0.5 onde a linha preta cai
+    float scanIntensity = mix(1.0, 1.0 - uAlpha, 1.0 - scanline);
     maskColor *= scanIntensity;
 
-    // --- 4. VIGNETTE (Sombra dos cantos do Tubo) ---
+    // --- 4. VIGNETTE (Sombra dos cantos) ---
     float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
     vignette = clamp(pow(16.0 * vignette, 0.25), 0.0, 1.0);
-    // Não deixamos escurecer 100%, travamos a sombra em 60% de opacidade
     float vignetteIntensity = mix(1.0, vignette, 0.6); 
     maskColor *= vignetteIntensity;
 
-    // --- 5. FLICKER (Oscilação de energia) ---
-    float flicker = sin(uTime * 15.0) * 0.02;
+    // --- 5. FLICKER (Oscilação de Energia) ---
+    float flicker = sin(uTime * 15.0) * 0.015;
     maskColor += vec3(flicker);
 
-    // Detalhe extra: Quando a onda pesada da TV passa, ela dá um "estouro" de brilho
-    maskColor += vec3(waveTear * occasional * 0.15);
+    // Adiciona a luz do ecrã quando a onda passa
+    maskColor += vec3(waveGlow);
 
-    // Envia a máscara final para a tela!
+    // Envia a máscara final para interagir com o ecrã
     fragColor = vec4(maskColor, 1.0);
 }

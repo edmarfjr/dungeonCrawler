@@ -128,7 +128,7 @@ class CrtPainter extends CustomPainter {
     shader.setFloat(7, 0.1); // Alpha matriz
 
     var paint = Paint()..shader = shader
-                      ..blendMode = BlendMode.multiply;
+                      ..blendMode = BlendMode.overlay;
     
     canvas.drawRect(Offset.zero & size, paint);
   }
